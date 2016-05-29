@@ -58,22 +58,18 @@ rely1, rely2 tell to which height the connections are pointed to. 1 means it wil
 
 ]]
 
-function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
+function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 	local mid=advtrains.round_vector_floor_y(midreal)
-	if(not advtrains.is_track_and_drives_on(minetest.get_node(mid).name, drives_on)) then
-		--print("[advtrains]in conway: no rail, returning!")
+	local drives_on=advtrains.all_traintypes[traintype].drives_on
+	
+	if not advtrains.get_rail_info_at(advtrains.round_vector_floor_y(prev), traintype) then
 		return nil
-	end
-	if(not prev or not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.round_vector_floor_y(prev)).name, drives_on)) then
-		--print("[advtrains]in conway: no prev rail, there should be an initial path!, returning!")
-		return nil
-	end
-	local midnode=minetest.get_node_or_nil(mid)
-	if not midnode then --print("[advtrains][conway] midnode is ignore")
-		return nil 
 	end
 	
-	local middir1, middir2, midrely1, midrely2=advtrains.get_track_connections(midnode.name, midnode.param2)
+	local midnode_ok, middir1, middir2, midrely1, midrely2=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+	if not midnode_ok then
+		return nil 
+	end
 	
 	local next, chkdir, chkrely, y_offset
 	y_offset=0
@@ -110,29 +106,21 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 		print("[advtrains]in conway: no next rail(nil), returning!")
 		return nil
 	end
-	local nextnode=minetest.get_node_or_nil(advtrains.round_vector_floor_y(next))
-	if not nextnode then print("[advtrains][conway] nextnode is ignore") 
-		return nil 
-	end
+	
+	local nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
 	
 	--is it a rail?
-	if(not advtrains.is_track_and_drives_on(nextnode.name, drives_on)) then
+	if(not nextnode_ok) then
 		print("[advtrains]in conway: next "..minetest.pos_to_string(next).." not a rail, trying one node below!")
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
-		nextnode=minetest.get_node_or_nil(advtrains.round_vector_floor_y(next))
-		if not nextnode then --print("[advtrains][conway] nextnode is ignore") 
-			return nil
-		end
-		if(not advtrains.is_track_and_drives_on(nextnode.name, drives_on)) then
+		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+		if(not nextnode_ok) then
 			print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
 		end
 	end
-	--print("[advtrains]trying to find if rail connects: "..(next and minetest.pos_to_string(next) or "nil").."(chkdir is "..(chkdir or "nil")..", y-offset "..y_offset..")")
-	
-	local nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_track_connections(nextnode.name, nextnode.param2)
 	
 	--is this next rail connecting to the mid?
 	if not ( (((nextdir1+4)%8)==chkdir and nextrely1==chkrely-y_offset) or (((nextdir2+4)%8)==chkdir and nextrely2==chkrely-y_offset) ) then
@@ -140,9 +128,13 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
-		nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_track_connections(nextnode.name, nextnode.param2)
+		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+		if(not nextnode_ok) then
+			print("[advtrains]in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
+			return nil
+		end
 		if not ( (((nextdir1+4)%8)==chkdir and nextrely1==chkrely) or (((nextdir2+4)%8)==chkdir and nextrely2==chkrely) ) then
-			print("[advtrains]in conway: next "..minetest.pos_to_string(next).." rail not connecting, returning!")
+			print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." rail not connecting, returning!")
 			--print("[advtrains] in order mid1,2,next1,2,chkdir "..middir1.." "..middir2.." "..nextdir1.." "..nextdir2.." "..chkdir)
 			return nil
 		end

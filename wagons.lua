@@ -89,6 +89,8 @@ function wagon:on_activate(staticdata, dtime_s)
 end
 
 function wagon:get_staticdata()
+	--save to table before being unloaded
+	advtrains.wagon_save[self.unique_id]=advtrains.merge_tables(self)
 	return minetest.serialize({
 		unique_id=self.unique_id,
 		train_id=self.train_id,

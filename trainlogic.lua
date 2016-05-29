@@ -32,6 +32,18 @@ else
 	end
 	file:close()
 end
+advtrains.fpath_ws=minetest.get_worldpath().."/advtrains_wagon_save"
+local file, err = io.open(advtrains.fpath_ws, "r")
+if not file then
+	local er=err or "Unknown Error"
+	print("[advtrains]Failed loading advtrains save file "..er)
+else
+	local tbl = minetest.deserialize(file:read("*a"))
+	if type(tbl) == "table" then
+		advtrains.wagon_save=tbl
+	end
+	file:close()
+end
 
 
 advtrains.save = function()
@@ -43,6 +55,25 @@ advtrains.save = function()
 		return
 	end
 	local file, err = io.open(advtrains.fpath, "w")
+	if err then
+		return err
+	end
+	file:write(datastr)
+	file:close()
+	
+	-- update wagon saves
+	for _,wagon in pairs(minetest.luaentities) do
+		if wagon.is_wagon and wagon.initialized then
+			advtrains.wagon_save[wagon.unique_id]=advtrains.merge_tables(wagon)--so, will only copy non_metatable elements
+		end
+	end
+	
+	datastr = minetest.serialize(advtrains.wagon_save)
+	if not datastr then
+		minetest.log("error", "[advtrains] Failed to serialize train data!")
+		return
+	end
+	file, err = io.open(advtrains.fpath_ws, "w")
 	if err then
 		return err
 	end
@@ -136,6 +167,45 @@ function advtrains.train_step(id, train, dtime)
 			end
 		end
 	end
+	
+	--check for any trainpart entities if they have been unloaded. do this only if both front and end positions are loaded, to ensure train entities will be placed inside loaded area, and only every second.
+	train.check_trainpartload=train.check_trainpartload-dtime
+	if train.check_trainpartload<=0 and posfront and posback and minetest.get_node_or_nil(posfront) and minetest.get_node_or_nil(posback) then
+		--it is better to iterate luaentites only once
+		local found_uids={}
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
+				if found_uids[wagon.unique_id] then
+					--duplicate found, delete it
+					wagon.object and wagon.object:remove()
+				else
+					found_uids[wagon.unique_id]=true
+				end
+			end
+		end
+		--now iterate trainparts and check. then cross them out to see if there are wagons over for any reason
+		for pit, w_id in ipairs(train.trainparts) do
+			if found_uids[w_id] then
+				found_uids[w_id]=nil
+			elseif advtrains.wagon_save[w_id] then
+				--spawn a new and initialize it with the properties from wagon_save
+				local le=minetest.env:add_entity(posfront, "advtrains:"..sysname):get_luaentity()
+				for k,v in pairs(advtrains.wagon_save[w_id]) do
+					le[k]=v
+				end
+			else
+				--what the hell...
+				local le=minetest.env:add_entity(posfront, "advtrains:"..sysname):get_luaentity()
+				le.unique_id=w_id
+				le.train_id=id
+				le.pos_in_trainparts=pit
+				advtrains.update_trainpart_properties(id, train)
+			end
+		end
+		train.check_trainpartload=1
+	end
+	
+	
 	--handle collided_with_env
 	if train.recently_collided_with_env then
 		train.tarvelocity=0
@@ -229,40 +299,34 @@ function advtrains.pathpredict(id, train)
 			return false
 		end
 		
-		local node=minetest.get_node_or_nil(advtrains.round_vector_floor_y(train.last_pos))
-		if not node then
-			--print("pathpredict:last_pos node "..minetest.pos_to_string(advtrains.round_vector_floor_y(train.last_pos)).." is nil. block probably not loaded")
-			return nil
-		end
-		local nodename=node.name
+		local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(train.last_pos), train.traintype)
 		
-		if(not advtrains.is_track_and_drives_on(nodename, advtrains.all_traintypes[train.traintype].drives_on)) then
-			advtrains.dumppath(train.path)
-			print("at index "..train.index)
+		if node_ok==nil then
+			--block not loaded, do nothing
+			return nil
+		elseif node_ok==false then
 			print("[advtrains]no track here, (fail) removing train.")
 			advtrains.trains[id]=nil
 			return false
 		end
+		
 		if not train.last_pos_prev then
 			--no chance to recover
 			print("[advtrains]train hasn't saved last-pos_prev, removing train.")
 			advtrains.trains[id]=nil
 			return false
 		end
-		local prevnode=minetest.get_node_or_nil(advtrains.round_vector_floor_y(train.last_pos_prev))
-		if not prevnode then
-			--print("pathpredict:last_pos_prev node "..minetest.pos_to_string(advtrains.round_vector_floor_y(train.last_pos_prev)).." is nil. block probably not loaded")
-			return nil
-		end
-		local prevnodename=prevnode.name
 		
-		if(not advtrains.is_track_and_drives_on(prevnodename, advtrains.all_traintypes[train.traintype].drives_on)) then
+		local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(train.last_pos_prev), train.traintype)
+		
+		if prevnode_ok==nil then
+			--block not loaded, do nothing
+			return nil
+		elseif prevnode_ok==false then
 			print("[advtrains]no track at prev, (fail) removing train.")
 			advtrains.trains[id]=nil
 			return false
 		end
-		
-		local conn1, conn2=advtrains.get_track_connections(nodename, node.param2)
 		
 		train.index=(train.restore_add_index or 0)+(train.savedpos_off_track_index_offset or 0)
 		--restore_add_index is set by save() to prevent trains hopping to next round index. should be between -0.5 and 0.5
@@ -277,7 +341,7 @@ function advtrains.pathpredict(id, train)
 	local maxn=advtrains.maxN(train.path)
 	while (maxn-train.index) < 2 do--pregenerate
 		--print("[advtrains]maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
-		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], advtrains.all_traintypes[train.traintype].drives_on)
+		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.traintype)
 		if conway then
 			train.path[maxn+1]=conway
 			train.max_index_on_track=maxn
@@ -294,7 +358,7 @@ function advtrains.pathpredict(id, train)
 	local minn=advtrains.minN(train.path)
 	while (train.index-minn) < (train.trainlen or 0) + 2 do --post_generate. has to be at least trainlen.
 		--print("[advtrains]minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
-		local conway=advtrains.conway(train.path[minn], train.path[minn+1], advtrains.all_traintypes[train.traintype].drives_on)
+		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.traintype)
 		if conway then
 			train.path[minn-1]=conway
 			train.min_index_on_track=minn
@@ -384,30 +448,20 @@ function advtrains.split_train_at_wagon(wagon)
 		print("split_train: pos_for_new_train not set")
 		return false
 	end
-	local node=minetest.get_node_or_nil(advtrains.round_vector_floor_y(pos_for_new_train))
-	if not node then
-		print("split_train: pos_for_new_train node "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train)).." is nil. block probably not loaded")
-		return nil
-	end
-	local nodename=node.name
-	
-	if(not advtrains.is_track_and_drives_on(nodename, advtrains.all_traintypes[train.traintype].drives_on)) then
-		print("split_train: pos_for_new_train "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." is not a rail")
+	local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.traintype)
+	if not node_ok then
+		print("split_train: pos_for_new_train "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." not loaded or is not a rail")
 		return false
 	end
+	
 	if not train.last_pos_prev then
 		print("split_train: pos_for_new_train_prev not set")
 		return false
 	end
-	local prevnode=minetest.get_node_or_nil(advtrains.round_vector_floor_y(pos_for_new_train_prev))
-	if not node then
-		print("split_train: pos_for_new_train_prev node "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." is nil. block probably not loaded")
-		return false
-	end
-	local prevnodename=prevnode.name
 	
-	if(not advtrains.is_track_and_drives_on(prevnodename, advtrains.all_traintypes[train.traintype].drives_on)) then
-		print("split_train: pos_for_new_train_prev "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." is not a rail")
+	local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.traintype)
+	if not prevnode_ok then
+		print("split_train: pos_for_new_train_prev "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." not loaded or is not a rail")
 		return false
 	end
 	

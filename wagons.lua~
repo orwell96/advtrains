@@ -60,6 +60,7 @@ function wagon:on_activate(staticdata, dtime_s)
 		if tmp then
 			self.unique_id=tmp.unique_id
 			self.train_id=tmp.train_id
+			self.wagon_flipped=tmp.wagon_flipped
 		end
 
 	end
@@ -88,9 +89,12 @@ function wagon:on_activate(staticdata, dtime_s)
 end
 
 function wagon:get_staticdata()
+	--save to table before being unloaded
+	advtrains.wagon_save[self.unique_id]=advtrains.merge_tables(self)
 	return minetest.serialize({
 		unique_id=self.unique_id,
 		train_id=self.train_id,
+		wagon_flipped=self.wagon_flipped,
 	})
 end
 
@@ -177,7 +181,7 @@ function wagon:on_step(dtime)
 		return
 	end
 	
-	local pos_in_train_left=self.pos_in_train+0
+	local pos_in_train_left=(self.pos_in_train or 0)+0 --pos_in_train may be not set if this was emergency-instantiated by train_step when it found out that an object is missing but no wagon_save was found.
 	local index=gp.index
 	if pos_in_train_left>(index-math.floor(index))*(gp.path_dist[math.floor(index)] or 1) then
 		pos_in_train_left=pos_in_train_left - (index-math.floor(index))*(gp.path_dist[math.floor(index)] or 1)

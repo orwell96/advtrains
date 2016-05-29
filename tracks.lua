@@ -31,6 +31,7 @@ function advtrains.register_tracks(tracktype, def)
 			if advtrains.is_train_at_pos(pos) then return end
 			advtrains.invalidate_all_paths()
 			minetest.set_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+			advtrains.reset_trackdb_position(pos)
 		end
 	end
 	local function make_overdef(img_suffix, conn1, conn2, switchfunc)
@@ -70,8 +71,12 @@ function advtrains.register_tracks(tracktype, def)
 		can_dig=function(pos)
 			return not advtrains.is_train_at_pos(pos)
 		end,
-		after_dig_node=function()
+		after_dig_node=function(pos)
 			advtrains.invalidate_all_paths()
+			advtrains.reset_trackdb_position(pos)
+		end
+		after_place_node=function(pos)
+			advtrains.reset_trackdb_position(pos)
 		end
 	}
 	minetest.register_node(def.nodename_prefix.."_st", advtrains.merge_tables(common_def, make_overdef("st", 0, 4), def.straight or {}))
@@ -136,7 +141,7 @@ end
 
 function advtrains.get_track_connections(name, param2)
 	local nodedef=minetest.registered_nodes[name]
-	if not nodedef then print("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0,4 end
+	if not nodedef then print("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 4, 0, 0, 0 end
 	local noderot=param2
 	if not param2 then noderot=0 end
 	if noderot > 3 then print("[advtrains] get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
