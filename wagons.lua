@@ -72,6 +72,13 @@ function wagon:on_activate(staticdata, dtime_s)
 	--does this object already have an ID?
 	if not self.unique_id then
 		self.unique_id=os.time()..os.clock()--should be random enough.
+	else
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.unique_id==self.unique_id then--i am a duplicate!
+				self.object:remove()
+				return
+			end
+		end
 	end
 	--is my train still here
 	if not self.train_id or not self:train() then

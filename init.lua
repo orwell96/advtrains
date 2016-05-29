@@ -17,3 +17,5 @@ dofile(advtrains.modpath.."/trainhud.lua")
 dofile(advtrains.modpath.."/trackplacer.lua")
 dofile(advtrains.modpath.."/tracks.lua")
 dofile(advtrains.modpath.."/wagons.lua")
+
+dofile(advtrains.modpath.."/pseudoload.lua");

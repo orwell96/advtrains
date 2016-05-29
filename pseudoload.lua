@@ -9,6 +9,9 @@ advtrains.trackdb={}
 --[] may be missing if 0,0,0
 
 --load initially
+--delayed since all traintypes need to be registered
+minetest.after(0, function()
+
 for tt, _ in pairs(advtrains.all_traintypes) do
 	local pl_fpath=minetest.get_worldpath().."/advtrains_trackdb_"..tt
 	advtrains.trackdb[tt]={}
@@ -59,6 +62,8 @@ for tt, _ in pairs(advtrains.all_traintypes) do
 	end
 end
 
+--end minetest.after
+end)
 
 function advtrains.save_trackdb()
 	for tt, _ in pairs(advtrains.all_traintypes) do
@@ -99,8 +104,8 @@ function advtrains.get_rail_info_at(pos, traintype)
 	local node=minetest.get_node_or_nil(pos)
 	if not node then
 		--try raildb
-		local rdp=vector.round(rdp)
-		local dbe=advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z]
+		local rdp=vector.round(pos)
+		local dbe=(advtrains.trackdb[traintype] and advtrains.trackdb[traintype][rdp.y] and advtrains.trackdb[traintype][rdp.y][rdp.x] and advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z])
 		if dbe then
 			return true, dbe.conn1, dbe.conn2, dbe.rely1 or 0, dbe.rely2 or 0, dbe.railheight or 0
 		else
@@ -114,9 +119,12 @@ function advtrains.get_rail_info_at(pos, traintype)
 	local conn1, conn2, rely1, rely2, railheight=advtrains.get_track_connections(node.name, node.param2)
 	
 	--already in trackdb?
-	local rdp=vector.round(rdp)
-	if not advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z] then--TODO is this necessary?
-		advtrains.trackdb[rdp.y][rdp.x][rdp.z]={
+	local rdp=vector.round(pos)
+	if not (advtrains.trackdb[traintype] and advtrains.trackdb[traintype][rdp.y] and advtrains.trackdb[traintype][rdp.y][rdp.x] and advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z]) then--TODO is this necessary?
+		if not advtrains.trackdb[traintype] then advtrains.trackdb[traintype]={} end
+		if not advtrains.trackdb[traintype][rdp.y] then advtrains.trackdb[traintype][rdp.y]={} end
+		if not advtrains.trackdb[traintype][rdp.y][rdp.x] then advtrains.trackdb[traintype][rdp.y][rdp.x]={} end
+		advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z]={
 			conn1=conn1, conn2=conn2,
 			rely1=rely1, rely2=rely2,
 			railheight=railheight
@@ -128,6 +136,9 @@ end
 function advtrains.reset_trackdb_position(pos)
 	local rdp=vector.round(pos)
 	for tt, _ in pairs(advtrains.all_traintypes) do
+		if not advtrains.trackdb[tt] then advtrains.trackdb[tt]={} end
+		if not advtrains.trackdb[tt][rdp.y] then advtrains.trackdb[tt][rdp.y]={} end
+		if not advtrains.trackdb[tt][rdp.y][rdp.x] then advtrains.trackdb[tt][rdp.y][rdp.x]={} end
 		advtrains.trackdb[tt][rdp.y][rdp.x][rdp.z]=nil
 		advtrains.get_rail_info_at(pos, tt)--to restore it.
 	end

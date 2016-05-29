@@ -74,10 +74,10 @@ function advtrains.register_tracks(tracktype, def)
 		after_dig_node=function(pos)
 			advtrains.invalidate_all_paths()
 			advtrains.reset_trackdb_position(pos)
-		end
+		end,
 		after_place_node=function(pos)
 			advtrains.reset_trackdb_position(pos)
-		end
+		end,
 	}
 	minetest.register_node(def.nodename_prefix.."_st", advtrains.merge_tables(common_def, make_overdef("st", 0, 4), def.straight or {}))
 	minetest.register_node(def.nodename_prefix.."_st_45", advtrains.merge_tables(common_def, make_overdef("st_45", 1, 5), def.straight45 or {}))

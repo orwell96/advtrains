@@ -18,6 +18,7 @@ end
 
 
 advtrains.trains={}
+advtrains.wagon_save={}
 
 --load initially
 advtrains.fpath=minetest.get_worldpath().."/advtrains"
@@ -169,7 +170,7 @@ function advtrains.train_step(id, train, dtime)
 	end
 	
 	--check for any trainpart entities if they have been unloaded. do this only if both front and end positions are loaded, to ensure train entities will be placed inside loaded area, and only every second.
-	train.check_trainpartload=train.check_trainpartload-dtime
+	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
 	if train.check_trainpartload<=0 and posfront and posback and minetest.get_node_or_nil(posfront) and minetest.get_node_or_nil(posback) then
 		--it is better to iterate luaentites only once
 		local found_uids={}
@@ -177,7 +178,7 @@ function advtrains.train_step(id, train, dtime)
 			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
 				if found_uids[wagon.unique_id] then
 					--duplicate found, delete it
-					wagon.object and wagon.object:remove()
+					if wagon.object then wagon.object:remove() end
 				else
 					found_uids[wagon.unique_id]=true
 				end
@@ -189,13 +190,15 @@ function advtrains.train_step(id, train, dtime)
 				found_uids[w_id]=nil
 			elseif advtrains.wagon_save[w_id] then
 				--spawn a new and initialize it with the properties from wagon_save
-				local le=minetest.env:add_entity(posfront, "advtrains:"..sysname):get_luaentity()
+				local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].name):get_luaentity()
 				for k,v in pairs(advtrains.wagon_save[w_id]) do
 					le[k]=v
 				end
+				advtrains.wagon_save[w_id].name=nil
+				advtrains.wagon_save[w_id].object=nil
 			else
 				--what the hell...
-				local le=minetest.env:add_entity(posfront, "advtrains:"..sysname):get_luaentity()
+				local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].name):get_luaentity()
 				le.unique_id=w_id
 				le.train_id=id
 				le.pos_in_trainparts=pit
