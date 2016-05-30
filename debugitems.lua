@@ -97,9 +97,9 @@ e.g. itemstack:take_item(); return itemstack
 ^ The default functions handle regular use cases.
 ]]
 })
-minetest.register_tool("advtrains:tttool",
+minetest.register_tool("advtrains:tunnelborer",
 {
-	description = "traintester tool",
+	description = "tunnelborer",
 	groups = {cracky=1}, -- key=name, value=rating; rating=1..3.
 	inventory_image = "drwho_screwdriver.png",
 	wield_image = "drwho_screwdriver.png",
@@ -113,17 +113,14 @@ minetest.register_tool("advtrains:tttool",
 	^ Shall place item and return the leftover itemstack
 	^ default: minetest.item_place ]]
 	on_use = function(itemstack, user, pointed_thing)
-		if pointed_thing.type=="object" then
-			local luaent=pointed_thing.ref:get_luaentity()
-			if luaent and luaent.is_wagon then
-				minetest.chat_send_all("wagon yaw is "..pointed_thing.ref:getyaw())
-				minetest.chat_send_all("trains last yaw is set to "..luaent:train().last_front_yaw)
-				minetest.chat_send_all("end report")
+		if pointed_thing.type=="node" then
+			for x=-1,1 do
+				for y=-1,1 do
+					for z=-1,1 do
+						minetest.remove_node(vector.add(pointed_thing.under, {x=x, y=y, z=z}))
+					end
+				end
 			end
-		else
-			minetest.chat_send_all(dump(minetest.get_node(pointed_thing.under)))
-			local c1, c2=advtrains.get_track_connections(minetest.get_node(pointed_thing.under).name, minetest.get_node(pointed_thing.under).param2)
-			minetest.chat_send_all(c1.." <-> "..c2)
 		end
 	end,
 --[[

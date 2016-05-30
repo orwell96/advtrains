@@ -1,3 +1,4 @@
+local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
 
 --pseudoload.lua
 --responsible for keeping up a database of all rail nodes existant in the world, regardless of whether the mapchunk is loaded.
@@ -9,6 +10,9 @@ advtrains.trackdb={}
 --[] may be missing if 0,0,0
 
 --load initially
+
+--[[ TODO temporary outcomment
+
 --delayed since all traintypes need to be registered
 minetest.after(0, function()
 
@@ -23,9 +27,10 @@ for tt, _ in pairs(advtrains.all_traintypes) do
 		--custom format to save memory
 		while true do
 			local xbytes=file:read(2)
-			if not xbytes then
+			if not xbytes or #xbytes<2 then
 				break --eof reached
 			end
+			print(xbytes)
 			local ybytes=file:read(2)
 			local zbytes=file:read(2)
 			local x=(string.byte(xbytes[1])-128)*256+(string.byte(xbytes[2]))
@@ -74,9 +79,10 @@ function advtrains.save_trackdb()
 			print("[advtrains]Failed saving advtrains trackdb save file "..er)
 		else
 			--custom format to save memory
-			for x,txl in pairs(advtrains.trackdb[tt]) do
-				for y,tyl in pairs(txl) do
-					for z,rail in pairs(tyl) do
+			for y,tyl in pairs(advtrains.trackdb[tt]) do
+				for x,txl in pairs(tyl) do
+					for z,rail in pairs(txl) do
+						print("write "..x.." "..y.." "..z.." "..minetest.serialize(rail))
 						file:write(string.char(math.floor(x/256)+128)..string.char((x%256)))
 						file:write(string.char(math.floor(y/256)+128)..string.char((y%256)))
 						file:write(string.char(math.floor(z/256)+128)..string.char((z%256)))
@@ -92,6 +98,33 @@ function advtrains.save_trackdb()
 			file:close()
 		end
 	end
+end
+]]--end temp outcomment
+advtrains.trackdb={}
+advtrains.fpath_tdb=minetest.get_worldpath().."/advtrains_trackdb"
+local file, err = io.open(advtrains.fpath_tdb, "r")
+if not file then
+	local er=err or "Unknown Error"
+	print("[advtrains]Failed loading advtrains save file "..er)
+else
+	local tbl = minetest.deserialize(file:read("*a"))
+	if type(tbl) == "table" then
+		advtrains.trackdb=tbl
+	end
+	file:close()
+end
+function advtrains.save_trackdb()
+	local datastr = minetest.serialize(advtrains.trackdb)
+	if not datastr then
+		minetest.log("error", "[advtrains] Failed to serialize trackdb data!")
+		return
+	end
+	local file, err = io.open(advtrains.fpath_tdb, "w")
+	if err then
+		return err
+	end
+	file:write(datastr)
+	file:close()
 end
 
 --get_node with pseudoload.

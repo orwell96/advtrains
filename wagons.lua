@@ -67,6 +67,7 @@ function wagon:on_activate(staticdata, dtime_s)
 	self.old_pos = self.object:getpos()
 	self.old_velocity = self.velocity
 	self.initialized_pre=true
+	self.entity_name=self.name
 	
 	--same code is in on_step
 	--does this object already have an ID?
@@ -125,6 +126,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		
 		table.remove(self:train().trainparts, self.pos_in_trainparts)
 		advtrains.update_trainpart_properties(self.train_id)
+		advtrains.wagon_save[self.unique_id]=nil
 		return
 
 
@@ -138,18 +140,15 @@ function wagon:on_step(dtime)
 		return
 	end
 	
+	self.entity_name=self.name
 	--does this object already have an ID?
 	if not self.unique_id then
 		self.unique_id=os.time()..os.clock()--should be random enough.
 	end
 	--is my train still here
 	if not self.train_id or not self:train() then
-		if self.initialized then
-			print("[advtrains][wagon "..self.unique_id.."] missing train_id, destroying")
-			self.object:remove()
-			return
-		end
-		print("[advtrains][wagon "..self.unique_id.."] missing train_id, but not yet initialized, returning")
+		print("[advtrains][wagon "..self.unique_id.."] missing train_id, destroying")
+		self.object:remove()
 		return
 	elseif not self.initialized then
 		self.initialized=true
@@ -166,7 +165,7 @@ function wagon:on_step(dtime)
 			elseif (not self.wagon_flipped and pc.down) or (self.wagon_flipped and pc.up) then --slower
 				self:train().tarvelocity=math.max(self:train().tarvelocity-1, -(advtrains.all_traintypes[self:train().traintype].max_speed or 10))
 			elseif pc.aux1 then --slower
-				if math.abs(self:train().velocity)<=3 then
+				if true or math.abs(self:train().velocity)<=3 then--TODO debug
 					self.driver:set_detach()
 					self.driver:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 					advtrains.set_trainhud(self.driver:get_player_name(), "")

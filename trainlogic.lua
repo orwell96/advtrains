@@ -68,7 +68,18 @@ advtrains.save = function()
 			advtrains.wagon_save[wagon.unique_id]=advtrains.merge_tables(wagon)--so, will only copy non_metatable elements
 		end
 	end
-	
+	--cross out userdata
+	for w_id, data in pairs(advtrains.wagon_save) do
+		data.name=nil
+		data.object=nil
+		if data.driver then
+			data.driver_name=data.driver:get_player_name()
+			data.driver=nil
+		else
+			data.driver_name=nil
+		end
+	end
+	--print(dump(advtrains.wagon_save))
 	datastr = minetest.serialize(advtrains.wagon_save)
 	if not datastr then
 		minetest.log("error", "[advtrains] Failed to serialize train data!")
@@ -80,6 +91,8 @@ advtrains.save = function()
 	end
 	file:write(datastr)
 	file:close()
+	
+	advtrains.save_trackdb()
 end
 minetest.register_on_shutdown(advtrains.save)
 
@@ -90,7 +103,7 @@ minetest.register_globalstep(function(dtime)
 		--print("[advtrains] audit step")
 		--clean up orphaned trains
 		for k,v in pairs(advtrains.trains) do
-			advtrains.update_trainpart_properties(k)
+			--advtrains.update_trainpart_properties(k)
 			if #v.trainparts==0 then
 				advtrains.trains[k]=nil
 			end
@@ -112,7 +125,7 @@ function advtrains.train_step(id, train, dtime)
 	--if not train.last_pos then advtrains.trains[id]=nil return end
 	
 	if not advtrains.pathpredict(id, train) then 
-		--print("pathpredict failed(returned false)")
+		print("pathpredict failed(returned false)")
 		train.velocity=0
 		train.tarvelocity=0
 		return
@@ -122,7 +135,7 @@ function advtrains.train_step(id, train, dtime)
 	if not path then
 		train.velocity=0
 		train.tarvelocity=0
-		--print("train has no path")
+		print("train has no path for whatever reason")
 		return 
 	end
 	--apply off-track handling:
@@ -169,40 +182,48 @@ function advtrains.train_step(id, train, dtime)
 		end
 	end
 	
-	--check for any trainpart entities if they have been unloaded. do this only if both front and end positions are loaded, to ensure train entities will be placed inside loaded area, and only every second.
+	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
 	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
-	if train.check_trainpartload<=0 and posfront and posback and minetest.get_node_or_nil(posfront) and minetest.get_node_or_nil(posback) then
-		--it is better to iterate luaentites only once
-		local found_uids={}
-		for _,wagon in pairs(minetest.luaentities) do
-			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
-				if found_uids[wagon.unique_id] then
-					--duplicate found, delete it
-					if wagon.object then wagon.object:remove() end
-				else
-					found_uids[wagon.unique_id]=true
+	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
+	if train.check_trainpartload<=0 and posfront and posback then
+		print(minetest.pos_to_string(posfront))
+		local should_check=false
+		for _,p in ipairs(minetest.get_connected_players()) do
+			should_check=should_check or ((vector.distance(posfront, p:getpos())<node_range) and (vector.distance(posback, p:getpos())<node_range))
+		end
+		if should_check then
+			--it is better to iterate luaentites only once
+			print("check_trainpartload")
+			local found_uids={}
+			for _,wagon in pairs(minetest.luaentities) do
+				if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
+					if found_uids[wagon.unique_id] then
+						--duplicate found, delete it
+						if wagon.object then wagon.object:remove() end
+					else
+						found_uids[wagon.unique_id]=true
+					end
 				end
 			end
-		end
-		--now iterate trainparts and check. then cross them out to see if there are wagons over for any reason
-		for pit, w_id in ipairs(train.trainparts) do
-			if found_uids[w_id] then
-				found_uids[w_id]=nil
-			elseif advtrains.wagon_save[w_id] then
-				--spawn a new and initialize it with the properties from wagon_save
-				local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].name):get_luaentity()
-				for k,v in pairs(advtrains.wagon_save[w_id]) do
-					le[k]=v
+			print("found_uids: "..dump(found_uids))
+			--now iterate trainparts and check. then cross them out to see if there are wagons over for any reason
+			for pit, w_id in ipairs(train.trainparts) do
+				if found_uids[w_id] then
+					print(w_id.." still loaded")
+				elseif advtrains.wagon_save[w_id] then
+					print(w_id.." not loaded, but save available")
+					--spawn a new and initialize it with the properties from wagon_save
+					local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].entity_name):get_luaentity()
+					for k,v in pairs(advtrains.wagon_save[w_id]) do
+						le[k]=v
+					end
+					advtrains.wagon_save[w_id].name=nil
+					advtrains.wagon_save[w_id].object=nil
+				else
+					print(w_id.." not loaded and no save available")
+					--what the hell...
+					table.remove(train.trainparts, pit)
 				end
-				advtrains.wagon_save[w_id].name=nil
-				advtrains.wagon_save[w_id].object=nil
-			else
-				--what the hell...
-				local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].name):get_luaentity()
-				le.unique_id=w_id
-				le.train_id=id
-				le.pos_in_trainparts=pit
-				advtrains.update_trainpart_properties(id, train)
 			end
 		end
 		train.check_trainpartload=1
@@ -419,6 +440,7 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local rel_pos=0
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
+		local any_loaded=false
 		for _,wagon in pairs(minetest.luaentities) do
 			if wagon.is_wagon and wagon.initialized and wagon.unique_id==w_id then
 				rel_pos=rel_pos+wagon.wagon_span
@@ -433,7 +455,11 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 					wagon.wagon_flipped = not wagon.wagon_flipped
 				end
 				rel_pos=rel_pos+wagon.wagon_span
+				any_loaded=true
 			end
+		end
+		if not any_loaded then
+			print("update_trainpart_properties wagon "..w_id.." not loaded, ignoring it.")
 		end
 	end
 	train.trainlen=rel_pos

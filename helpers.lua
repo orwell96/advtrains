@@ -107,7 +107,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 		return nil
 	end
 	
-	local nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+	local nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), traintype)
 	
 	--is it a rail?
 	if(not nextnode_ok) then
@@ -115,7 +115,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
-		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), traintype)
 		if(not nextnode_ok) then
 			print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
@@ -128,7 +128,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
-		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), traintype)
 		if(not nextnode_ok) then
 			print("[advtrains]in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
