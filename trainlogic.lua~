@@ -186,14 +186,14 @@ function advtrains.train_step(id, train, dtime)
 	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
 	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
 	if train.check_trainpartload<=0 and posfront and posback then
-		--print(minetest.pos_to_string(posfront))
+		print(minetest.pos_to_string(posfront))
 		local should_check=false
 		for _,p in ipairs(minetest.get_connected_players()) do
 			should_check=should_check or ((vector.distance(posfront, p:getpos())<node_range) and (vector.distance(posback, p:getpos())<node_range))
 		end
 		if should_check then
 			--it is better to iterate luaentites only once
-			--print("check_trainpartload")
+			print("check_trainpartload")
 			local found_uids={}
 			for _,wagon in pairs(minetest.luaentities) do
 				if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
@@ -205,13 +205,13 @@ function advtrains.train_step(id, train, dtime)
 					end
 				end
 			end
-			--print("found_uids: "..dump(found_uids))
+			print("found_uids: "..dump(found_uids))
 			--now iterate trainparts and check. then cross them out to see if there are wagons over for any reason
 			for pit, w_id in ipairs(train.trainparts) do
 				if found_uids[w_id] then
-					--print(w_id.." still loaded")
+					print(w_id.." still loaded")
 				elseif advtrains.wagon_save[w_id] then
-					--print(w_id.." not loaded, but save available")
+					print(w_id.." not loaded, but save available")
 					--spawn a new and initialize it with the properties from wagon_save
 					local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].entity_name):get_luaentity()
 					for k,v in pairs(advtrains.wagon_save[w_id]) do
