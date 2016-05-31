@@ -19,3 +19,4 @@ dofile(advtrains.modpath.."/tracks.lua")
 dofile(advtrains.modpath.."/wagons.lua")
 
 dofile(advtrains.modpath.."/pseudoload.lua");
+dofile(advtrains.modpath.."/couple.lua");

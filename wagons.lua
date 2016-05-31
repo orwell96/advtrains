@@ -53,7 +53,7 @@ function wagon:train()
 end
 
 function wagon:on_activate(staticdata, dtime_s)
-	print("[advtrains][wagon "..(self.unique_id or "no-id").."] activated")
+	--print("[advtrains][wagon "..(self.unique_id or "no-id").."] activated")
 	self.object:set_armor_groups({immortal=1})
 	if staticdata then
 		local tmp = minetest.deserialize(staticdata)

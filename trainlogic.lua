@@ -1,7 +1,7 @@
 --trainlogic.lua
 --controls train entities stuff about connecting/disconnecting/colliding trains and other things
 
-local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
+local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
 
 advtrains.train_accel_force=5--per second and divided by number of wagons
 advtrains.train_brake_force=3--per second, not divided by number of wagons
@@ -121,6 +121,11 @@ end)
 function advtrains.train_step(id, train, dtime)
 	
 	--TODO check for all vars to be present
+	
+	--very unimportant thing: check if couple is here
+	if train.couple_eid_front and (not minetest.luaentities[train.couple_eid_front] or not minetest.luaentities[train.couple_eid_front].is_couple) then train.couple_eid_front=nil end
+	if train.couple_eid_back and (not minetest.luaentities[train.couple_eid_back] or not minetest.luaentities[train.couple_eid_back].is_couple) then train.couple_eid_back=nil end
+	
 	
 	--if not train.last_pos then advtrains.trains[id]=nil return end
 	
@@ -372,7 +377,7 @@ function advtrains.pathpredict(id, train)
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update max_index_on_track
-			print("over-generating path max to index "..maxn+1)
+			--print("over-generating path max to index "..maxn+1)
 			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
 		end
 		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
@@ -389,7 +394,7 @@ function advtrains.pathpredict(id, train)
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update min_index_on_track
-			print("over-generating path min to index "..minn-1)
+			--print("over-generating path min to index "..minn-1)
 			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
 		end
 		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
@@ -419,7 +424,6 @@ end
 
 function advtrains.get_or_create_path(id, train)
 	if not train.path then return advtrains.pathpredict(id, train) end
-	
 	return train.path
 end
 
@@ -530,29 +534,94 @@ function advtrains.try_connect_trains(id1, id2)
 	end
 	if #train1.trainparts==0 or #train2.trainparts==0 then return end
 	
-	local frontpos1=train1.path[math.floor(train1.index+0.5)]
-	local backpos1=train1.path[math.floor(train1.index-(train1.trainlen or 2)+0.5)]
-	local frontpos2=train2.path[math.floor(train2.index+0.5)]
-	local backpos2=train2.path[math.floor(train2.index-(train1.trainlen or 2)+0.5)]
+	local frontpos1=advtrains.get_real_index_position(train1.path, train1.index)
+	local backpos1=advtrains.get_real_index_position(train1.path, train1.index-(train1.trainlen or 2))
+	local frontpos2=advtrains.get_real_index_position(train2.path, train2.index)
+	local backpos2=advtrains.get_real_index_position(train2.path, train2.index-(train2.trainlen or 2))
 	
 	if not frontpos1 or not frontpos2 or not backpos1 or not backpos2 then return end
 	
 	--case 1 (first train is front)
-	if vector.equals(frontpos2, backpos1) then
-		advtrains.do_connect_trains(id1, id2)
-	--case 2 (second train is front)
-	elseif vector.equals(frontpos1, backpos2) then
-		advtrains.do_connect_trains(id2, id1)
-	--case 3 
-	elseif vector.equals(backpos2, backpos1) then
-		advtrains.invert_train(id2)
-		advtrains.do_connect_trains(id1, id2)
-	--case 4 
-	elseif vector.equals(frontpos2, frontpos1) then
-		advtrains.invert_train(id1)
-		advtrains.do_connect_trains(id1, id2)
+	if vector.distance(frontpos2, backpos1)<0.5 then
+		advtrains.spawn_couple_if_neccessary(backpos1, frontpos2, id1, id2, true, false)
+		--case 2 (second train is front)
+	elseif vector.distance(frontpos1, backpos2)<0.5 then
+		advtrains.spawn_couple_if_neccessary(backpos2, frontpos1, id2, id1, true, false)
+		--case 3 
+	elseif vector.distance(backpos2, backpos1)<0.5 then
+		advtrains.spawn_couple_if_neccessary(backpos1, backpos2, id1, id2, true, true)
+		--case 4 
+	elseif vector.distance(frontpos2, frontpos1)<0.5 then
+		advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
 	end
 end
+--order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
+--pos1 and pos2 are just needed to form a median.
+function advtrains.spawn_couple_if_neccessary(pos1, pos2, tid1, tid2, train1_is_backpos, train2_is_backpos)
+	--print("spawn_couple_if_neccessary..."..dump({pos1=pos1, pos2=pos2, train1_is_backpos=train1_is_backpos, train2_is_backpos=train2_is_backpos}))
+	local train1=advtrains.trains[tid1]
+	local train2=advtrains.trains[tid2]
+	local t1_has_couple
+	if train1_is_backpos then
+		t1_has_couple=train1.couple_eid_back
+	else
+		t1_has_couple=train1.couple_eid_front
+	end
+	local t2_has_couple
+	if train2_is_backpos then
+		t2_has_couple=train2.couple_eid_back
+	else
+		t2_has_couple=train2.couple_eid_front
+	end
+	
+	if t1_has_couple and t2_has_couple then
+		if t1_has_couple~=t2_has_couple then--what the hell
+			if minetest.object_refs[t2_has_couple] then minetest.object_refs[t2_has_couple]:remove() end
+			if train2_is_backpos then
+				train2.couple_eid_back=t1_has_couple
+			else
+				train2.couple_eid_front=t1_has_couple
+			end
+		end
+	--[[elseif t1_has_couple and not t2_has_couple then
+		if train2_is_backpos then
+			train2.couple_eid_back=t1_has_couple
+		else
+			train2.couple_eid_front=t1_has_couple
+		end
+	elseif not t1_has_couple and t2_has_couple then
+		if train1_is_backpos then
+			train1.couple_eid_back=t2_has_couple
+		else
+			train1.couple_eid_front=t2_has_couple
+		end]]
+	else
+		local pos=advtrains.pos_median(pos1, pos2)
+		local obj=minetest.add_entity(pos, "advtrains:couple")
+		if not obj then print("failed creating object") return end
+		local le=obj:get_luaentity()
+		le.train_id_1=tid1
+		le.train_id_2=tid2
+		le.train1_is_backpos=train1_is_backpos
+		le.train2_is_backpos=train2_is_backpos
+		--find in object_refs
+		for aoi, compare in pairs(minetest.object_refs) do
+			if compare==obj then
+				if train1_is_backpos then
+					train1.couple_eid_back=aoi
+				else
+					train1.couple_eid_front=aoi
+				end
+				if train2_is_backpos then
+					train2.couple_eid_back=aoi
+				else
+					train2.couple_eid_front=aoi
+				end
+			end
+		end
+	end
+end
+
 function advtrains.do_connect_trains(first_id, second_id)
 	local first_wagoncnt=#advtrains.trains[first_id].trainparts
 	local second_wagoncnt=#advtrains.trains[second_id].trainparts
