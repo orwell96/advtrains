@@ -127,6 +127,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		table.remove(self:train().trainparts, self.pos_in_trainparts)
 		advtrains.update_trainpart_properties(self.train_id)
 		advtrains.wagon_save[self.unique_id]=nil
+		if self.discouple_id and minetest.object_refs[self.discouple_id] then minetest.object_refs[self.discouple_id]:remove() end
 		return
 
 
@@ -152,6 +153,28 @@ function wagon:on_step(dtime)
 		return
 	elseif not self.initialized then
 		self.initialized=true
+	end
+	
+	--DisCouple
+	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
+		if not self.discouple_id or not minetest.luaentities[self.discouple_id] then
+			local object=minetest.add_entity(pos, "advtrains:discouple")
+			if object then
+				print("spawning discouple")
+				local le=object:get_luaentity()
+				le.wagon=self
+				--box is hidden when attached, so unuseful.
+				--object:set_attach(self.object, "", {x=0, y=0, z=self.wagon_span*10}, {x=0, y=0, z=0})
+				--find in object_refs
+				for aoi, compare in pairs(minetest.object_refs) do
+					if compare==object then
+						self.discouple_id=aoi
+					end
+				end
+			else
+				print("Couldn't spawn DisCouple")
+			end
+		end
 	end
 	
 	--driver control
@@ -251,7 +274,7 @@ function wagon:on_step(dtime)
 	end
 	
 	self.updatepct_timer=(self.updatepct_timer or 0)-dtime
-	if true or not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.old_yaw~=yaw or self.updatepct_timer<=0 then--only send update packet if something changed
+	if not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.old_yaw~=yaw or self.updatepct_timer<=0 then--only send update packet if something changed
 		self.object:setpos(actual_pos)
 		self.object:setvelocity(velocityvec)
 		self.object:setyaw(yaw)

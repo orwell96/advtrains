@@ -5,7 +5,7 @@
 --set into existing trains to split them when punched.
 --they are attached to the wagons.
 --[[fields
-wagon_id
+wagon
 
 wagons keep their couple entity minetest-internal id inside the field discouple_id. if it refers to nowhere, they will spawn a new one if player is near
 ]]
@@ -28,14 +28,21 @@ minetest.register_entity("advtrains:discouple", {
 		end
 	end,
 	get_staticdata=function() return "DISCOUPLE" end,
-	on_punch=function()
-		for _,wagon in pairs(minetest.luaentities) do
-			if wagon.is_wagon and wagon.initialized and wagon.unique_id==self.wagon_id then
-				advtrains.split_train_at_wagon(wagon)--found in trainlogic.lua
-			end
+	on_punch=function(self)
+		advtrains.split_train_at_wagon(self.wagon)--found in trainlogic.lua
+	end,
+	on_step=function(self, dtime)
+		if not self.wagon then
+			self.object:remove()
 		end
-	end
-	
+		local velocityvec=self.wagon.object:getvelocity()
+		self.updatepct_timer=(self.updatepct_timer or 0)-dtime
+		if not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.updatepct_timer<=0 then--only send update packet if something changed
+			self.object:setpos(vector.add(self.wagon.object:getpos(), {y=0, x=-math.sin(self.wagon.object:getyaw())*self.wagon.wagon_span, z=math.cos(self.wagon.object:getyaw())*self.wagon.wagon_span}))
+			self.object:setvelocity(velocityvec)
+			self.updatepct_timer=2
+		end
+	end,
 })
 
 --advtrains:couple

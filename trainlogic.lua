@@ -473,8 +473,8 @@ end
 function advtrains.split_train_at_wagon(wagon)
 	--get train
 	local train=advtrains.trains[wagon.train_id]
-	local pos_for_new_train=advtrains.get_or_create_path(wagon.train_id, train)[math.floor((train.index or 0)-wagon.pos_in_train-0.5)]
-	local pos_for_new_train_prev=advtrains.get_or_create_path(wagon.train_id, train)[math.floor((train.index or 0)-wagon.pos_in_train-1.5)]
+	local pos_for_new_train=advtrains.get_or_create_path(wagon.train_id, train)[math.floor((train.index or 0)-wagon.pos_in_train+wagon.wagon_span)]
+	local pos_for_new_train_prev=advtrains.get_or_create_path(wagon.train_id, train)[math.floor((train.index or 0)-wagon.pos_in_train-1+wagon.wagon_span)]
 	
 	--before doing anything, check if both are rails. else do not allow
 	if not pos_for_new_train then
