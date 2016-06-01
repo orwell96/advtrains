@@ -172,7 +172,7 @@ function advtrains.train_step(id, train, dtime)
 		for _,v in pairs(objrefs) do
 			local le=v:get_luaentity()
 			if le and le.is_wagon and le.initialized and le.train_id~=id then
-				advtrains.try_connect_trains(id, le.train_id)
+				advtrains.try_connect_trains_and_check_collision(id, le.train_id)
 			end
 		end
 	end
@@ -182,7 +182,7 @@ function advtrains.train_step(id, train, dtime)
 		for _,v in pairs(objrefs) do
 			local le=v:get_luaentity()
 			if le and le.is_wagon and le.initialized and le.train_id~=id then
-				advtrains.try_connect_trains(id, le.train_id)
+				advtrains.try_connect_trains_and_check_collision(id, le.train_id)
 			end
 		end
 	end
@@ -231,7 +231,7 @@ function advtrains.train_step(id, train, dtime)
 				end
 			end
 		end
-		train.check_trainpartload=1
+		train.check_trainpartload=2
 	end
 	
 	
@@ -523,37 +523,62 @@ end
 --->backpos's will match
 --4.   R<->F F<->R flip one of these trains and take it as new parent
 --->frontpos's will match
-function advtrains.try_connect_trains(id1, id2)
+function advtrains.try_connect_trains_and_check_collision(id1, id2)
 	local train1=advtrains.trains[id1]
 	local train2=advtrains.trains[id2]
 	if not train1 or not train2 then return end
 	if not train1.path or not train2.path then return end
-	if train1.traintype~=train2.traintype then
-		--TODO implement collision without connection
-		return
-	end
 	if #train1.trainparts==0 or #train2.trainparts==0 then return end
 	
 	local frontpos1=advtrains.get_real_index_position(train1.path, train1.index)
 	local backpos1=advtrains.get_real_index_position(train1.path, train1.index-(train1.trainlen or 2))
-	local frontpos2=advtrains.get_real_index_position(train2.path, train2.index)
-	local backpos2=advtrains.get_real_index_position(train2.path, train2.index-(train2.trainlen or 2))
-	
-	if not frontpos1 or not frontpos2 or not backpos1 or not backpos2 then return end
-	
-	--case 1 (first train is front)
-	if vector.distance(frontpos2, backpos1)<0.5 then
-		advtrains.spawn_couple_if_neccessary(backpos1, frontpos2, id1, id2, true, false)
-		--case 2 (second train is front)
-	elseif vector.distance(frontpos1, backpos2)<0.5 then
-		advtrains.spawn_couple_if_neccessary(backpos2, frontpos1, id2, id1, true, false)
-		--case 3 
-	elseif vector.distance(backpos2, backpos1)<0.5 then
-		advtrains.spawn_couple_if_neccessary(backpos1, backpos2, id1, id2, true, true)
-		--case 4 
-	elseif vector.distance(frontpos2, frontpos1)<0.5 then
-		advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
+	--couple logic
+	if train1.traintype==train2.traintype then
+		local frontpos2=advtrains.get_real_index_position(train2.path, train2.index)
+		local backpos2=advtrains.get_real_index_position(train2.path, train2.index-(train2.trainlen or 2))
+		
+		if not frontpos1 or not frontpos2 or not backpos1 or not backpos2 then return end
+		
+		--case 1 (first train is front)
+		if vector.distance(frontpos2, backpos1)<0.5 then
+			advtrains.spawn_couple_if_neccessary(backpos1, frontpos2, id1, id2, true, false)
+			--case 2 (second train is front)
+		elseif vector.distance(frontpos1, backpos2)<0.5 then
+			advtrains.spawn_couple_if_neccessary(backpos2, frontpos1, id2, id1, true, false)
+			--case 3 
+		elseif vector.distance(backpos2, backpos1)<0.5 then
+			advtrains.spawn_couple_if_neccessary(backpos1, backpos2, id1, id2, true, true)
+			--case 4 
+		elseif vector.distance(frontpos2, frontpos1)<0.5 then
+			advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
+		end
 	end
+	--check if one train invaded another's critical path area...
+	if not train1.recently_collided_with_env and not train2.recently_collided_with_env then
+		--try to find one of these inside the other train's path
+		--iterated start and end numbers are decimal values, since lua  should count i up by one each iteration, this should be no problem.
+		--0.5: some grace interval, since else the couple entity does not appear
+		for i=(train2.index-(train2.trainlen or 2))+0.5,train2.index-0.5 do
+			local testpos=advtrains.get_real_index_position(train2.path,i)
+			if vector.distance(testpos, backpos1) < 0.5 then
+				--TODO physics
+				train1.velocity=1
+				train2.velocity=-1
+				train1.recently_collided_with_env=true
+				train2.recently_collided_with_env=true
+				return
+			end
+			if vector.distance(testpos, frontpos1) < 0.5 then
+				train1.velocity=-1
+				train2.velocity=1
+				train1.recently_collided_with_env=true
+				train2.recently_collided_with_env=true
+				return
+			end
+			
+		end
+	end
+	
 end
 --order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
 --pos1 and pos2 are just needed to form a median.
