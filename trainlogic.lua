@@ -3,7 +3,10 @@
 
 local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
 
-advtrains.train_accel_force=5--per second and divided by number of wagons
+--printbm=function(str, t) print("[advtrains]"..str.." "..((os.clock()-t)*1000).."ms") end
+printbm=function() end
+
+advtrains.train_accel_force=2--per second and divided by number of wagons
 advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
@@ -100,6 +103,7 @@ advtrains.save_and_audit_timer=advtrains.audit_interval
 minetest.register_globalstep(function(dtime)
 	advtrains.save_and_audit_timer=advtrains.save_and_audit_timer-dtime
 	if advtrains.save_and_audit_timer<=0 then
+		local t=os.clock()
 		--print("[advtrains] audit step")
 		--clean up orphaned trains
 		for k,v in pairs(advtrains.trains) do
@@ -111,11 +115,14 @@ minetest.register_globalstep(function(dtime)
 		--save
 		advtrains.save()
 		advtrains.save_and_audit_timer=advtrains.audit_interval
+		printbm("saving", t)
 	end
 	--regular train step
+	local t=os.clock()
 	for k,v in pairs(advtrains.trains) do
 		advtrains.train_step(k, v, dtime)
 	end
+	printbm("trainsteps", t)
 end)
 
 function advtrains.train_step(id, train, dtime)
@@ -143,9 +150,11 @@ function advtrains.train_step(id, train, dtime)
 		print("train has no path for whatever reason")
 		return 
 	end
+	
+	local train_end_index=advtrains.get_train_end_index(train)
 	--apply off-track handling:
 	local front_off_track=train.max_index_on_track and train.index>train.max_index_on_track
-	local back_off_track=train.min_index_on_track and (train.index-train.trainlen)<train.min_index_on_track
+	local back_off_track=train.min_index_on_track and train_end_index<train.min_index_on_track
 	if front_off_track and back_off_track then--allow movement in both directions
 		if train.tarvelocity>1 then train.tarvelocity=1 end
 		if train.tarvelocity<-1 then train.tarvelocity=-1 end
@@ -176,7 +185,7 @@ function advtrains.train_step(id, train, dtime)
 			end
 		end
 	end
-	local posback=path[math.floor(train.index-(train.trainlen or 0)-1)]
+	local posback=path[math.floor(train_end_index-1)]
 	if posback then
 		local objrefs=minetest.get_objects_inside_radius(posback, search_radius)
 		for _,v in pairs(objrefs) do
@@ -385,7 +394,7 @@ function advtrains.pathpredict(id, train)
 	end
 	
 	local minn=advtrains.minN(train.path)
-	while (train.index-minn) < (train.trainlen or 0) + 2 do --post_generate. has to be at least trainlen.
+	while (train.index-minn) < (train.trainlen or 0) + 2 do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
 		--print("[advtrains]minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.traintype)
 		if conway then
@@ -420,6 +429,9 @@ function advtrains.pathpredict(id, train)
 		train.last_pos_prev=train.path[math.floor(train.index-0.5)]
 	end
 	return train.path
+end
+function advtrains.get_train_end_index(train)
+	return advtrains.get_real_path_index(train, train.trainlen or 2)--this function can be found inside wagons.lua since it's more related to wagons. we just set trainlen as pos_in_train
 end
 
 function advtrains.get_or_create_path(id, train)
@@ -473,8 +485,9 @@ end
 function advtrains.split_train_at_wagon(wagon)
 	--get train
 	local train=advtrains.trains[wagon.train_id]
-	local pos_for_new_train=advtrains.get_or_create_path(wagon.train_id, train)[math.floor((train.index or 0)-wagon.pos_in_train+wagon.wagon_span)]
-	local pos_for_new_train_prev=advtrains.get_or_create_path(wagon.train_id, train)[math.floor((train.index or 0)-wagon.pos_in_train-1+wagon.wagon_span)]
+	local real_pos_in_train=advtrains.get_real_path_index(train, wagon.pos_in_train)
+	local pos_for_new_train=advtrains.get_or_create_path(wagon.train_id, train)[math.floor(real_pos_in_train+wagon.wagon_span)]
+	local pos_for_new_train_prev=advtrains.get_or_create_path(wagon.train_id, train)[math.floor(real_pos_in_train-1+wagon.wagon_span)]
 	
 	--before doing anything, check if both are rails. else do not allow
 	if not pos_for_new_train then
@@ -531,11 +544,11 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 	if #train1.trainparts==0 or #train2.trainparts==0 then return end
 	
 	local frontpos1=advtrains.get_real_index_position(train1.path, train1.index)
-	local backpos1=advtrains.get_real_index_position(train1.path, train1.index-(train1.trainlen or 2))
+	local backpos1=advtrains.get_real_index_position(train1.path, advtrains.get_train_end_index(train1))
 	--couple logic
 	if train1.traintype==train2.traintype then
 		local frontpos2=advtrains.get_real_index_position(train2.path, train2.index)
-		local backpos2=advtrains.get_real_index_position(train2.path, train2.index-(train2.trainlen or 2))
+		local backpos2=advtrains.get_real_index_position(train2.path, advtrains.get_train_end_index(train2))
 		
 		if not frontpos1 or not frontpos2 or not backpos1 or not backpos2 then return end
 		
@@ -558,7 +571,7 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 		--try to find one of these inside the other train's path
 		--iterated start and end numbers are decimal values, since lua  should count i up by one each iteration, this should be no problem.
 		--0.5: some grace interval, since else the couple entity does not appear
-		for i=(train2.index-(train2.trainlen or 2))+0.5,train2.index-0.5 do
+		for i=(advtrains.get_train_end_index(train2)+0.5),train2.index-0.5 do
 			local testpos=advtrains.get_real_index_position(train2.path,i)
 			if vector.distance(testpos, backpos1) < 0.5 then
 				--TODO physics
@@ -667,7 +680,7 @@ function advtrains.invert_train(train_id)
 	
 	local old_path=advtrains.get_or_create_path(train_id, train)
 	train.path={}
-	train.index=-train.index+train.trainlen
+	train.index= - advtrains.get_train_end_index(train1)
 	train.velocity=-train.velocity
 	train.tarvelocity=-train.tarvelocity
 	for k,v in pairs(old_path) do
@@ -693,7 +706,7 @@ function advtrains.is_train_at_pos(pos)
 			local path=advtrains.get_or_create_path(le.train_id, le:train())
 			if path then
 				--print("has path")
-				for i=math.floor(le:train().index-le:train().trainlen+0.5),math.floor(le:train().index+0.5) do
+				for i=math.floor(advtrains.get_train_end_index(le:train())+0.5),math.floor(le:train().index+0.5) do
 					if path[i] then
 						--print("has pathitem "..i.." "..minetest.pos_to_string(path[i]))
 						if vector.equals(advtrains.round_vector_floor_y(path[i]), pos) then

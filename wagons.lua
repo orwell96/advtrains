@@ -134,6 +134,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 end
 
 function wagon:on_step(dtime)
+	local t=os.clock()
 	local pos = self.object:getpos()
 	if not self.initialized_pre then 
 		print("[advtrains] wagon stepping while not yet initialized_pre, returning")
@@ -210,19 +211,7 @@ function wagon:on_step(dtime)
 		return
 	end
 	
-	local pos_in_train_left=self.pos_in_train+0
-	local index=gp.index
-	if pos_in_train_left>(index-math.floor(index))*(gp.path_dist[math.floor(index)] or 1) then
-		pos_in_train_left=pos_in_train_left - (index-math.floor(index))*(gp.path_dist[math.floor(index)] or 1)
-		index=math.floor(index)
-		while pos_in_train_left>(gp.path_dist[index-1] or 1) do
-			pos_in_train_left=pos_in_train_left - (gp.path_dist[index-1] or 1)
-			index=index-1
-		end
-		index=index-(pos_in_train_left/(gp.path_dist[index-1] or 1))
-	else
-		index=index-(pos_in_train_left*(gp.path_dist[math.floor(index-1)] or 1))
-	end
+	local index=advtrains.get_real_path_index(self:train(), self.pos_in_train)
 	--print("trainindex "..gp.index.." wagonindex "..index)
 	
 	--position recalculation
@@ -283,6 +272,24 @@ function wagon:on_step(dtime)
 	
 	self.old_velocity_vector=velocityvec
 	self.old_yaw=yaw
+	printbm("wagon step", t)
+end
+
+function advtrains.get_real_path_index(train, pit)
+	local pos_in_train_left=pit
+	local index=train.index
+	if pos_in_train_left>(index-math.floor(index))*(train.path_dist[math.floor(index)] or 1) then
+		pos_in_train_left=pos_in_train_left - (index-math.floor(index))*(train.path_dist[math.floor(index)] or 1)
+		index=math.floor(index)
+		while pos_in_train_left>(train.path_dist[index-1] or 1) do
+			pos_in_train_left=pos_in_train_left - (train.path_dist[index-1] or 1)
+			index=index-1
+		end
+		index=index-(pos_in_train_left/(train.path_dist[index-1] or 1))
+	else
+		index=index-(pos_in_train_left*(train.path_dist[math.floor(index-1)] or 1))
+	end
+	return index
 end
 
 

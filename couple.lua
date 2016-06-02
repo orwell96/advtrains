@@ -32,6 +32,7 @@ minetest.register_entity("advtrains:discouple", {
 		advtrains.split_train_at_wagon(self.wagon)--found in trainlogic.lua
 	end,
 	on_step=function(self, dtime)
+		local t=os.clock()
 		if not self.wagon then
 			self.object:remove()
 		end
@@ -42,6 +43,7 @@ minetest.register_entity("advtrains:discouple", {
 			self.object:setvelocity(velocityvec)
 			self.updatepct_timer=2
 		end
+		printbm("discouple_step", t)
 	end,
 })
 
@@ -93,6 +95,7 @@ minetest.register_entity("advtrains:couple", {
 		self.object:remove()
 	end,
 	on_step=function(self, dtime)
+		local t=os.clock()
 		if not self.train_id_1 or not self.train_id_2 then print("wtf no train ids?")return end
 		local train1=advtrains.trains[self.train_id_1]
 		local train2=advtrains.trains[self.train_id_2]
@@ -105,15 +108,14 @@ minetest.register_entity("advtrains:couple", {
 		if not self.train1_is_backpos then
 			tp1=advtrains.get_real_index_position(train1.path, train1.index)
 		else
-			tp1=advtrains.get_real_index_position(train1.path, train1.index-(train1.trainlen or 2))
+			tp1=advtrains.get_real_index_position(train1.path, advtrains.get_train_end_index(train1))
 		end
 		local tp2
 		if not self.train2_is_backpos then
 			tp2=advtrains.get_real_index_position(train2.path, train2.index)
 		else
-			tp2=advtrains.get_real_index_position(train2.path, train2.index-(train2.trainlen or 2))
+			tp2=advtrains.get_real_index_position(train2.path, advtrains.get_train_end_index(train2))
 		end
-		local function nilsave_pts(pos) return pos and minetest.pos_to_string(pos) or "nil" end
 		if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<0.5) then
 			self.object:remove()
 			return
@@ -123,5 +125,6 @@ minetest.register_entity("advtrains:couple", {
 				self.object:setpos(pos_median)
 			end
 		end
+		printbm("couple step", t)
 	end,
 }) 
