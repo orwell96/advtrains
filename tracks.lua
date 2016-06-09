@@ -122,7 +122,7 @@ end
 
 advtrains.register_tracks("regular", {
 	nodename_prefix="advtrains:track",
-	texture_prefix="track",
+	texture_prefix="advtrains_track",
 	description="Regular Train Track",
 })
 
