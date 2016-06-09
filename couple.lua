@@ -39,7 +39,8 @@ minetest.register_entity("advtrains:discouple", {
 		local velocityvec=self.wagon.object:getvelocity()
 		self.updatepct_timer=(self.updatepct_timer or 0)-dtime
 		if not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.updatepct_timer<=0 then--only send update packet if something changed
-			self.object:setpos(vector.add(self.wagon.object:getpos(), {y=0, x=-math.sin(self.wagon.object:getyaw())*self.wagon.wagon_span, z=math.cos(self.wagon.object:getyaw())*self.wagon.wagon_span}))
+			local flipsign=self.wagon.wagon_flipped and -1 or 1
+			self.object:setpos(vector.add(self.wagon.object:getpos(), {y=0, x=-math.sin(self.wagon.object:getyaw())*self.wagon.wagon_span*flipsign, z=math.cos(self.wagon.object:getyaw())*self.wagon.wagon_span*flipsign}))
 			self.object:setvelocity(velocityvec)
 			self.updatepct_timer=2
 		end

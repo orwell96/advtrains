@@ -156,28 +156,6 @@ function wagon:on_step(dtime)
 		self.initialized=true
 	end
 	
-	--DisCouple
-	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
-		if not self.discouple_id or not minetest.luaentities[self.discouple_id] then
-			local object=minetest.add_entity(pos, "advtrains:discouple")
-			if object then
-				print("spawning discouple")
-				local le=object:get_luaentity()
-				le.wagon=self
-				--box is hidden when attached, so unuseful.
-				--object:set_attach(self.object, "", {x=0, y=0, z=self.wagon_span*10}, {x=0, y=0, z=0})
-				--find in object_refs
-				for aoi, compare in pairs(minetest.object_refs) do
-					if compare==object then
-						self.discouple_id=aoi
-					end
-				end
-			else
-				print("Couldn't spawn DisCouple")
-			end
-		end
-	end
-	
 	--driver control
 	if self.driver and self.is_locomotive then
 		if self.driver:get_player_control_bits()~=self.old_player_control_bits then
@@ -205,6 +183,34 @@ function wagon:on_step(dtime)
 	end
 	
 	local gp=self:train()
+	
+	--DisCouple
+	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
+		if gp.velocity==0 then
+			if not self.discouple_id or not minetest.luaentities[self.discouple_id] then
+				local object=minetest.add_entity(pos, "advtrains:discouple")
+				if object then
+					print("spawning discouple")
+					local le=object:get_luaentity()
+					le.wagon=self
+					--box is hidden when attached, so unuseful.
+					--object:set_attach(self.object, "", {x=0, y=0, z=self.wagon_span*10}, {x=0, y=0, z=0})
+					--find in object_refs
+					for aoi, compare in pairs(minetest.object_refs) do
+						if compare==object then
+							self.discouple_id=aoi
+						end
+					end
+				else
+					print("Couldn't spawn DisCouple")
+				end
+			end
+		else
+			if self.discouple_id and minetest.luaentities[self.discouple_id] then
+				minetest.object_refs[self.discouple_id]:remove()
+			end
+		end
+	end
 	--for path to be available. if not, skip step
 	if not advtrains.get_or_create_path(self.train_id, gp) then
 		self.object:setvelocity({x=0, y=0, z=0})
