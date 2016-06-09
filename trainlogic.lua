@@ -81,6 +81,10 @@ advtrains.save = function()
 		else
 			data.driver_name=nil
 		end
+		if data.discouple then
+			data.discouple.object:remove()
+			data.discouple=nil
+		end
 	end
 	--print(dump(advtrains.wagon_save))
 	datastr = minetest.serialize(advtrains.wagon_save)

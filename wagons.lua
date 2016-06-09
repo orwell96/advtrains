@@ -129,7 +129,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		table.remove(self:train().trainparts, self.pos_in_trainparts)
 		advtrains.update_trainpart_properties(self.train_id)
 		advtrains.wagon_save[self.unique_id]=nil
-		if self.discouple_id and minetest.object_refs[self.discouple_id] then minetest.object_refs[self.discouple_id]:remove() end
+		if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
 		return
 
 
@@ -189,27 +189,21 @@ function wagon:on_step(dtime)
 	--DisCouple
 	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
 		if gp.velocity==0 then
-			if not self.discouple_id or not minetest.luaentities[self.discouple_id] then
+			if not self.discouple or not self.discouple.object:getyaw() then
 				local object=minetest.add_entity(pos, "advtrains:discouple")
 				if object then
-					print("spawning discouple")
 					local le=object:get_luaentity()
 					le.wagon=self
 					--box is hidden when attached, so unuseful.
 					--object:set_attach(self.object, "", {x=0, y=0, z=self.wagon_span*10}, {x=0, y=0, z=0})
-					--find in object_refs
-					for aoi, compare in pairs(minetest.object_refs) do
-						if compare==object then
-							self.discouple_id=aoi
-						end
-					end
+					self.discouple=le
 				else
 					print("Couldn't spawn DisCouple")
 				end
 			end
 		else
-			if self.discouple_id and minetest.luaentities[self.discouple_id] then
-				minetest.object_refs[self.discouple_id]:remove()
+			if self.discouple and self.discouple.object:getyaw() then
+				self.discouple.object:remove()
 			end
 		end
 	end

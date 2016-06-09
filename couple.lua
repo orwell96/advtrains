@@ -36,6 +36,10 @@ minetest.register_entity("advtrains:discouple", {
 		if not self.wagon then
 			self.object:remove()
 		end
+		--getyaw seems to be a reliable method to check if an object is loaded...if it returns nil, it is not.
+		if not self.wagon.object:getyaw() then
+			self.object:remove()
+		end
 		local velocityvec=self.wagon.object:getvelocity()
 		self.updatepct_timer=(self.updatepct_timer or 0)-dtime
 		if not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.updatepct_timer<=0 then--only send update packet if something changed
