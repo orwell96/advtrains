@@ -122,7 +122,9 @@ function advtrains.register_track_placer(nnprefix, imgprefix, dispname)
 				local pos=pointed_thing.above
 				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to then
 					advtrains.placetrack(pos, nnprefix)
-					itemstack:take_item()
+					if not minetest.setting_getbool("creative_mode") then
+						itemstack:take_item()
+					end
 				end
 			end
 			return itemstack
