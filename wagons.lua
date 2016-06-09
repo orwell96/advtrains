@@ -37,12 +37,14 @@ function wagon:on_rightclick(clicker)
 		return
 	end	
 	if self.driver and clicker == self.driver then
+		advtrains.player_to_wagon_mapping[self.driver:get_player_name()]=nil
 		advtrains.set_trainhud(self.driver:get_player_name(), "")
 		self.driver = nil
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 	elseif not self.driver then
 		self.driver = clicker
+		advtrains.player_to_wagon_mapping[clicker:get_player_name()]=self
 		clicker:set_attach(self.object, "", self.attach_offset, {x=0,y=0,z=0})
 		clicker:set_eye_offset(self.view_offset, self.view_offset)
 	end
@@ -355,7 +357,7 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	textures = {"advtrains_newlocomotive.png"},
 	is_locomotive=true,
 	attach_offset={x=5, y=10, z=-10},
-	view_offset={x=0, y=6, z=18},
+	view_offset={x=0, y=6, z=0},
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
