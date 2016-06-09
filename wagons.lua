@@ -40,6 +40,7 @@ function wagon:on_rightclick(clicker)
 		advtrains.player_to_wagon_mapping[self.driver:get_player_name()]=nil
 		advtrains.set_trainhud(self.driver:get_player_name(), "")
 		self.driver = nil
+		self.driver_name = nil
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 	elseif not self.driver then
@@ -158,6 +159,17 @@ function wagon:on_step(dtime)
 		self.initialized=true
 	end
 	
+	--re-attach driver if he got lost
+	if not self.driver and self.driver_name then
+		local clicker=minetest.get_player_by_name(self.driver_name)
+		if clicker then
+			self.driver = clicker
+			advtrains.player_to_wagon_mapping[clicker:get_player_name()]=self
+			clicker:set_attach(self.object, "", self.attach_offset, {x=0,y=0,z=0})
+			clicker:set_eye_offset(self.view_offset, self.view_offset)
+		end
+	end
+	
 	--driver control
 	if self.driver and self.is_locomotive then
 		if self.driver:get_player_control_bits()~=self.old_player_control_bits then
@@ -170,10 +182,12 @@ function wagon:on_step(dtime)
 				self:train().tarvelocity=math.max(self:train().tarvelocity-1, -(advtrains.all_traintypes[self:train().traintype].max_speed or 10))
 			elseif pc.aux1 then --slower
 				if true or math.abs(self:train().velocity)<=3 then--TODO debug
+					advtrains.player_to_wagon_mapping[self.driver:get_player_name()]=nil
 					self.driver:set_detach()
 					self.driver:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 					advtrains.set_trainhud(self.driver:get_player_name(), "")
 					self.driver = nil
+					self.driver_name = nil
 					return--(don't let it crash because of statement below)
 				else
 					minetest.chat_send_player(self.driver:get_player_name(), "Can't get off driving train!")
