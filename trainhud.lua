@@ -33,8 +33,8 @@ function advtrains.hud_train_format(train, flip)
 	if flip then fct=-1 end
 	if not train then return "" end
 	local max=advtrains.all_traintypes[train.traintype].max_speed or 10
-	local vel=math.ceil(train.velocity)*fct
-	local tvel=math.ceil(train.tarvelocity)*fct
+	local vel=advtrains.abs_ceil(train.velocity)*fct
+	local tvel=advtrains.abs_ceil(train.tarvelocity)*fct
 	local firstLine, secondLine
 	if vel<0 then
 		firstLine="Speed: <"..string.rep("_", vel+max)..string.rep("+", -vel).."|"..string.rep("_", max)..">"

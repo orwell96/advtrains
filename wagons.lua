@@ -268,6 +268,9 @@ function wagon:on_step(dtime)
 		self.object:setvelocity(velocityvec)
 		self.object:setyaw(yaw)
 		self.updatepct_timer=2
+		if self.update_animation then
+			self:update_animation(gp.velocity)
+		end
 	end
 	
 	self.old_velocity_vector=velocityvec
@@ -336,6 +339,11 @@ advtrains.register_wagon("greenwagon", "steam",{textures = {"green.png"}})
 advtrains.register_wagon("redwagon", "steam",{textures = {"red.png"}})
 advtrains.register_wagon("yellowwagon", "steam",{textures = {"yellow.png"}})
 ]]
+
+--[[
+	wagons can define update_animation(self, velocity) if they have a speed-dependent animation
+	this function will be called when the velocity vector changes or every 2 seconds.
+]]
 advtrains.register_wagon("newlocomotive", "steam",{
 	mesh="newlocomotive.b3d",
 	textures = {"advtrains_newlocomotive.png"},
@@ -345,6 +353,12 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	update_animation=function(self, velocity)
+		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
+			self.object:set_animation({x=1,y=60}, math.floor(velocity))
+			self.old_anim_velocity=advtrains.abs_ceil(velocity)
+		end
+	end
 })
 advtrains.register_wagon("wagon_default", "steam",{
 	mesh="wagon.b3d",

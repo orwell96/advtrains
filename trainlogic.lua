@@ -574,16 +574,18 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 		for i=(advtrains.get_train_end_index(train2)+0.5),train2.index-0.5 do
 			local testpos=advtrains.get_real_index_position(train2.path,i)
 			if vector.distance(testpos, backpos1) < 0.5 then
+				local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				--TODO physics
 				train1.velocity=1
-				train2.velocity=-1
+				train2.velocity=v2_sign
 				train1.recently_collided_with_env=true
 				train2.recently_collided_with_env=true
 				return
 			end
 			if vector.distance(testpos, frontpos1) < 0.5 then
+				local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				train1.velocity=-1
-				train2.velocity=1
+				train2.velocity=v2_sign
 				train1.recently_collided_with_env=true
 				train2.recently_collided_with_env=true
 				return
@@ -680,7 +682,7 @@ function advtrains.invert_train(train_id)
 	
 	local old_path=advtrains.get_or_create_path(train_id, train)
 	train.path={}
-	train.index= - advtrains.get_train_end_index(train1)
+	train.index= - advtrains.get_train_end_index(train)
 	train.velocity=-train.velocity
 	train.tarvelocity=-train.tarvelocity
 	for k,v in pairs(old_path) do

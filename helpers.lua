@@ -220,3 +220,6 @@ end
 function advtrains.pos_median(pos1, pos2)
 	return {x=pos1.x-(pos1.x-pos2.x)*0.5, y=pos1.y-(pos1.y-pos2.y)*0.5, z=pos1.z-(pos1.z-pos2.z)*0.5}
 end
+function advtrains.abs_ceil(i)
+	return math.ceil(math.abs(i))*math.sign(i)
+end
