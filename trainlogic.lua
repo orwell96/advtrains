@@ -577,11 +577,12 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 		--0.5: some grace interval, since else the couple entity does not appear
 		for i=(advtrains.get_train_end_index(train2)+0.5),train2.index-0.5 do
 			local testpos=advtrains.get_real_index_position(train2.path,i)
+			--must look for center positions of both trains and compare these, else bugs.
 			if vector.distance(testpos, backpos1) < 0.5 then
-				local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
+				--local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				--TODO physics
 				train1.velocity=1
-				train2.velocity=v2_sign
+				train2.velocity=advtrains.trains_facing(train1, train2) and -1 or 1
 				train1.recently_collided_with_env=true
 				train2.recently_collided_with_env=true
 				return
@@ -589,7 +590,7 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 			if vector.distance(testpos, frontpos1) < 0.5 then
 				local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				train1.velocity=-1
-				train2.velocity=v2_sign
+				train2.velocity=advtrains.trains_facing(train1, train2) and -1 or 1
 				train1.recently_collided_with_env=true
 				train2.recently_collided_with_env=true
 				return
@@ -599,6 +600,23 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 	end
 	
 end
+--true when trains are facing each other. needed on colliding.
+-- check done by iterating paths and checking their direction
+--returns nil when not on the same track at all. this distinction may not always be needed.
+function advtrains.trains_facing(train1, train2)
+	local sr_pos=train1.path[math.floor(train1.index)]
+	local sr_pos_p=train1.path[math.floor(train1.index)-1]
+
+	for i=advtrains.minN(train2.path), advtrains.maxN(train2.path) do
+		if vector.equals(sr_pos, train2.path[i]) then
+			if vector.equals(sr_pos_p, train2.path[i+1]) then return true end
+			if vector.equals(sr_pos_p, train2.path[i-1]) then return false end
+			return nil
+		end
+	end
+	return nil
+end
+
 --order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
 --pos1 and pos2 are just needed to form a median.
 function advtrains.spawn_couple_if_neccessary(pos1, pos2, tid1, tid2, train1_is_backpos, train2_is_backpos)
