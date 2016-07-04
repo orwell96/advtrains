@@ -347,7 +347,7 @@ function advtrains.register_wagon(sysname, traintype, prototype)
 		end,
 	})
 end
-advtrains.register_train_type("steam", {"regular"})
+advtrains.register_train_type("steam", {"regular", "fineturns"})
 
 --[[advtrains.register_wagon("blackwagon", "steam",{textures = {"black.png"}})
 advtrains.register_wagon("bluewagon", "steam",{textures = {"blue.png"}})
