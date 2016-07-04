@@ -577,7 +577,6 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 		--0.5: some grace interval, since else the couple entity does not appear
 		for i=(advtrains.get_train_end_index(train2)+0.5),train2.index-0.5 do
 			local testpos=advtrains.get_real_index_position(train2.path,i)
-			--must look for center positions of both trains and compare these, else bugs.
 			if vector.distance(testpos, backpos1) < 0.5 then
 				--local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				--TODO physics
