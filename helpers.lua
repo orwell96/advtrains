@@ -1,35 +1,32 @@
 --advtrains by orwell96, see readme.txt
 local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
 
+advtrains.dir_trans_tbl={
+	[0]={x=0, z=1},
+	[1]={x=1, z=2},
+	[2]={x=1, z=1},
+	[3]={x=2, z=1},
+	[4]={x=1, z=0},
+	[5]={x=2, z=-1},
+	[6]={x=1, z=-1},
+	[7]={x=1, z=-2},
+	[8]={x=0, z=-1},
+	[9]={x=-1, z=-2},
+	[10]={x=-1, z=-1},
+	[11]={x=-2, z=-1},
+	[12]={x=-1, z=0},
+	[13]={x=-2, z=1},
+	[14]={x=-1, z=1},
+	[15]={x=-1, z=2},
+}
+
 function advtrains.dirCoordSet(coord, dir)
-	local x=0
-	local z=0
-	--local dir=(dirx+2)%8
-	if(dir==6) then
-		x=-1
-	elseif (dir==7) then
-		x=-1
-		z=1
-	elseif (dir==0) then
-		z=1
-	elseif (dir==1) then
-		z=1
-		x=1
-	elseif (dir==2) then
-		x=1
-	elseif (dir==3) then
-		x=1
-		z=-1
-	elseif (dir==4) then
-		z=-1
-	elseif (dir==5) then
-		z=-1
-		x=-1
+	local x,z
+	if advtrains.dir_trans_tbl[dir] then
+		x,z=advtrains.dir_trans_tbl[dir].x, advtrains.dir_trans_tbl[dir].z
 	else
 		error("advtrains: in helpers.lua/dirCoordSet() given dir="..(dir or "nil"))
 	end
-
-
 	return {x=coord.x+x, y=coord.y, z=coord.z+z}
 end
 function advtrains.dirToCoord(dir)
@@ -123,7 +120,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 	end
 	
 	--is this next rail connecting to the mid?
-	if not ( (((nextdir1+4)%8)==chkdir and nextrely1==chkrely-y_offset) or (((nextdir2+4)%8)==chkdir and nextrely2==chkrely-y_offset) ) then
+	if not ( (((nextdir1+8)%16)==chkdir and nextrely1==chkrely-y_offset) or (((nextdir2+8)%16)==chkdir and nextrely2==chkrely-y_offset) ) then
 		--print("[advtrains]in conway: next "..minetest.pos_to_string(next).." not connecting, trying one node below!")
 		next.y=next.y-1
 		y_offset=y_offset-1
@@ -133,7 +130,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 			--print("[advtrains]in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
 		end
-		if not ( (((nextdir1+4)%8)==chkdir and nextrely1==chkrely) or (((nextdir2+4)%8)==chkdir and nextrely2==chkrely) ) then
+		if not ( (((nextdir1+8)%16)==chkdir and nextrely1==chkrely) or (((nextdir2+8)%16)==chkdir and nextrely2==chkrely) ) then
 			--print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." rail not connecting, returning!")
 			--print("[advtrains] in order mid1,2,next1,2,chkdir "..middir1.." "..middir2.." "..nextdir1.." "..nextdir2.." "..chkdir)
 			return nil
@@ -142,6 +139,10 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 	
 	--print("[advtrains]conway found rail.")
 	return vector.add(advtrains.round_vector_floor_y(next), {x=0, y=nextrailheight, z=0}), chkdir
+end
+--TODO use this
+function advtrains.oppd(dir)
+	return ((dir+8)%16)
 end
 
 function advtrains.round_vector_floor_y(vec)

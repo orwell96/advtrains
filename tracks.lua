@@ -4,6 +4,7 @@
 nodename_prefix
 texture_prefix
 description
+common={}
 straight={}
 straight45={}
 curve={}
@@ -44,7 +45,7 @@ function advtrains.register_tracks(tracktype, def)
 			on_rightclick=switchfunc,
 		}
 	end
-	local common_def={
+	local common_def=advtrains.merge_tables({
 		description = def.description,
 		drawtype = "mesh",
 		mesh = "trackplane.b3d",
@@ -78,42 +79,42 @@ function advtrains.register_tracks(tracktype, def)
 		after_place_node=function(pos)
 			advtrains.reset_trackdb_position(pos)
 		end,
-	}
-	minetest.register_node(def.nodename_prefix.."_st", advtrains.merge_tables(common_def, make_overdef("st", 0, 4), def.straight or {}))
-	minetest.register_node(def.nodename_prefix.."_st_45", advtrains.merge_tables(common_def, make_overdef("st_45", 1, 5), def.straight45 or {}))
+	}, def.common or {})
+	minetest.register_node(def.nodename_prefix.."_st", advtrains.merge_tables(common_def, make_overdef("st", 0, 8), def.straight or {}))
+	minetest.register_node(def.nodename_prefix.."_st_45", advtrains.merge_tables(common_def, make_overdef("st_45", 2, 10), def.straight45 or {}))
 	
-	minetest.register_node(def.nodename_prefix.."_cr", advtrains.merge_tables(common_def, make_overdef("cr", 0, 3), def.curve or {}))
-	minetest.register_node(def.nodename_prefix.."_cr_45", advtrains.merge_tables(common_def, make_overdef("cr_45", 1, 4), def.curve45 or {}))
+	minetest.register_node(def.nodename_prefix.."_cr", advtrains.merge_tables(common_def, make_overdef("cr", 0, 6), def.curve or {}))
+	minetest.register_node(def.nodename_prefix.."_cr_45", advtrains.merge_tables(common_def, make_overdef("cr_45", 2, 8), def.curve45 or {}))
 	
-	advtrains.trackplacer_register(def.nodename_prefix.."_st", 0, 4)
-	advtrains.trackplacer_register(def.nodename_prefix.."_st_45", 1, 5)
-	advtrains.trackplacer_register(def.nodename_prefix.."_cr", 0, 3)
-	advtrains.trackplacer_register(def.nodename_prefix.."_cr_45", 1, 4)
+	advtrains.trackplacer_register(def.nodename_prefix.."_st", 0, 8)
+	advtrains.trackplacer_register(def.nodename_prefix.."_st_45", 2, 10)
+	advtrains.trackplacer_register(def.nodename_prefix.."_cr", 0, 6)
+	advtrains.trackplacer_register(def.nodename_prefix.."_cr_45", 2, 8)
 	
 	
-	minetest.register_node(def.nodename_prefix.."_swl_st", advtrains.merge_tables(common_def, make_overdef("swl_st", 0, 4, make_switchfunc("swl_cr")), def.lswitchst or {}))
-	minetest.register_node(def.nodename_prefix.."_swl_st_45", advtrains.merge_tables(common_def, make_overdef("swl_st_45", 1, 5, make_switchfunc("swl_cr_45")), def.lswitchst45 or {}))
-	minetest.register_node(def.nodename_prefix.."_swl_cr", advtrains.merge_tables(common_def, make_overdef("swl_cr", 0, 3, make_switchfunc("swl_st")), def.lswitchcr or {}))
-	minetest.register_node(def.nodename_prefix.."_swl_cr_45", advtrains.merge_tables(common_def, make_overdef("swl_cr_45", 1, 4, make_switchfunc("swl_st_45")), def.lswitchcr45 or {}))
+	minetest.register_node(def.nodename_prefix.."_swl_st", advtrains.merge_tables(common_def, make_overdef("swl_st", 0, 8, make_switchfunc("swl_cr")), def.lswitchst or {}))
+	minetest.register_node(def.nodename_prefix.."_swl_st_45", advtrains.merge_tables(common_def, make_overdef("swl_st_45", 2, 10, make_switchfunc("swl_cr_45")), def.lswitchst45 or {}))
+	minetest.register_node(def.nodename_prefix.."_swl_cr", advtrains.merge_tables(common_def, make_overdef("swl_cr", 0, 6, make_switchfunc("swl_st")), def.lswitchcr or {}))
+	minetest.register_node(def.nodename_prefix.."_swl_cr_45", advtrains.merge_tables(common_def, make_overdef("swl_cr_45", 2, 8, make_switchfunc("swl_st_45")), def.lswitchcr45 or {}))
 	
-	minetest.register_node(def.nodename_prefix.."_swr_st", advtrains.merge_tables(common_def, make_overdef("swr_st", 0, 4, make_switchfunc("swr_cr")), def.rswitchst or {}))
-	minetest.register_node(def.nodename_prefix.."_swr_st_45", advtrains.merge_tables(common_def, make_overdef("swr_st_45", 1, 5, make_switchfunc("swr_cr_45")), def.rswitchst45 or {}))
-	minetest.register_node(def.nodename_prefix.."_swr_cr", advtrains.merge_tables(common_def, make_overdef("swr_cr", 0, 5, make_switchfunc("swr_st")), def.rswitchcr or {}))
-	minetest.register_node(def.nodename_prefix.."_swr_cr_45", advtrains.merge_tables(common_def, make_overdef("swr_cr_45", 1, 6, make_switchfunc("swr_st_45")), def.rswitchcr45 or {}))
+	minetest.register_node(def.nodename_prefix.."_swr_st", advtrains.merge_tables(common_def, make_overdef("swr_st", 0, 8, make_switchfunc("swr_cr")), def.rswitchst or {}))
+	minetest.register_node(def.nodename_prefix.."_swr_st_45", advtrains.merge_tables(common_def, make_overdef("swr_st_45", 2, 10, make_switchfunc("swr_cr_45")), def.rswitchst45 or {}))
+	minetest.register_node(def.nodename_prefix.."_swr_cr", advtrains.merge_tables(common_def, make_overdef("swr_cr", 0, 10, make_switchfunc("swr_st")), def.rswitchcr or {}))
+	minetest.register_node(def.nodename_prefix.."_swr_cr_45", advtrains.merge_tables(common_def, make_overdef("swr_cr_45", 2, 12, make_switchfunc("swr_st_45")), def.rswitchcr45 or {}))
 	
-	minetest.register_node(def.nodename_prefix.."_vert1", advtrains.merge_tables(common_def, make_overdef("vert1", 0, 4), {
+	minetest.register_node(def.nodename_prefix.."_vert1", advtrains.merge_tables(common_def, make_overdef("vert1", 0, 8), {
 		mesh = "trackvertical1.b3d",
 		rely1=0,
 		rely2=0.5,
 		railheight=0.25,
 		description = def.description.." (vertical track lower node)",
 		}, def.vert1 or {}))
-	minetest.register_node(def.nodename_prefix.."_vert2", advtrains.merge_tables(common_def, make_overdef("vert2", 0, 4), {
+	minetest.register_node(def.nodename_prefix.."_vert2", advtrains.merge_tables(common_def, make_overdef("vert2", 0, 8), {
 		mesh = "trackvertical2.b3d",
 		rely1=0.5,
 		rely2=1,
 		railheight=0.75,
-		description = def.description.." (vertical track lower node)",
+		description = def.description.." (vertical track upper node)",
 		},def.vert2 or {}))
 	
 	advtrains.register_track_placer(def.nodename_prefix, def.texture_prefix, def.description)
@@ -141,12 +142,12 @@ end
 
 function advtrains.get_track_connections(name, param2)
 	local nodedef=minetest.registered_nodes[name]
-	if not nodedef then print("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 4, 0, 0, 0 end
+	if not nodedef then print("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 8, 0, 0, 0 end
 	local noderot=param2
 	if not param2 then noderot=0 end
 	if noderot > 3 then print("[advtrains] get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
 	
-	return (nodedef.connect1 + 2 * noderot)%8, (nodedef.connect2  + 2 * noderot)%8, nodedef.rely1 or 0, nodedef.rely2 or 0, nodedef.railheight or 0
+	return (nodedef.connect1 + 4 * noderot)%16, (nodedef.connect2  + 4 * noderot)%16, nodedef.rely1 or 0, nodedef.rely2 or 0, nodedef.railheight or 0
 end
 
 

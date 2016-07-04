@@ -39,18 +39,18 @@ function advtrains.placetrack(pos)
 	elseif conn1 and not conn2 then
 		local node1=minetest.get_node(advtrains.dirCoordSet(pos, conn1))
 		local node1_conn1, node1_conn2=advtrains.get_track_connections(node1.name, node1.param2)
-		local node1_backconnects=(conn1+4)%8==node1_conn1 or (conn1+4)%8==node1_conn2
+		local node1_backconnects=(conn1+8)%16==node1_conn1 or (conn1+8)%16==node1_conn2
 		
 		if not node1_backconnects and advtrains.trackplacer_modified_rails[node1.name] then
 			--check if this rail has a dangling connection
 			--TODO possible problems on |- situation
 			if not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn1)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+4)%8)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+4)%8)])
+				if advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)] then
+					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)])
 				end
 			elseif not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn2)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+4)%8)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+4)%8)])
+				if advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)] then
+					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)])
 				end
 			end
 		end
@@ -67,34 +67,34 @@ function advtrains.placetrack(pos)
 		end
 		local node1=minetest.get_node(advtrains.dirCoordSet(pos, conn1))
 		local node1_conn1, node1_conn2=advtrains.get_track_connections(node1.name, node1.param2)
-		local node1_backconnects=(conn1+4)%8==node1_conn1 or (conn1+4)%8==node1_conn2
+		local node1_backconnects=(conn1+8)%16==node1_conn1 or (conn1+8)%16==node1_conn2
 		if not node1_backconnects and advtrains.trackplacer_modified_rails[node1.name] then
 			--check if this rail has a dangling connection
 			--TODO possible problems on |- situation
 			if not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn1)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+4)%8)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+4)%8)])
+				if advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)] then
+					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)])
 				end
 			elseif not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn2)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+4)%8)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+4)%8)])
+				if advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)] then
+					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)])
 				end
 			end
 		end
 		
 		local node2=minetest.get_node(advtrains.dirCoordSet(pos, conn2))
 		local node2_conn1, node2_conn2=advtrains.get_track_connections(node2.name, node2.param2)
-		local node2_backconnects=(conn2+4)%8==node2_conn1 or (conn2+4)%8==node2_conn2
+		local node2_backconnects=(conn2+8)%16==node2_conn1 or (conn2+8)%16==node2_conn2
 		if not node2_backconnects and advtrains.trackplacer_modified_rails[node2.name] then
 			--check if this rail has a dangling connection
 			--TODO possible problems on |- situation
 			if not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node2_conn1)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node2_conn1.."_"..((conn2+4)%8)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn2), advtrains.trackplacer_dir_to_node_mapping[node2_conn1.."_"..((conn2+4)%8)])
+				if advtrains.trackplacer_dir_to_node_mapping[node2_conn1.."_"..((conn2+8)%16)] then
+					minetest.set_node(advtrains.dirCoordSet(pos, conn2), advtrains.trackplacer_dir_to_node_mapping[node2_conn1.."_"..((conn2+8)%16)])
 				end
 			elseif not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node2_conn2)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node2_conn2.."_"..((conn1+4)%8)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn2), advtrains.trackplacer_dir_to_node_mapping[node2_conn2.."_"..((conn2+4)%8)])
+				if advtrains.trackplacer_dir_to_node_mapping[node2_conn2.."_"..((conn1+8)%16)] then
+					minetest.set_node(advtrains.dirCoordSet(pos, conn2), advtrains.trackplacer_dir_to_node_mapping[node2_conn2.."_"..((conn2+8)%16)])
 				end
 			end
 		end
