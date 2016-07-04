@@ -229,7 +229,7 @@ advtrains.register_tracks("regular", {
 	description="Regular Train Track",
 })
 
-advtrains.register_tracks("fineturns", {
+advtrains.register_tracks_finer("fineturns", {
 	nodename_prefix="advtrains:dtrack",
 	texture_prefix="advtrains_dtrack",
 	description="Fine Turn Train Track",
