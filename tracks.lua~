@@ -337,7 +337,7 @@ advtrains.register_tracks_finer("fineturns", {
 	description="Fine Turn Train Track",
 })
 
-advtrains.register_tracks_modeled("default", {
+advtrains.register_tracks_finer("default", {
 	nodename_prefix="advtrains:dtrack",
 	texture_prefix="advtrains_dtrack",
 	models_prefix="advtrains_dtrack",
