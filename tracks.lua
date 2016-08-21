@@ -259,7 +259,7 @@ function advtrains.register_tracks_modeled(tracktype, def)
 			attached_node=1,
 			["advtrains_track_"..tracktype]=1,
 			dig_immediate=2,
-			--not_in_creative_inventory=1,
+			not_in_creative_inventory=1,
 		},
 		rely1=0,
 		rely2=0,
@@ -303,7 +303,16 @@ function advtrains.register_tracks_modeled(tracktype, def)
 			railheight=0.75,
 		},
 		def.vst2 or {}))
-	
+
+	advtrains.trackplacer_register(def.nodename_prefix.."_st", 0, 8)
+	advtrains.trackplacer_register(def.nodename_prefix.."_st_30", 1, 9)
+	advtrains.trackplacer_register(def.nodename_prefix.."_st_45", 2, 10)
+	advtrains.trackplacer_register(def.nodename_prefix.."_st_60", 3, 11)
+	advtrains.trackplacer_register(def.nodename_prefix.."_cr", 0, 7)
+	advtrains.trackplacer_register(def.nodename_prefix.."_cr_30", 1, 8)
+	advtrains.trackplacer_register(def.nodename_prefix.."_cr_45", 2, 9)
+	advtrains.trackplacer_register(def.nodename_prefix.."_cr_60", 3, 10)
+
 	--[[advtrains.trackplacer_register(def.nodename_prefix.."_st", 0, 8)
 	advtrains.trackplacer_register(def.nodename_prefix.."_st_45", 2, 10)
 	advtrains.trackplacer_register(def.nodename_prefix.."_cr", 0, 6)

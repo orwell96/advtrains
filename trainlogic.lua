@@ -601,15 +601,15 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 end
 --true when trains are facing each other. needed on colliding.
 -- check done by iterating paths and checking their direction
---returns nil when not on the same track at all. this distinction may not always be needed.
+--returns nil when not on the same track at all OR when required path items are not generated. this distinction may not always be needed.
 function advtrains.trains_facing(train1, train2)
 	local sr_pos=train1.path[math.floor(train1.index)]
 	local sr_pos_p=train1.path[math.floor(train1.index)-1]
 
 	for i=advtrains.minN(train2.path), advtrains.maxN(train2.path) do
 		if vector.equals(sr_pos, train2.path[i]) then
-			if vector.equals(sr_pos_p, train2.path[i+1]) then return true end
-			if vector.equals(sr_pos_p, train2.path[i-1]) then return false end
+			if train2.path[i+1] and vector.equals(sr_pos_p, train2.path[i+1]) then return true end
+			if train2.path[i-1] and vector.equals(sr_pos_p, train2.path[i-1]) then return false end
 			return nil
 		end
 	end
