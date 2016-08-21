@@ -285,9 +285,24 @@ function advtrains.register_tracks_modeled(tracktype, def)
 	minetest.register_node(def.nodename_prefix.."_st_60", advtrains.merge_tables(common_def, make_overdef("st_60", 3, 11), def.straight60 or {}))
 	
 	minetest.register_node(def.nodename_prefix.."_cr", advtrains.merge_tables(common_def, make_overdef("cr", 0, 7), def.curve or {}))
-	minetest.register_node(def.nodename_prefix.."_cr_30", advtrains.merge_tables(common_def, make_overdef("cr_30", 1, 8), def.curve45 or {}))
+	minetest.register_node(def.nodename_prefix.."_cr_30", advtrains.merge_tables(common_def, make_overdef("cr_30", 1, 8), def.curve30 or {}))
 	minetest.register_node(def.nodename_prefix.."_cr_45", advtrains.merge_tables(common_def, make_overdef("cr_45", 2, 9), def.curve45 or {}))
-	minetest.register_node(def.nodename_prefix.."_cr_60", advtrains.merge_tables(common_def, make_overdef("cr_60", 3, 10), def.curve45 or {}))
+	minetest.register_node(def.nodename_prefix.."_cr_60", advtrains.merge_tables(common_def, make_overdef("cr_60", 3, 10), def.curve60 or {}))
+	
+	minetest.register_node(def.nodename_prefix.."_vst1", advtrains.merge_tables(common_def, make_overdef("vst1", 8, 0),
+		{
+			rely1=0,
+			rely2=0.5,
+			railheight=0.25,
+		}, 
+		def.vst1 or {}))
+	minetest.register_node(def.nodename_prefix.."_vst2", advtrains.merge_tables(common_def, make_overdef("vst2", 8, 0),
+		{
+			rely1=0.5,
+			rely2=1,
+			railheight=0.75,
+		},
+		def.vst2 or {}))
 	
 	--[[advtrains.trackplacer_register(def.nodename_prefix.."_st", 0, 8)
 	advtrains.trackplacer_register(def.nodename_prefix.."_st_45", 2, 10)
