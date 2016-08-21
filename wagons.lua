@@ -306,7 +306,7 @@ function advtrains.get_real_path_index(train, pit)
 		end
 		index=index-(pos_in_train_left/(train.path_dist[index-1] or 1))
 	else
-		index=index-(pos_in_train_left*(train.path_dist[math.floor(index-1)] or 1))
+		index=index-(pos_in_train_left/(train.path_dist[math.floor(index-1)] or 1))
 	end
 	return index
 end
