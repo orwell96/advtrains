@@ -3,20 +3,47 @@
 
 local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
 
---keys:conn1_conn2 (example:1_4)
---values:{name=x, param2=x}
-advtrains.trackplacer_dir_to_node_mapping={}
---keys are nodenames!
-advtrains.trackplacer_modified_rails={}
+--all new trackplacer code
+local tp={
+	tracks={}
+}
 
-function advtrains.trackplacer_register(nodename, conn1, conn2)
-	for i=0,3 do
-		advtrains.trackplacer_dir_to_node_mapping[((conn1+2*i)%8).."_"..((conn2+2*i)%8)]={name=nodename, param2=i}
-		advtrains.trackplacer_dir_to_node_mapping[((conn2+2*i)%8).."_"..((conn1+2*i)%8)]={name=nodename, param2=i}
-	end
-	advtrains.trackplacer_modified_rails[nodename]=true
+function tp.register_tracktype(nnprefix, n_suffix)
+	tp.tracks[nnprefix]={
+		default=n_suffix,
+		single_conn={},
+		double_conn={},
+		--keys:conn1_conn2 (example:1_4)
+		--values:{name=x, param2=x}
+		twcycle={},
+		twrotate={},--indexed by suffix, list, tells order of rotations
+		modify={}
+	}
 end
-function advtrains.find_adjacent_tracks(pos)--TODO vertical calculations(check node below)
+function tp.add_double_conn(nnprefix, suffix, rotation, conns)
+	local nodename=nnprefix.."_"..suffix..rotation
+	for i=0,3 do
+		tp.tracks[nnprefix].double_conn[((conns.conn1+4*i)%16).."_"..((conns.conn2+4*i)%16)]={name=nodename, param2=i}
+		tp.tracks[nnprefix].double_conn[((conns.conn2+4*i)%16).."_"..((conns.conn1+4*i)%16)]={name=nodename, param2=i}
+	end
+	tp.tracks[nnprefix].modify[nodename]=true
+end
+function tp.add_single_conn(nnprefix, suffix, rotation, conns)
+	local nodename=nnprefix.."_"..suffix..rotation
+	for i=0,3 do
+		tp.tracks[nnprefix].single_conn[((conns.conn1+4*i)%16)]={name=nodename, param2=i}
+		tp.tracks[nnprefix].single_conn[((conns.conn2+4*i)%16)]={name=nodename, param2=i}
+	end
+	tp.tracks[nnprefix].modify[nodename]=true
+end
+
+function tp.add_worked(nnprefix, suffix, rotation, cycle_follows)
+	tp.tracks[nnprefix].twcycle[suffix]=cycle_follows
+	if not tp.tracks[nnprefix].twrotate[suffix] then tp.tracks[nnprefix].twrotate[suffix]={} end
+	table.insert(tp.tracks[nnprefix].twrotate[suffix], rotation)
+end
+
+function tp.find_adjacent_tracks(pos)--TODO vertical calculations(check node below)
 	local conn1=0
 	while conn1<16 and not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, conn1)).name, advtrains.all_tracktypes) do
 		conn1=conn1+1
@@ -33,89 +60,86 @@ function advtrains.find_adjacent_tracks(pos)--TODO vertical calculations(check n
 	end
 	return conn1, conn2
 end
+function tp.find_already_connected(pos)--TODO vertical calculations(check node below)
+	local function istrackandbc(pos, conn)
+		local cnode=minetest.get_node(advtrains.dirCoordSet(pos, conn))
+		local bconn=(conn+8)%16
+		if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
+			local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
+			return cconn1==bconn or cconn2==bconn
+		end
+		return false
+	end
+	local conn1=0
+	while conn1<16 and not istrackandbc(pos, conn1) do
+		conn1=conn1+1
+	end
+	if conn1>=16 then
+		return nil, nil
+	end
+	local conn2=0
+	while conn2<16 and not istrackandbc(pos, conn2) or conn2==conn1 do
+		conn2=conn2+1
+	end
+	if conn2>=16 then
+		return conn1, nil
+	end
+	return conn1, conn2
+end
 
-local modext={[0]="", "_30", "_45", "_60"}
-
-function advtrains.placetrack(pos, nnpref)
-	local conn1, conn2=advtrains.find_adjacent_tracks(pos)
-	
+function tp.placetrack(pos, nnpref)
+	local conn1, conn2=tp.find_adjacent_tracks(pos)
+	local tr=tp.tracks[nnpref]
 	if not conn1 and not conn2 then
-		minetest.set_node(pos, {name=nnpref.."_st"})
+		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
 	elseif conn1 and not conn2 then
-		local node1=minetest.get_node(advtrains.dirCoordSet(pos, conn1))
-		local node1_conn1, node1_conn2=advtrains.get_track_connections(node1.name, node1.param2)
-		local node1_backconnects=(conn1+8)%16==node1_conn1 or (conn1+8)%16==node1_conn2
-		
-		if not node1_backconnects and advtrains.trackplacer_modified_rails[node1.name] then
-			--check if this rail has a dangling connection
-			--TODO possible problems on |- situation
-			if not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn1)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)])
-				end
-			elseif not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn2)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)])
-				end
-			end
+		if tr.single_conn[conn1] then
+			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn1), (conn1+8)%16)
+			minetest.set_node(pos, tr.single_conn[conn1])
+		else
+			minetest.set_node(pos, {name=nnpref.."_"..tr.default})
 		end
-		--second end will be free. place standard rail
-		local modulo=conn1%4
-		minetest.set_node(pos, {name=nnpref.."_st"..modext[modulo], param2=(conn1-modulo)/4})
-
 	elseif conn1 and conn2 then
-		if not advtrains.trackplacer_dir_to_node_mapping[conn1.."_"..conn2] then
-			minetest.set_node(pos, {name=nnpref.."_st"})
-			return
+		if tr.double_conn[conn1.."_"..conn2] then
+			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn1), (conn1+8)%16)
+			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn2), (conn1+8)%16)
+			minetest.set_node(pos, tr.double_conn[conn1.."_"..conn2])
+		elseif tr.single_conn[conn1] then --try at least one side
+			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn1), (conn1+8)%16)
+			minetest.set_node(pos, tr.single_conn[conn1])
+		else
+			minetest.set_node(pos, {name=nnpref.."_"..tr.default})
 		end
-		local node1=minetest.get_node(advtrains.dirCoordSet(pos, conn1))
-		local node1_conn1, node1_conn2=advtrains.get_track_connections(node1.name, node1.param2)
-		local node1_backconnects=(conn1+8)%16==node1_conn1 or (conn1+8)%16==node1_conn2
-		if not node1_backconnects and advtrains.trackplacer_modified_rails[node1.name] then
-			--check if this rail has a dangling connection
-			--TODO possible problems on |- situation
-			if not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn1)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn1.."_"..((conn1+8)%16)])
-				end
-			elseif not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node1_conn2)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn1), advtrains.trackplacer_dir_to_node_mapping[node1_conn2.."_"..((conn1+8)%16)])
-				end
-			end
+	end
+end
+function tp.try_adjust_rail(tr, pos, newdir)
+	--is rail already connected?
+	local node=minetest.get_node(pos)
+	local conn1, conn2=advtrains.get_track_connections(node.name, node.param2)
+	if newdir==conn1 or newdir==conn2 then
+		return
+	end
+	--rail at other end?
+	local adj1, adj2=tp.find_already_connected(pos)
+	if adj1 and adj2 then
+		return false--dont destroy existing track
+	elseif adj1 and not adj2 then
+		if tr.double_conn[adj1.."_"..newdir] then
+			minetest.set_node(pos, tr.double_conn[adj1.."_"..newdir])
+			return true--if exists, connect new rail and old end
 		end
-		
-		local node2=minetest.get_node(advtrains.dirCoordSet(pos, conn2))
-		local node2_conn1, node2_conn2=advtrains.get_track_connections(node2.name, node2.param2)
-		local node2_backconnects=(conn2+8)%16==node2_conn1 or (conn2+8)%16==node2_conn2
-		if not node2_backconnects and advtrains.trackplacer_modified_rails[node2.name] then
-			--check if this rail has a dangling connection
-			--TODO possible problems on |- situation
-			if not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node2_conn1)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node2_conn1.."_"..((conn2+8)%16)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn2), advtrains.trackplacer_dir_to_node_mapping[node2_conn1.."_"..((conn2+8)%16)])
-				end
-			elseif not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, node2_conn2)).name, advtrains.all_tracktypes) then
-				if advtrains.trackplacer_dir_to_node_mapping[node2_conn2.."_"..((conn1+8)%16)] then
-					minetest.set_node(advtrains.dirCoordSet(pos, conn2), advtrains.trackplacer_dir_to_node_mapping[node2_conn2.."_"..((conn2+8)%16)])
-				end
-			end
+		return false
+	else
+		if tr.single_conn[newdir] then--just rotate old rail to right orientation
+			minetest.set_node(pos, tr.single_conn[newdir])
+			return true
 		end
-		minetest.set_node(pos, advtrains.trackplacer_dir_to_node_mapping[conn1.."_"..conn2])
+		return false
 	end
 end
 
 
-advtrains.trackworker_cycle_nodes={
-	["swr_cr"]="st",
-	["swr_st"]="st",
-	["st"]="cr",
-	["cr"]="swl_st",
-	["swl_cr"]="swr_cr",
-	["swl_st"]="swr_st",
-}
-
-function advtrains.register_track_placer(nnprefix, imgprefix, dispname)
+function tp.register_track_placer(nnprefix, imgprefix, dispname)
 	minetest.register_craftitem(nnprefix.."_placer",{
 		description = dispname,
 		inventory_image = imgprefix.."_placer.png",
@@ -124,7 +148,7 @@ function advtrains.register_track_placer(nnprefix, imgprefix, dispname)
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above
 				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to then
-					advtrains.placetrack(pos, nnprefix)
+					tp.placetrack(pos, nnprefix)
 					if not minetest.setting_getbool("creative_mode") then
 						itemstack:take_item()
 					end
@@ -150,14 +174,17 @@ minetest.register_craftitem("advtrains:trackworker",{
 			
 			if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 			if advtrains.is_train_at_pos(pos) then return end
-			local nodeprefix, railtype, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
+			
+			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 			--print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
-			if not advtrains.trackworker_cycle_nodes[railtype] then
-				print("[advtrains]rail not workable by trackworker")
+			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
+				print("[advtrains]railtype not workable by trackworker")
 				return
 			end
+			local modext=tp.tracks[nnprefix].twrotate[suffix]
+
 			if rotation==modext[#modext] then --increase param2
-				minetest.set_node(pos, {name=nodeprefix.."_"..railtype..modext[0], param2=(node.param2+1)%4})
+				minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
 				return
 			else
 				local modpos
@@ -166,7 +193,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 					print("[advtrains]rail not workable by trackworker")
 					return
 				end
-				minetest.set_node(pos, {name=nodeprefix.."_"..railtype..modext[modpos+1], param2=node.param2})
+				minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
 			end
 			advtrains.invalidate_all_paths()
 		end
@@ -178,15 +205,19 @@ minetest.register_craftitem("advtrains:trackworker",{
 			
 			if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 			if advtrains.is_train_at_pos(pos) then return end
-			local nodeprefix, railtype, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
+			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 			
-			if not advtrains.trackworker_cycle_nodes[railtype] then
-				print("[advtrains]trackworker does not know what to set here...")
+			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
+				print("[advtrains]railtype not workable by trackworker")
 				return
 			end
-			minetest.set_node(pos, {name=nodeprefix.."_"..advtrains.trackworker_cycle_nodes[railtype]..rotation, param2=node.param2})
+			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
+			minetest.set_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
 			--invalidate trains
 			advtrains.invalidate_all_paths()
 		end
 	end,
 })
+
+--putting into right place
+advtrains.trackplacer=tp
