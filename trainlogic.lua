@@ -581,7 +581,7 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 				--local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				--TODO physics
 				train1.velocity=1
-				train2.velocity=advtrains.trains_facing(train1, train2) and -1 or 1
+				train2.velocity=advtrains.trains_facing(train1, train2) and 1 or -1
 				train1.recently_collided_with_env=true
 				train2.recently_collided_with_env=true
 				return
@@ -589,7 +589,7 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 			if vector.distance(testpos, frontpos1) < 0.5 then
 				--local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
 				train1.velocity=-1
-				train2.velocity=advtrains.trains_facing(train1, train2) and 1 or -1
+				train2.velocity=advtrains.trains_facing(train1, train2) and -1 or 1
 				train1.recently_collided_with_env=true
 				train2.recently_collided_with_env=true
 				return
