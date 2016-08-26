@@ -170,32 +170,45 @@ function advtrains.train_step(id, train, dtime)
 		if train.tarvelocity<0 then train.tarvelocity=0 end
 	end
 	
-	--move
 	if not train.velocity then
 		train.velocity=0
 	end
-	train.index=train.index and train.index+((train.velocity/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
 	--check for collisions by finding objects
 	--front
 	local search_radius=4
 	
-	local posfront=path[math.floor(train.index+1)]
-	if posfront then
-		local objrefs=minetest.get_objects_inside_radius(posfront, search_radius)
-		for _,v in pairs(objrefs) do
-			local le=v:get_luaentity()
-			if le and le.is_wagon and le.initialized and le.train_id~=id then
-				advtrains.try_connect_trains_and_check_collision(id, le.train_id)
+	--coupling
+	local couple_outward=1
+	local posfront=advtrains.get_real_index_position(path, train.index+couple_outward)
+	local posback=advtrains.get_real_index_position(path, train_end_index-couple_outward)
+	for _,pos in ipairs({posfront, posback}) do
+		if pos then
+			local objrefs=minetest.get_objects_inside_radius(pos, search_radius)
+			for _,v in pairs(objrefs) do
+				local le=v:get_luaentity()
+				if le and le.is_wagon and le.initialized and le.train_id~=id then
+					advtrains.try_connect_trains(id, le.train_id)
+				end
 			end
 		end
 	end
-	local posback=path[math.floor(train_end_index-1)]
-	if posback then
-		local objrefs=minetest.get_objects_inside_radius(posback, search_radius)
+	--new train collisions (only search in the direction of the driving train)
+	local coll_search_radius=2
+	local coll_grace=0
+	local collpos
+	if train.velocity>0 then
+		collpos=advtrains.get_real_index_position(path, train.index-coll_grace)
+	elseif train.velocity<0 then
+		collpos=advtrains.get_real_index_position(path, train_end_index+coll_grace)
+	end
+	if collpos then
+		local objrefs=minetest.get_objects_inside_radius(collpos, coll_search_radius)
 		for _,v in pairs(objrefs) do
 			local le=v:get_luaentity()
 			if le and le.is_wagon and le.initialized and le.train_id~=id then
-				advtrains.try_connect_trains_and_check_collision(id, le.train_id)
+				train.recently_collided_with_env=true
+				train.velocity=-0.5*train.velocity
+				train.tarvelocity=0
 			end
 		end
 	end
@@ -278,6 +291,9 @@ function advtrains.train_step(id, train, dtime)
 		train.velocity=train.velocity+(applydiff*math.sign(train.tarvelocity-train.velocity))
 	end
 	
+	--move
+	train.index=train.index and train.index+((train.velocity/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
+	
 end
 
 --the 'leader' concept has been overthrown, we won't rely on MT's "buggy object management"
@@ -296,7 +312,6 @@ trains={
 		path_inv_level
 		last_pos       |
 		last_dir       | for pathpredicting.
-		no_connect_for_movements (index way counter for when not to connect again) TODO implement
 	}
 }
 --a wagon itself has the following properties:
@@ -540,7 +555,7 @@ end
 --->backpos's will match
 --4.   R<->F F<->R flip one of these trains and take it as new parent
 --->frontpos's will match
-function advtrains.try_connect_trains_and_check_collision(id1, id2)
+function advtrains.try_connect_trains(id1, id2)
 	local train1=advtrains.trains[id1]
 	local train2=advtrains.trains[id2]
 	if not train1 or not train2 then return end
@@ -570,34 +585,6 @@ function advtrains.try_connect_trains_and_check_collision(id1, id2)
 			advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
 		end
 	end
-	--check if one train invaded another's critical path area...
-	if not train1.recently_collided_with_env and not train2.recently_collided_with_env then
-		--try to find one of these inside the other train's path
-		--iterated start and end numbers are decimal values, since lua  should count i up by one each iteration, this should be no problem.
-		--0.5: some grace interval, since else the couple entity does not appear
-		for i=(advtrains.get_train_end_index(train2)+0.5),train2.index-0.5 do
-			local testpos=advtrains.get_real_index_position(train2.path,i)
-			if vector.distance(testpos, backpos1) < 0.5 then
-				--local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
-				--TODO physics
-				train1.velocity=1
-				train2.velocity=advtrains.trains_facing(train1, train2) and 1 or -1
-				train1.recently_collided_with_env=true
-				train2.recently_collided_with_env=true
-				return
-			end
-			if vector.distance(testpos, frontpos1) < 0.5 then
-				--local v2_sign = math.sign(i - ((train2.index-0.5) - ( (train2.index-0.5)-(advtrains.get_train_end_index(train2)+0.5) / 2 )))
-				train1.velocity=-1
-				train2.velocity=advtrains.trains_facing(train1, train2) and -1 or 1
-				train1.recently_collided_with_env=true
-				train2.recently_collided_with_env=true
-				return
-			end
-			
-		end
-	end
-	
 end
 --true when trains are facing each other. needed on colliding.
 -- check done by iterating paths and checking their direction
