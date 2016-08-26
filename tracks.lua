@@ -1,5 +1,12 @@
 --advtrains by orwell96, see readme.txt
 
+--dev-time settings:
+--EDIT HERE
+--If the old non-model rails on straight tracks should be replaced by the new...
+--false: no
+--true: yes
+advtrains.register_straight_rep_lbm=true
+
 --[[TracksDefinition
 nodename_prefix
 texture_prefix
@@ -279,7 +286,7 @@ advtrains.register_tracks("default", {
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
 	description="New Default Train Track",
-	formats={vst1={true}, vst2={true}, swlcr={}, swlst={}, swrcr={}, swrst={}},
+	formats={vst1={true}, vst2={true}},
 }, t_30deg)
 
 --TODO legacy
@@ -301,20 +308,34 @@ for name,rep in pairs({swl_st="swlst", swr_st="swrst", swl_cr="swlcr", swr_cr="s
     })
 end
 
-minetest.register_abm({
+minetest.register_lbm({
+	name = "advtrains:ramp_replacement_1",
 --  In the following two fields, also group:groupname will work.
 	nodenames = {"advtrains:track_vert1"},
-   interval = 1.0, -- Operation interval in seconds
-   chance = 1, -- Chance of trigger per-node per-interval is 1.0 / this
-   action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst1", param2=(node.param2+2)%4}) end,
+	action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst1", param2=(node.param2+2)%4}) end,
 })
-minetest.register_abm({
---  In the following two fields, also group:groupname will work.
+minetest.register_lbm({
+	name = "advtrains:ramp_replacement_1",
+--  --  In the following two fields, also group:groupname will work.
 	nodenames = {"advtrains:track_vert2"},
-   interval = 1.0, -- Operation interval in seconds
-   chance = 1, -- Chance of trigger per-node per-interval is 1.0 / this
-   action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst2", param2=(node.param2+2)%4}) end,
+	action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst2", param2=(node.param2+2)%4}) end,
 })
+if advtrains.register_straight_rep_lbm then
+	minetest.register_abm({
+		name = "advtrains:st_rep_1",
+	--  In the following two fields, also group:groupname will work.
+		nodenames = {"advtrains:track_st"},
+		interval=1,
+		chance=1,
+		action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_st", param2=node.param2}) end,
+	})
+	minetest.register_lbm({
+		name = "advtrains:st_rep_1",
+	--  --  In the following two fields, also group:groupname will work.
+		nodenames = {"advtrains:track_st_45"},
+		action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_st_45", param2=node.param2}) end,
+	})
+end
 
 
 
