@@ -48,6 +48,16 @@ local t_30deg={
 		vst1=conns(8,0,0,0.5,0.25),
 		vst2=conns(8,0,0.5,1,0.75),
 	},
+	description={
+		st="straight",
+		cr="curve",
+		swlst="left switch (straight)",
+		swlcr="left switch (curve)",
+		swrst="right switch (straight)",
+		swrcr="right switch (curve)",
+		vst1="vertical lower node",
+		vst2="vertical upper node",
+	},
 	switch={
 		swlst="swlcr",
 		swlcr="swlst",
@@ -84,6 +94,16 @@ local t_45deg={
 		swrcr=conns(0,10),
 		vst1=conns(8,0,0,0.5,0.25),
 		vst2=conns(8,0,0.5,1,0.75),
+	},
+	description={
+		st="straight",
+		cr="curve",
+		swlst="left switch (straight)",
+		swlcr="left switch (curve)",
+		swrst="right switch (straight)",
+		swrcr="right switch (curve)",
+		vst1="vertical lower node",
+		vst2="vertical upper node",
 	},
 	switch={
 		swlst="swlcr",
@@ -134,19 +154,27 @@ function advtrains.register_tracks(tracktype, def, preset)
 			advtrains.reset_trackdb_position(pos)
 		end
 	end
-	local function make_overdef(img_suffix, conns, switchfunc)
+	local function make_overdef(suffix, rotation, conns, switchfunc, in_creative_inv)
+		local img_suffix=suffix..rotation
 		return {
 			mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
 			tiles = {def.shared_texture or (def.texture_prefix.."_"..img_suffix..".png")},
-			inventory_image = def.texture_prefix.."_"..img_suffix..".png",
-			wield_image = def.texture_prefix.."_"..img_suffix..".png",
+			--inventory_image = def.texture_prefix.."_"..img_suffix..".png",
+			--wield_image = def.texture_prefix.."_"..img_suffix..".png",
+			description=def.description.."("..preset.description[suffix]..rotation..")",
 			connect1=conns.conn1,
 			connect2=conns.conn2,
 			rely1=conns.rely1 or 0,
 			rely2=conns.rely2 or 0,
 			railheight=conns.railheight or 0,
 			on_rightclick=switchfunc,
-		}
+			groups = {
+				attached_node=1,
+				["advtrains_track_"..tracktype]=1,
+				dig_immediate=2,
+				not_in_creative_inventory=(not in_creative_inv and 1 or nil),
+			},
+			}
 	end
 	local function cycle_conns(conns, rotid)
 		local add=(rotid-1)*preset.regstep
@@ -167,12 +195,6 @@ function advtrains.register_tracks(tracktype, def, preset)
 		selection_box = {
 			type = "fixed",
 			fixed = {-1/2, -1/2, -1/2, 1/2, -1/2+1/16, 1/2},
-		},
-		groups = {
-			attached_node=1,
-			["advtrains_track_"..tracktype]=1,
-			dig_immediate=2,
-			--not_in_creative_inventory=1,--NOTE see below when changing groups
 		},
 		rely1=0,
 		rely2=0,
@@ -203,18 +225,11 @@ function advtrains.register_tracks(tracktype, def, preset)
 				minetest.register_node(def.nodename_prefix.."_"..suffix..rotation, advtrains.merge_tables(
 					common_def, 
 					make_overdef(
-						suffix..rotation,
+						suffix, rotation,
 						cycle_conns(conns, rotid),
-						switchfunc
+						switchfunc, preset.increativeinv[suffix]
 						)
-					),
-					preset.increativeinv[suffix] and {
-						groups = {--NOTE change groups here too
-							attached_node=1,
-							["advtrains_track_"..tracktype]=1,
-							dig_immediate=2,
-						},
-					} or {}
+					)
 				)
 				--trackplacer
 				if preset.trackplacer[suffix] then
