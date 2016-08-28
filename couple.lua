@@ -35,10 +35,12 @@ minetest.register_entity("advtrains:discouple", {
 		local t=os.clock()
 		if not self.wagon then
 			self.object:remove()
+			return
 		end
 		--getyaw seems to be a reliable method to check if an object is loaded...if it returns nil, it is not.
 		if not self.wagon.object:getyaw() then
 			self.object:remove()
+			return
 		end
 		local velocityvec=self.wagon.object:getvelocity()
 		self.updatepct_timer=(self.updatepct_timer or 0)-dtime
