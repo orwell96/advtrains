@@ -246,7 +246,7 @@ function wagon:on_step(dtime)
 			for y=0,2 do
 				for z=-1,1 do
 					local node=minetest.get_node_or_nil(vector.add(first_pos, {x=x, y=y, z=z}))
-					if node and minetest.registered_nodes[node.name] and minetest.registered_nodes[node.name].walkable then
+					if (advtrains.train_collides(node)) then
 						collides=true
 					end
 				end

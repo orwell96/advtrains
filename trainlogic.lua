@@ -3,14 +3,41 @@
 
 local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
 
+local benchmark=false
 --printbm=function(str, t) print("[advtrains]"..str.." "..((os.clock()-t)*1000).."ms") end
-printbm=function() end
+local bm={}
+local bmlt=0
+local bmsteps=0
+local bmstepint=200
+printbm=function(action, ta)
+	if not benchmark then return end
+	local t=(os.clock()-ta)*1000
+	if not bm[action] then
+		bm[action]=t
+	else
+		bm[action]=bm[action]+t
+	end
+	bmlt=bmlt+t
+end
+function endstep()
+	if not benchmark then return end
+	bmsteps=bmsteps-1
+	if bmsteps<=0 then
+		bmsteps=bmstepint
+		for key, value in pairs(bm) do
+			minetest.chat_send_all(key.." "..(value/bmstepint).." ms avg.")
+		end
+		minetest.chat_send_all("Total time consumed by all advtrains actions per step: "..(bmlt/bmstepint).." ms avg.")
+		bm={}
+		bmlt=0
+	end
+end
 
 advtrains.train_accel_force=2--per second and divided by number of wagons
 advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
-advtrains.audit_interval=10
+advtrains.audit_interval=30
 
 advtrains.all_traintypes={}
 function advtrains.register_train_type(name, drives_on, max_speed)
@@ -127,16 +154,21 @@ minetest.register_globalstep(function(dtime)
 		advtrains.train_step(k, v, dtime)
 	end
 	printbm("trainsteps", t)
+	endstep()
 end)
 
 function advtrains.train_step(id, train, dtime)
 	
 	--TODO check for all vars to be present
-	
+	if not train.velocity then
+		train.velocity=0
+	end
 	--very unimportant thing: check if couple is here
 	if train.couple_eid_front and (not minetest.luaentities[train.couple_eid_front] or not minetest.luaentities[train.couple_eid_front].is_couple) then train.couple_eid_front=nil end
 	if train.couple_eid_back and (not minetest.luaentities[train.couple_eid_back] or not minetest.luaentities[train.couple_eid_back].is_couple) then train.couple_eid_back=nil end
 	
+	--skip certain things (esp. collision) when not moving
+	local train_moves=train.velocity~=0
 	
 	--if not train.last_pos then advtrains.trains[id]=nil return end
 	
@@ -170,49 +202,47 @@ function advtrains.train_step(id, train, dtime)
 		if train.tarvelocity<0 then train.tarvelocity=0 end
 	end
 	
-	if not train.velocity then
-		train.velocity=0
-	end
-	--check for collisions by finding objects
-	--front
-	local search_radius=4
-	
-	--coupling
-	local couple_outward=1
-	local posfront=advtrains.get_real_index_position(path, train.index+couple_outward)
-	local posback=advtrains.get_real_index_position(path, train_end_index-couple_outward)
-	for _,pos in ipairs({posfront, posback}) do
-		if pos then
-			local objrefs=minetest.get_objects_inside_radius(pos, search_radius)
+	if train_moving then
+		--check for collisions by finding objects
+		--front
+		local search_radius=4
+		
+		--coupling
+		local couple_outward=1
+		local posfront=advtrains.get_real_index_position(path, train.index+couple_outward)
+		local posback=advtrains.get_real_index_position(path, train_end_index-couple_outward)
+		for _,pos in ipairs({posfront, posback}) do
+			if pos then
+				local objrefs=minetest.get_objects_inside_radius(pos, search_radius)
+				for _,v in pairs(objrefs) do
+					local le=v:get_luaentity()
+					if le and le.is_wagon and le.initialized and le.train_id~=id then
+						advtrains.try_connect_trains(id, le.train_id)
+					end
+				end
+			end
+		end
+		--new train collisions (only search in the direction of the driving train)
+		local coll_search_radius=2
+		local coll_grace=0
+		local collpos
+		if train.velocity>0 then
+			collpos=advtrains.get_real_index_position(path, train.index-coll_grace)
+		elseif train.velocity<0 then
+			collpos=advtrains.get_real_index_position(path, train_end_index+coll_grace)
+		end
+		if collpos then
+			local objrefs=minetest.get_objects_inside_radius(collpos, coll_search_radius)
 			for _,v in pairs(objrefs) do
 				local le=v:get_luaentity()
 				if le and le.is_wagon and le.initialized and le.train_id~=id then
-					advtrains.try_connect_trains(id, le.train_id)
+					train.recently_collided_with_env=true
+					train.velocity=-0.5*train.velocity
+					train.tarvelocity=0
 				end
 			end
 		end
 	end
-	--new train collisions (only search in the direction of the driving train)
-	local coll_search_radius=2
-	local coll_grace=0
-	local collpos
-	if train.velocity>0 then
-		collpos=advtrains.get_real_index_position(path, train.index-coll_grace)
-	elseif train.velocity<0 then
-		collpos=advtrains.get_real_index_position(path, train_end_index+coll_grace)
-	end
-	if collpos then
-		local objrefs=minetest.get_objects_inside_radius(collpos, coll_search_radius)
-		for _,v in pairs(objrefs) do
-			local le=v:get_luaentity()
-			if le and le.is_wagon and le.initialized and le.train_id~=id then
-				train.recently_collided_with_env=true
-				train.velocity=-0.5*train.velocity
-				train.tarvelocity=0
-			end
-		end
-	end
-	
 	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
 	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
 	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
@@ -257,14 +287,14 @@ function advtrains.train_step(id, train, dtime)
 				end
 			end
 		end
-		train.check_trainpartload=2
+		train.check_trainpartload=10
 	end
 	
 	
 	--handle collided_with_env
 	if train.recently_collided_with_env then
 		train.tarvelocity=0
-		if train.velocity==0 then
+		if not train_moving then
 			train.recently_collided_with_env=false--reset status when stopped
 		end
 	end
@@ -741,3 +771,27 @@ function advtrains.invalidate_all_paths()
 		v.max_index_on_track=nil
 	end
 end
+
+--not blocking trains group
+function advtrains.train_collides(node)
+	if node and minetest.registered_nodes[node.name] and minetest.registered_nodes[node.name].walkable then
+		if not minetest.registered_nodes[node.name].groups.not_blocking_trains then
+			return true
+		end
+	end
+	return false
+end
+
+local nonblocknodes={
+	"default:fence_wood",
+	"default:torch",
+	"default:sign_wall",
+	"signs:sign_post",
+}
+minetest.after(0, function()
+	for _,name in ipairs(nonblocknodes) do
+		if minetest.registered_nodes[name] then
+			minetest.registered_nodes[name].groups.not_blocking_trains=1
+		end
+	end
+end)

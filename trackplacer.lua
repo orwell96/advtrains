@@ -144,6 +144,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 		description = dispname,
 		inventory_image = imgprefix.."_placer.png",
 		wield_image = imgprefix.."_placer.png",
+		groups={},
 		on_place = function(itemstack, placer, pointed_thing)
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above

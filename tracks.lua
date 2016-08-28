@@ -173,6 +173,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				["advtrains_track_"..tracktype]=1,
 				dig_immediate=2,
 				not_in_creative_inventory=(not in_creative_inv and 1 or nil),
+				not_blocking_trains=1,
 			},
 			}
 	end
