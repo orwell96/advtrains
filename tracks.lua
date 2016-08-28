@@ -172,7 +172,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			attached_node=1,
 			["advtrains_track_"..tracktype]=1,
 			dig_immediate=2,
-			not_in_creative_inventory=1,--NOTE see below when changing groups
+			--not_in_creative_inventory=1,--NOTE see below when changing groups
 		},
 		rely1=0,
 		rely2=0,
