@@ -312,14 +312,14 @@ function advtrains.get_real_path_index(train, pit)
 end
 
 
-function advtrains.register_wagon(sysname, traintype, prototype)
+function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 	setmetatable(prototype, {__index=wagon})
 	minetest.register_entity("advtrains:"..sysname,prototype)
 	
 	minetest.register_craftitem("advtrains:"..sysname, {
-		description = sysname,
-		inventory_image = prototype.textures[1],
-		wield_image = prototype.textures[1],
+		description = desc,
+		inventory_image = inv_img,
+		wield_image = inv_img,
 		stack_max = 1,
 		
 		on_place = function(itemstack, placer, pointed_thing)
@@ -347,7 +347,7 @@ function advtrains.register_wagon(sysname, traintype, prototype)
 		end,
 	})
 end
-advtrains.register_train_type("steam", {"regular", "fineturns", "default"})
+advtrains.register_train_type("steam", {"regular", "default"})
 
 --[[advtrains.register_wagon("blackwagon", "steam",{textures = {"black.png"}})
 advtrains.register_wagon("bluewagon", "steam",{textures = {"blue.png"}})
@@ -375,7 +375,7 @@ advtrains.register_wagon("newlocomotive", "steam",{
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		end
 	end
-})
+}, "Steam Engine", "advtrains_newlocomotive_inv.png")
 advtrains.register_wagon("wagon_default", "steam",{
 	mesh="wagon.b3d",
 	textures = {"advtrains_wagon.png"},
@@ -384,8 +384,20 @@ advtrains.register_wagon("wagon_default", "steam",{
 	visual_size = {x=1, y=1},
 	wagon_span=1.8,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-})
+}, "Passenger Wagon", "advtrains_wagon_inv.png")
 
+advtrains.register_train_type("subway", {"regular", "default"})
+
+advtrains.register_wagon("subway_wagon", "subway",{
+	mesh="advtrains_subway_train.b3d",
+	textures = {"advtrains_subway_train.png"},
+	attach_offset={x=0, y=10, z=0},
+	view_offset={x=0, y=6, z=0},
+	visual_size = {x=1, y=1},
+	wagon_span=1.8,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	is_locomotive=true,
+}, "Subway Passenger Wagon", "advtrains_subway_train_inv.png")
 --[[
 advtrains.register_wagon("wagontype1",{on_rightclick=function(self, clicker)
 	if clicker:get_player_control().sneak then

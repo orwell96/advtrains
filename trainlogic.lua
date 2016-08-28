@@ -168,7 +168,7 @@ function advtrains.train_step(id, train, dtime)
 	if train.couple_eid_back and (not minetest.luaentities[train.couple_eid_back] or not minetest.luaentities[train.couple_eid_back].is_couple) then train.couple_eid_back=nil end
 	
 	--skip certain things (esp. collision) when not moving
-	local train_moves=train.velocity~=0
+	local train_moves=(train.velocity~=0)
 	
 	--if not train.last_pos then advtrains.trains[id]=nil return end
 	
@@ -202,7 +202,7 @@ function advtrains.train_step(id, train, dtime)
 		if train.tarvelocity<0 then train.tarvelocity=0 end
 	end
 	
-	if train_moving then
+	if train_moves then
 		--check for collisions by finding objects
 		--front
 		local search_radius=4
@@ -294,7 +294,7 @@ function advtrains.train_step(id, train, dtime)
 	--handle collided_with_env
 	if train.recently_collided_with_env then
 		train.tarvelocity=0
-		if not train_moving then
+		if not train_moves then
 			train.recently_collided_with_env=false--reset status when stopped
 		end
 	end
