@@ -43,23 +43,23 @@ function tp.add_worked(nnprefix, suffix, rotation, cycle_follows)
 	table.insert(tp.tracks[nnprefix].twrotate[suffix], rotation)
 end
 
-function tp.find_adjacent_tracks(pos)--TODO vertical calculations(check node below)
-	local conn1=0
-	while conn1<16 and not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, conn1)).name, advtrains.all_tracktypes) do
-		conn1=conn1+1
-	end
-	if conn1>=16 then
-		return nil, nil
-	end
-	local conn2=0
-	while conn2<16 and not advtrains.is_track_and_drives_on(minetest.get_node(advtrains.dirCoordSet(pos, conn2)).name, advtrains.all_tracktypes) or conn2==conn1 do
-		conn2=conn2+1
-	end
-	if conn2>=16 then
-		return conn1, nil
-	end
-	return conn1, conn2
-end
+
+--[[
+	rewrite algorithm.
+	selection criteria: these will never be changed or even selected:
+	- tracks being already connected on both sides
+	- tracks that are already connected on one side but are not bendable to the desired position
+	the following situations can occur:
+	1. there are two more than two rails around
+		1.1 there is one or more subset(s) that can be directly connected
+			-> choose the first possibility
+		2.2 not
+			-> choose the first one and orient straight
+	2. there's exactly 1 rail around
+		-> choose and orient straight
+	3. there's no rail around
+		-> set straight
+]]
 function tp.find_already_connected(pos)--TODO vertical calculations(check node below)
 	local function istrackandbc(pos, conn)
 		local cnode=minetest.get_node(advtrains.dirCoordSet(pos, conn))
@@ -70,51 +70,45 @@ function tp.find_already_connected(pos)--TODO vertical calculations(check node b
 		end
 		return false
 	end
-	local conn1=0
-	while conn1<16 and not istrackandbc(pos, conn1) do
-		conn1=conn1+1
+	local dnode=minetest.get_node(pos)
+	local dconn1, dconn2=advtrains.get_track_connections(dnode.name, dnode.param2)
+	local t={[true]="true", [false]="false"}
+	if istrackandbc(pos, dconn1) and istrackandbc(pos, dconn2) then return dconn1, dconn2
+	elseif istrackandbc(pos, dconn1) then return dconn1
+	elseif istrackandbc(pos, dconn2) then return dconn2
 	end
-	if conn1>=16 then
-		return nil, nil
-	end
-	local conn2=0
-	while conn2<16 and not istrackandbc(pos, conn2) or conn2==conn1 do
-		conn2=conn2+1
-	end
-	if conn2>=16 then
-		return conn1, nil
-	end
-	return conn1, conn2
+	return nil
 end
-
-function tp.placetrack(pos, nnpref)
-	local conn1, conn2=tp.find_adjacent_tracks(pos)
-	local tr=tp.tracks[nnpref]
-	if not conn1 and not conn2 then
-		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
-	elseif conn1 and not conn2 then
-		if tr.single_conn[conn1] then
-			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn1), (conn1+8)%16)
-			minetest.set_node(pos, tr.single_conn[conn1])
-		else
-			minetest.set_node(pos, {name=nnpref.."_"..tr.default})
-		end
-	elseif conn1 and conn2 then
-		if tr.double_conn[conn1.."_"..conn2] then
-			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn1), (conn1+8)%16)
-			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn2), (conn1+8)%16)
-			minetest.set_node(pos, tr.double_conn[conn1.."_"..conn2])
-		elseif tr.single_conn[conn1] then --try at least one side
-			tp.try_adjust_rail(tr, advtrains.dirCoordSet(pos, conn1), (conn1+8)%16)
-			minetest.set_node(pos, tr.single_conn[conn1])
-		else
-			minetest.set_node(pos, {name=nnpref.."_"..tr.default})
-		end
-	end
-end
-function tp.try_adjust_rail(tr, pos, newdir)
-	--is rail already connected?
+function tp.rail_and_can_be_bent(originpos, conn, nnpref)
+	local pos=advtrains.dirCoordSet(originpos, conn)
+	local newdir=(conn+8)%16
 	local node=minetest.get_node(pos)
+	local tr=tp.tracks[nnpref]
+	if not advtrains.is_track_and_drives_on(node.name, advtrains.all_tracktypes) then
+		return false
+	end
+	--rail at other end?
+	local adj1, adj2=tp.find_already_connected(pos)
+	if adj1 and adj2 then
+		return false--dont destroy existing track
+	elseif adj1 and not adj2 then
+		if tr.double_conn[adj1.."_"..newdir] then
+			return true--if exists, connect new rail and old end
+		end
+		return false
+	else
+		if tr.single_conn[newdir] then--just rotate old rail to right orientation
+			return true
+		end
+		return false
+	end
+end
+function tp.bend_rail(originpos, conn, nnpref)
+	local pos=advtrains.dirCoordSet(originpos, conn)
+	local newdir=(conn+8)%16
+	local node=minetest.get_node(pos)
+	local tr=tp.tracks[nnpref]
+	--is rail already connected? no need to bend.
 	local conn1, conn2=advtrains.get_track_connections(node.name, node.param2)
 	if newdir==conn1 or newdir==conn2 then
 		return
@@ -135,6 +129,37 @@ function tp.try_adjust_rail(tr, pos, newdir)
 			return true
 		end
 		return false
+	end
+end
+function tp.placetrack(pos, nnpref)
+	--1. find all rails that are likely to be connected
+	local tr=tp.tracks[nnpref]
+	local p_rails={}
+	for i=0,15 do
+		if tp.rail_and_can_be_bent(pos, i, nnpref) then
+			p_rails[#p_rails+1]=i
+		end
+	end
+	print(dump(p_rails))
+	if #p_rails==0 then
+		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
+	elseif #p_rails==1 then
+		tp.bend_rail(pos, p_rails[1], nnpref)
+		minetest.set_node(pos, tr.single_conn[p_rails[1]])
+	else
+		--iterate subsets
+		for k1, conn1 in ipairs(p_rails) do
+			for k2, conn2 in ipairs(p_rails) do
+				if k1~=k2 then
+					if (tr.double_conn[conn1.."_"..conn2]) then
+						tp.bend_rail(pos, conn1, nnpref)
+						tp.bend_rail(pos, conn2, nnpref)
+						minetest.set_node(pos, tr.double_conn[conn1.."_"..conn2])
+						return
+					end
+				end
+			end
+		end
 	end
 end
 
