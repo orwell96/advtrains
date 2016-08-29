@@ -140,7 +140,6 @@ function tp.placetrack(pos, nnpref)
 			p_rails[#p_rails+1]=i
 		end
 	end
-	print(dump(p_rails))
 	if #p_rails==0 then
 		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
 	elseif #p_rails==1 then

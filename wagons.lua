@@ -338,7 +338,6 @@ function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 			local conn1=advtrains.get_track_connections(node.name, node.param2)
 			local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1), traintype)
 			advtrains.add_wagon_to_train(le, id)
-			print(dump(advtrains.trains))
 			if not minetest.setting_getbool("creative_mode") then
 				itemstack:take_item()
 			end
