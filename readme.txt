@@ -1,7 +1,11 @@
+This is version 1.0
 Since there are no trains mods out there that satisfied my needs, I decided to write my own.
 Until now are supported:
-- tracks and switches, based on angles of 45 degrees
+- tracks and switches, based on angles of 30(!) degrees
 - wagons that drive on these rails and collide with nodes in the environment(they need 3x3x3 space)
+-> a steam engine
+-> a regular green wagon
+-> a subway train (NEW!)
 - coupling /discoupling of wagons/trains
 - trains can travel through unloaded map chunks
 - head-up display for train speed and nice controls when sitting in locomotive
@@ -15,10 +19,10 @@ Planned features:
 - an API, because API's are cool.
 (I will probably split trains api and actual trains into two mods, to allow for extensions to be enabled individually)
 
-At the moment, you can try around with the trains. There are some debug messages that shouldn't disturb you. Note that anything may change in future releases.
-- Use the 'track' item to place tracks. In most cases it will adjust rails in the direction you need them.
-- use the trackworker tool to rotate tracks(right-click) and to change normal rails into switches(left-click)
-- to overcome heights you need the rails with the strange gravel texture in the background, place them and you will understand.
+Manual:
+- Use the 'track' item (red bent line) to place tracks. In most cases it will adjust rails in the direction you need them.
+- use the trackworker tool (doctor who sonic screwdriver) to rotate tracks(right-click) and to change normal rails into switches(left-click)
+- to overcome heights you need the ramped rails, place them and you will understand.
 - right-click switches to change direction
 - place locomotives or wagons by picking the item and placing it on a track.
 - right-click a wagon or locomotive to sit onto it.
@@ -26,6 +30,7 @@ At the moment, you can try around with the trains. There are some debug messages
 - drive two trains together and they will connect by right-clicking that green icon that appears.
 - punch the red couple icon between wagons to discouple them
 
+Have fun!
+
 License of code: LGPL 2.1
 License of media: CC-BY-SA 3.0
-see attached files.
