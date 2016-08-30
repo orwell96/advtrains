@@ -159,6 +159,9 @@ function tp.placetrack(pos, nnpref)
 				end
 			end
 		end
+		--not found
+		tp.bend_rail(pos, p_rails[1], nnpref)
+		minetest.set_node(pos, tr.single_conn[p_rails[1]])
 	end
 end
 
@@ -172,7 +175,9 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 		on_place = function(itemstack, placer, pointed_thing)
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above
-				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to then
+				local upos=pointed_thing.under
+				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
+					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
 					tp.placetrack(pos, nnprefix)
 					if not minetest.setting_getbool("creative_mode") then
 						itemstack:take_item()
