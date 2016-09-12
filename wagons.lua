@@ -120,11 +120,11 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		
 		local inv = puncher:get_inventory()
 		if minetest.setting_getbool("creative_mode") then
-			if not inv:contains_item("main", "advtrains:locomotive") then
-				inv:add_item("main", "advtrains:locomotive")
+			if not inv:contains_item("main", self.name) then
+				inv:add_item("main", self.name)
 			end
 		else
-			inv:add_item("main", "advtrains:locomotive")
+			inv:add_item("main", self.name)
 		end
 		
 		table.remove(self:train().trainparts, self.pos_in_trainparts)

@@ -47,6 +47,20 @@ function advtrains.register_platform(preset)
 		paramtype = "light",
 		sunlight_propagates = true,
 	})
+	minetest.register_craft({
+		type="shapeless",
+		output = "advtrains:platform_high_"..nodename.." 4",
+		recipe = {
+			"dye:yellow", preset, preset
+		},
+	})
+	minetest.register_craft({
+		type="shapeless",
+		output = "advtrains:platform_low_"..nodename.." 4",
+		recipe = {
+			"dye:yellow", preset
+		},
+	})
 end
 
 minetest.register_abm({
