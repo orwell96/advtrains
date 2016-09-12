@@ -81,7 +81,7 @@ local t_30deg={
 		["swlst"]="swrst",
 	},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={vst1=true, vst2=true}
+	increativeinv={vst1=true, vst2=true},
 }
 local t_45deg={
 	regstep=2,
@@ -304,6 +304,80 @@ advtrains.register_tracks("default", {
 	description="New Default Train Track",
 	formats={vst1={true}, vst2={true}},
 }, t_30deg)
+
+--bumpers. temporary registration. later: integrate to register_tracks.
+function advtrains.register_bumpers(tracktype, def, preset)
+	local common_def=advtrains.merge_tables({
+		description = def.description,
+		drawtype = "mesh",
+		paramtype="light",
+		paramtype2="facedir",
+		walkable = false,
+		selection_box = {
+			type = "fixed",
+			fixed = {-1/2, -1/2, -1/2, 1/2, -1/2+1/16, 1/2},
+		},
+		rely1=0,
+		rely2=0,
+		railheight=0,
+		drop="advtrains:placetrack_"..tracktype,
+		can_dig=function(pos)
+			return not advtrains.is_train_at_pos(pos)
+		end,
+		after_dig_node=function(pos)
+			advtrains.invalidate_all_paths()
+			advtrains.reset_trackdb_position(pos)
+		end,
+		after_place_node=function(pos)
+			advtrains.reset_trackdb_position(pos)
+		end,
+	}, def.common or {})
+	local function cycle_conns(conns, rotid)
+		local add=(rotid-1)*preset.regstep
+		return {
+			conn1=(conns.conn1+add)%16,
+			conn2=(conns.conn2+add)%16,
+			rely1=conns.rely1 or 0,
+			rely2=conns.rely2 or 0,
+			railheight=conns.railheight or 0,
+		}
+	end
+	for rotid, rotation in ipairs(preset.rotation) do
+		local img_suffix="bumper"..rotation
+		minetest.register_node(def.nodename_prefix.."_".."bumper"..rotation, advtrains.merge_tables(
+			common_def, 
+			{
+				mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
+				tiles = {def.shared_texture or (def.texture_prefix.."_"..img_suffix..".png")},
+				--inventory_image = def.texture_prefix.."_"..img_suffix..".png",
+				--wield_image = def.texture_prefix.."_"..img_suffix..".png",
+				description=def.description.."(".."bumper"..rotation..")",
+				on_rightclick=switchfunc,
+				groups = {
+					attached_node=1,
+					--["advtrains_track_"..tracktype]=1, not a rail...
+					dig_immediate=2,
+				},
+				}
+		))
+		
+		advtrains.trackplacer.add_single_conn(def.nodename_prefix, "bumper", rotation, cycle_conns({conn1=0, conn2=8}, rotid))
+		advtrains.trackplacer.add_worked(def.nodename_prefix, "bumper", rotation, preset.trackworker[suffix])
+	end
+end
+
+advtrains.register_bumpers("default", {
+	nodename_prefix="advtrains:dtrack",
+	texture_prefix="advtrains_dtrack",
+	models_prefix="advtrains_dtrack",
+	models_suffix=".b3d",
+	shared_texture="advtrains_dtrack_rail.png",
+	description="New Default Train Track",
+	formats={vst1={true}, vst2={true}},
+}, t_30deg)
+
+
+
 
 --TODO legacy
 --I know lbms are better for this purpose
