@@ -22,5 +22,6 @@ dofile(advtrains.modpath.."/pseudoload.lua");
 dofile(advtrains.modpath.."/couple.lua");
 dofile(advtrains.modpath.."/damage.lua");
 
+dofile(advtrains.modpath.."/signals.lua");
 dofile(advtrains.modpath.."/misc_nodes.lua");
 dofile(advtrains.modpath.."/crafting.lua");
