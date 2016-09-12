@@ -200,7 +200,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 		rely1=0,
 		rely2=0,
 		railheight=0,
-		drop="advtrains:placetrack_"..tracktype,
+		drop=def.nodename_prefix.."_placer",
 		can_dig=function(pos)
 			return not advtrains.is_train_at_pos(pos)
 		end,
@@ -320,7 +320,6 @@ function advtrains.register_bumpers(tracktype, def, preset)
 		rely1=0,
 		rely2=0,
 		railheight=0,
-		drop="advtrains:placetrack_"..tracktype,
 		can_dig=function(pos)
 			return not advtrains.is_train_at_pos(pos)
 		end,
@@ -361,8 +360,8 @@ function advtrains.register_bumpers(tracktype, def, preset)
 				}
 		))
 		
-		advtrains.trackplacer.add_single_conn(def.nodename_prefix, "bumper", rotation, cycle_conns({conn1=0, conn2=8}, rotid))
-		advtrains.trackplacer.add_worked(def.nodename_prefix, "bumper", rotation, preset.trackworker[suffix])
+		--advtrains.trackplacer.add_single_conn(def.nodename_prefix, "bumper", rotation, cycle_conns({conn1=0, conn2=8}, rotid))
+		--advtrains.trackplacer.add_worked(def.nodename_prefix, "bumper", rotation, preset.trackworker[suffix])
 	end
 end
 
