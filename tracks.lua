@@ -159,15 +159,14 @@ local t_45deg={
 }]]
 function advtrains.register_tracks(tracktype, def, preset)
 	local function make_switchfunc(suffix_target, mesecon_state)
-		return function(pos, node)
+		local switchfunc=function(pos, node)
 			if advtrains.is_train_at_pos(pos) then return end
-			advtrains.invalidate_all_paths()
 			minetest.set_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+			advtrains.invalidate_all_paths()
 			advtrains.reset_trackdb_position(pos)
-		end, {effector = {
-			["action_"..mesecon_state] = function (pos, node)
-				minetest.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
-			end
+		end
+		return switchfunc, {effector = {
+			["action_"..mesecon_state] = switchfunc
 		}}
 	end
 	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, in_creative_inv)
