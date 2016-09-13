@@ -20,7 +20,7 @@ for r,f in pairs({on="off", off="on"}) do
 			not_blocking_trains=1
 		},
 		mesecons = {effector = {
-			action_on = function (pos, node)
+			["action_"..f] = function (pos, node)
 				minetest.swap_node(pos, {name = "advtrains:retrosignal_"..f, param2 = node.param2})
 			end
 		}},

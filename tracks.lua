@@ -64,6 +64,12 @@ local t_30deg={
 		swrst="swrcr",
 		swrcr="swrst",
 	},
+	switchmc={
+		swlst="on",
+		swlcr="off",
+		swrst="on",
+		swrcr="off",
+	},
 	trackplacer={
 		st=true,
 		cr=true,
@@ -111,6 +117,12 @@ local t_45deg={
 		swrst="swrcr",
 		swrcr="swrst",
 	},
+	switchmc={
+		swlst="on",
+		swlcr="off",
+		swrst="on",
+		swrcr="off",
+	},
 	trackplacer={
 		st=true,
 		cr=true,
@@ -146,15 +158,19 @@ local t_45deg={
 	common={} change something on common rail appearance
 }]]
 function advtrains.register_tracks(tracktype, def, preset)
-	local function make_switchfunc(suffix_target)
+	local function make_switchfunc(suffix_target, mesecon_state)
 		return function(pos, node)
 			if advtrains.is_train_at_pos(pos) then return end
 			advtrains.invalidate_all_paths()
 			minetest.set_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
 			advtrains.reset_trackdb_position(pos)
-		end
+		end, {effector = {
+			["action_"..mesecon_state] = function (pos, node)
+				minetest.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+			end
+		}}
 	end
-	local function make_overdef(suffix, rotation, conns, switchfunc, in_creative_inv)
+	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, in_creative_inv)
 		local img_suffix=suffix..rotation
 		return {
 			mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
@@ -175,6 +191,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				not_in_creative_inventory=(not in_creative_inv and 1 or nil),
 				not_blocking_trains=1,
 			},
+			mesecons=mesecontbl,
 			}
 	end
 	local function cycle_conns(conns, rotid)
@@ -219,16 +236,16 @@ function advtrains.register_tracks(tracktype, def, preset)
 	for suffix, conns in pairs(preset.variant) do
 		for rotid, rotation in ipairs(preset.rotation) do
 			if not def.formats[suffix] or def.formats[suffix][rotid] then
-				local switchfunc
+				local switchfunc, mesecontbl
 				if preset.switch[suffix] then
-					switchfunc=make_switchfunc(preset.switch[suffix]..rotation)
+					switchfunc, mesecontbl=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix])
 				end
 				minetest.register_node(def.nodename_prefix.."_"..suffix..rotation, advtrains.merge_tables(
 					common_def, 
 					make_overdef(
 						suffix, rotation,
 						cycle_conns(conns, rotid),
-						switchfunc, preset.increativeinv[suffix]
+						switchfunc, mesecontbl, preset.increativeinv[suffix]
 						)
 					)
 				)
