@@ -192,7 +192,7 @@ end
 
 
 minetest.register_craftitem("advtrains:trackworker",{
-	description = "Track Worker Tool\n\nLeft-click: change rail type (straight/curve/switch)\nRight-click: rotate rail",
+	description = "Track Worker Tool\n\nLeft-click: change rail type (straight/curve/switch)\nRight-click: rotate rail/bumper/signal/etc.",
 	groups = {cracky=1}, -- key=name, value=rating; rating=1..3.
 	inventory_image = "advtrains_trackworker.png",
 	wield_image = "advtrains_trackworker.png",
@@ -202,7 +202,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			local pos=pointed_thing.under
 			local node=minetest.get_node(pos)
 			
-			if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
+			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 			if advtrains.is_train_at_pos(pos) then return end
 			
 			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
@@ -233,7 +233,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			local pos=pointed_thing.under
 			local node=minetest.get_node(pos)
 			
-			if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
+			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 			if advtrains.is_train_at_pos(pos) then return end
 			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 			
@@ -245,6 +245,8 @@ minetest.register_craftitem("advtrains:trackworker",{
 			minetest.set_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
 			--invalidate trains
 			advtrains.invalidate_all_paths()
+		else
+			print(dump(tp.tracks))
 		end
 	end,
 })

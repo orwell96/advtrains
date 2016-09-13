@@ -357,8 +357,13 @@ function advtrains.register_bumpers(tracktype, def, preset)
 			railheight=conns.railheight or 0,
 		}
 	end
+	
 	for rotid, rotation in ipairs(preset.rotation) do
 		local img_suffix="bumper"..rotation
+		
+		local crea=1
+		if rotid==1 then crea=0 end
+		
 		minetest.register_node(def.nodename_prefix.."_".."bumper"..rotation, advtrains.merge_tables(
 			common_def, 
 			{
@@ -377,7 +382,7 @@ function advtrains.register_bumpers(tracktype, def, preset)
 		))
 		
 		--advtrains.trackplacer.add_single_conn(def.nodename_prefix, "bumper", rotation, cycle_conns({conn1=0, conn2=8}, rotid))
-		--advtrains.trackplacer.add_worked(def.nodename_prefix, "bumper", rotation, preset.trackworker[suffix])
+		advtrains.trackplacer.add_worked(def.nodename_prefix, "bumper", rotation, nil)
 	end
 end
 
