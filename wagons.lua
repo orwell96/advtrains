@@ -111,7 +111,7 @@ end
 
 -- Remove the wagon
 function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direction)
-	if not puncher or not puncher:is_player() then
+	if not puncher or not puncher:is_player() or puncher == self.driver then
 		return
 	end
 

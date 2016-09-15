@@ -785,8 +785,22 @@ end
 local nonblocknodes={
 	"default:fence_wood",
 	"default:torch",
+	
 	"default:sign_wall",
+	"signs:sign_wall",
+	"signs:sign_wall_blue",
+	"signs:sign_wall_brown",
+	"signs:sign_wall_orange",
+	"signs:sign_wall_green",
+	"signs:sign_yard",
+	"signs:sign_wall_white_black",
+	"signs:sign_wall_red",
+	"signs:sign_wall_white_red",
+	"signs:sign_wall_yellow",
 	"signs:sign_post",
+	"signs:sign_hanging",
+	
+	
 }
 minetest.after(0, function()
 	for _,name in ipairs(nonblocknodes) do
