@@ -191,6 +191,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				not_blocking_trains=1,
 			},
 			mesecons=mesecontbl,
+			drop = increativeinv and def.nodename_prefix.."_"..suffix..rotation or def.nodename_prefix.."_placer",
 			}
 	end
 	local function cycle_conns(conns, rotid)

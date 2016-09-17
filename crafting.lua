@@ -12,39 +12,60 @@ minetest.register_craft({
 	},
 })
 minetest.register_craft({
-	output = 'advtrains:dtrack_puffer 2',
+	type = "shapeless",
+	output = 'advtrains:dtrack_vst1 2',
 	recipe = {
-		{'default:wood', 'dye:red', ''},
-		{'default:steel_ingot', '', 'default:steel_ingot'},
-		{'advtrains:dtrack_placer', 'advtrains:dtrack_placer', ''},
-	},
-})
---temporary, as long as puffers do not rotate
-minetest.register_craft({
-	output = 'advtrains:dtrack_puffer_30',
-	recipe = {
-		{'advtrains:dtrack_puffer'},
+		"advtrains:dtrack_placer",
+		"advtrains:dtrack_placer",
+		"default:gravel",
 	},
 })
 minetest.register_craft({
-	output = 'advtrains:dtrack_puffer_45',
+	type = "shapeless",
+	output = 'advtrains:dtrack_vst2 2',
 	recipe = {
-		{'advtrains:dtrack_puffer_30'},
-	},
-})
-minetest.register_craft({
-	output = 'advtrains:dtrack_puffer_60',
-	recipe = {
-		{'advtrains:dtrack_puffer_45'},
-	},
-})
-minetest.register_craft({
-	output = 'advtrains:dtrack_puffer',
-	recipe = {
-		{'advtrains:dtrack_puffer_60'},
+		"advtrains:dtrack_placer",
+		"advtrains:dtrack_placer",
+		"default:gravel",
+		"default:gravel",
 	},
 })
 
+minetest.register_craft({
+	output = 'advtrains:dtrack_bumper 2',
+	recipe = {
+		{'default:wood', 'dye:red'},
+		{'default:steel_ingot', 'default:steel_ingot'},
+		{'advtrains:dtrack_placer', 'advtrains:dtrack_placer'},
+	},
+})
+--signals
+minetest.register_craft({
+	output = 'advtrains:retrosignal_off 2',
+	recipe = {
+		{'dye:red', 'default:steel_ingot', 'default:steel_ingot'},
+		{'', '', 'default:steel_ingot'},
+		{'', '', 'default:steel_ingot'},
+	},
+})
+minetest.register_craft({
+	output = 'advtrains:signal_off 2',
+	recipe = {
+		{'', 'dye:red', 'default:steel_ingot'},
+		{'', 'dye:dark_green', 'default:steel_ingot'},
+		{'', '', 'default:steel_ingot'},
+	},
+})
+
+--trackworker
+minetest.register_craft({
+	output = 'advtrains:trackworker',
+	recipe = {
+		{'default:diamond'},
+		{'screwdriver:screwdriver'},
+		{'default:steel_ingot'},
+	},
+})
 
 --wagons
 minetest.register_craft({

@@ -63,13 +63,5 @@ function advtrains.register_platform(preset)
 	})
 end
 
-minetest.register_abm({
-		name = "advtrains:platform_high",
-	--  In the following two fields, also group:groupname will work.
-		nodenames = {"advtrains:platform_high"},
-		interval=1,
-		chance=1,
-		action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:platform_high_stonebrick", param2=node.param2}) end,
-	})
 
 advtrains.register_platform("default:stonebrick")
