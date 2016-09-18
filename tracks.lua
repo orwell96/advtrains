@@ -319,7 +319,7 @@ advtrains.register_tracks("default", {
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
 	description="New Default Train Track",
-	formats={vst1={true}, vst2={true}},
+	formats={vst1={true, false, true}, vst2={true, false, true}},
 }, t_30deg)
 
 --bumpers. temporary registration. later: integrate to register_tracks.
