@@ -111,30 +111,42 @@ end
 
 -- Remove the wagon
 function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direction)
-	if not puncher or not puncher:is_player() or puncher == self.driver then
+	if not puncher or not puncher:is_player() or self.driver then
 		return
 	end
 
-		self.object:remove()
-		if not self.initialized then return end
-		
-		local inv = puncher:get_inventory()
-		if minetest.setting_getbool("creative_mode") then
-			if not inv:contains_item("main", self.name) then
-				inv:add_item("main", self.name)
-			end
-		else
+	if self.custom_may_destroy then
+		if not self.custom_may_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction) then
+			return
+		end
+	end
+	if self.custom_on_destroy then
+		self.custom_on_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction)
+	end
+
+	self:destroy()
+
+	local inv = puncher:get_inventory()
+	if minetest.setting_getbool("creative_mode") then
+		if not inv:contains_item("main", self.name) then
 			inv:add_item("main", self.name)
 		end
-		
-		table.remove(self:train().trainparts, self.pos_in_trainparts)
-		advtrains.update_trainpart_properties(self.train_id)
-		advtrains.wagon_save[self.unique_id]=nil
-		if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
-		return
-
-
+	else
+		inv:add_item("main", self.name)
+	end
 end
+function wagon:destroy()
+	self.object:remove()
+
+	if not self.initialized then return end
+
+	table.remove(self:train().trainparts, self.pos_in_trainparts)
+	advtrains.update_trainpart_properties(self.train_id)
+	advtrains.wagon_save[self.unique_id]=nil
+	if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
+	return
+end
+
 
 function wagon:on_step(dtime)
 	local t=os.clock()
@@ -144,7 +156,7 @@ function wagon:on_step(dtime)
 		self.object:setvelocity({x=0,y=0,z=0})
 		return
 	end
-	
+
 	self.entity_name=self.name
 	--does this object already have an ID?
 	if not self.unique_id then
@@ -158,7 +170,7 @@ function wagon:on_step(dtime)
 	elseif not self.initialized then
 		self.initialized=true
 	end
-	
+
 	--re-attach driver if he got lost
 	if not self.driver and self.driver_name then
 		local clicker=minetest.get_player_by_name(self.driver_name)
@@ -169,7 +181,12 @@ function wagon:on_step(dtime)
 			clicker:set_eye_offset(self.view_offset, self.view_offset)
 		end
 	end
-	
+
+	--custom on_step function
+	if self.custom_on_step then
+		self.custom_on_step(self, dtime)
+	end
+
 	--driver control
 	if self.driver and self.is_locomotive then
 		if self.driver:get_player_control_bits()~=self.old_player_control_bits then
@@ -197,9 +214,9 @@ function wagon:on_step(dtime)
 		end
 		advtrains.set_trainhud(self.driver:get_player_name(), advtrains.hud_train_format(self:train(), self.wagon_flipped))
 	end
-	
+
 	local gp=self:train()
-	
+
 	--DisCouple
 	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
 		if gp.velocity==0 then
