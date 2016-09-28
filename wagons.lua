@@ -111,10 +111,40 @@ end
 
 -- Remove the wagon
 function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direction)
-	if not puncher or not puncher:is_player() or self.driver then
+	if not puncher or not puncher:is_player() then
 		return
 	end
+	
+	if minetest.setting_getbool("creative_mode") then
+		self:destroy()
+		
+		local inv = puncher:get_inventory()
+		if not inv:contains_item("main", self.name) then
+			inv:add_item("main", self.name)
+		end
+	else
+		local pc=puncher:get_player_control()
+		if not pc.sneak then
+			minetest.chat_send_player(puncher:get_player_name(), "Warning: If you destroy this wagon, you only get some steel back! If you are sure, shift-leftclick the wagon.")
+			return
+		end
 
+		self:destroy()
+
+		local inv = puncher:get_inventory()
+		for _,item in ipairs(self.drops or {self.name}) do
+			inv:add_item("main", item)
+		end
+	end
+end
+function wagon:destroy()
+	--some rules:
+	-- you get only some items back
+	-- single left-click shows warning
+	-- shift leftclick destroys
+	-- not when a driver is inside
+	if self.driver then return false end
+	
 	if self.custom_may_destroy then
 		if not self.custom_may_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction) then
 			return
@@ -123,19 +153,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 	if self.custom_on_destroy then
 		self.custom_on_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction)
 	end
-
-	self:destroy()
-
-	local inv = puncher:get_inventory()
-	if minetest.setting_getbool("creative_mode") then
-		if not inv:contains_item("main", self.name) then
-			inv:add_item("main", self.name)
-		end
-	else
-		inv:add_item("main", self.name)
-	end
-end
-function wagon:destroy()
+	
 	self.object:remove()
 
 	if not self.initialized then return end
@@ -385,12 +403,13 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	update_animation=function(self, velocity)
+	--[[update_animation=function(self, velocity)
 		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
 			self.object:set_animation({x=1,y=60}, math.floor(velocity))
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		end
-	end
+	end]]
+	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
 advtrains.register_wagon("wagon_default", "steam",{
 	mesh="wagon.b3d",
@@ -400,6 +419,7 @@ advtrains.register_wagon("wagon_default", "steam",{
 	visual_size = {x=1, y=1},
 	wagon_span=1.8,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
 
 advtrains.register_train_type("subway", {"regular", "default"})
@@ -413,6 +433,7 @@ advtrains.register_wagon("subway_wagon", "subway",{
 	wagon_span=1.8,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	is_locomotive=true,
+	drops={"default:steelblock 4"},
 }, "Subway Passenger Wagon", "advtrains_subway_train_inv.png")
 --[[
 advtrains.register_wagon("wagontype1",{on_rightclick=function(self, clicker)
