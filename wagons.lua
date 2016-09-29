@@ -17,7 +17,7 @@ local wagon={
 
 
 function wagon:on_rightclick(clicker)
-	print("[advtrains] wagon rightclick")
+	--print("[advtrains] wagon rightclick")
 	if not clicker or not clicker:is_player() then
 		return
 	end
@@ -64,6 +64,7 @@ function wagon:on_activate(staticdata, dtime_s)
 			self.unique_id=tmp.unique_id
 			self.train_id=tmp.train_id
 			self.wagon_flipped=tmp.wagon_flipped
+			self.owner=tmp.owner
 		end
 
 	end
@@ -106,12 +107,17 @@ function wagon:get_staticdata()
 		unique_id=self.unique_id,
 		train_id=self.train_id,
 		wagon_flipped=self.wagon_flipped,
+		owner=self.owner,
 	})
 end
 
 -- Remove the wagon
 function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direction)
 	if not puncher or not puncher:is_player() then
+		return
+	end
+	if self.owner and puncher:get_player_name()~=self.owner then
+		minetest.chat_send_player(puncher:get_player_name(), "This wagon is owned by "..self.owner..", you can't destroy it.")
 		return
 	end
 	
@@ -361,7 +367,14 @@ function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 			if not pointed_thing.type == "node" then
 				return
 			end
-			local le=minetest.env:add_entity(pointed_thing.under, "advtrains:"..sysname):get_luaentity()
+			local ob=minetest.env:add_entity(pointed_thing.under, "advtrains:"..sysname)
+			if not ob then
+				print("[advtrains]couldn't add_entity, aborting")
+			end
+			local le=ob:get_luaentity()
+			
+			le.owner=placer:get_player_name()
+			le.infotext=desc..", owned by "..placer:get_player_name()
 			
 			local node=minetest.env:get_node_or_nil(pointed_thing.under)
 			if not node then print("[advtrains]Ignore at placer position") return itemstack end

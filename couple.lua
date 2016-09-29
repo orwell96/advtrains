@@ -26,9 +26,26 @@ minetest.register_entity("advtrains:discouple", {
 			self.object:remove()
 			return
 		end
+		self.object:set_armor_groups({immortal=1})
 	end,
 	get_staticdata=function() return "DISCOUPLE" end,
-	on_punch=function(self)
+	on_punch=function(self, player)
+		--only if player owns at least one wagon next to this
+		local own=player:get_player_name()
+		if self.wagon.owner and self.wagon.owner~=own then
+			local train=advtrains.trains[self.wagon.train_id]
+			local nextwgn_id=train.trainparts[self.wagon.pos_in_trainparts-1]
+			for aoi, le in pairs(minetest.luaentities) do
+				if le and le.is_wagon then
+					if le.unique_id==nextwgn_id then
+						if le.owner and le.owner~=own then
+							minetest.chat_send_player(own, "You need to own at least one neighboring wagon to destroy this couple.")
+							return
+						end
+					end
+				end
+			end
+		end
 		advtrains.split_train_at_wagon(self.wagon)--found in trainlogic.lua
 	end,
 	on_step=function(self, dtime)
