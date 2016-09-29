@@ -300,7 +300,8 @@ function wagon:on_step(dtime)
 		end
 	end
 	
-	local velocity=gp.velocity/(gp.path_dist[math.floor(gp.index)] or 1)
+	--FIX: use index of the wagon, not of the train.
+	local velocity=gp.velocity/(gp.path_dist[math.floor(index)] or 1)
 	local factor=index-math.floor(index)
 	local actual_pos={x=first_pos.x-(first_pos.x-second_pos.x)*factor, y=first_pos.y-(first_pos.y-second_pos.y)*factor, z=first_pos.z-(first_pos.z-second_pos.z)*factor,}
 	local velocityvec={x=(first_pos.x-second_pos.x)*velocity*-1, z=(first_pos.z-second_pos.z)*velocity*-1, y=(first_pos.y-second_pos.y)*velocity*-1}
