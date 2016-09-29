@@ -302,9 +302,11 @@ function wagon:on_step(dtime)
 	
 	--FIX: use index of the wagon, not of the train.
 	local velocity=gp.velocity/(gp.path_dist[math.floor(index)] or 1)
+	local acceleration=(gp.last_accel or 0)/(gp.path_dist[math.floor(index)] or 1)
 	local factor=index-math.floor(index)
 	local actual_pos={x=first_pos.x-(first_pos.x-second_pos.x)*factor, y=first_pos.y-(first_pos.y-second_pos.y)*factor, z=first_pos.z-(first_pos.z-second_pos.z)*factor,}
 	local velocityvec={x=(first_pos.x-second_pos.x)*velocity*-1, z=(first_pos.z-second_pos.z)*velocity*-1, y=(first_pos.y-second_pos.y)*velocity*-1}
+	local accelerationvec={x=(first_pos.x-second_pos.x)*acceleration*-1, z=(first_pos.z-second_pos.z)*acceleration*-1, y=(first_pos.y-second_pos.y)*acceleration*-1}
 	
 	--some additional positions to determine orientation
 	local aposfwd=gp.path[math.floor(index+2)]
@@ -321,9 +323,15 @@ function wagon:on_step(dtime)
 	end
 	
 	self.updatepct_timer=(self.updatepct_timer or 0)-dtime
-	if not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.old_yaw~=yaw or self.updatepct_timer<=0 then--only send update packet if something changed
-		self.object:setpos(actual_pos)
+	if not self.old_velocity_vector 
+			or not vector.equals(velocityvec, self.old_velocity_vector)
+			or not self.old_acceleration_vector 
+			or not vector.equals(accelerationvec, self.old_acceleration_vector)
+			or self.old_yaw~=yaw
+			or self.updatepct_timer<=0 then--only send update packet if something changed
+			self.object:setpos(actual_pos)
 		self.object:setvelocity(velocityvec)
+		self.object:setacceleration(accelerationvec)
 		self.object:setyaw(yaw)
 		self.updatepct_timer=2
 		if self.update_animation then
@@ -332,6 +340,7 @@ function wagon:on_step(dtime)
 	end
 	
 	self.old_velocity_vector=velocityvec
+	self.old_acceleration_vector=accelerationvec
 	self.old_yaw=yaw
 	printbm("wagon step", t)
 end

@@ -318,7 +318,10 @@ function advtrains.train_step(id, train, dtime)
 				applydiff=(math.min((advtrains.train_brake_force*dtime), math.abs(diff)))
 			end
 		end
-		train.velocity=train.velocity+(applydiff*math.sign(train.tarvelocity-train.velocity))
+		train.last_accel=(applydiff*math.sign(train.tarvelocity-train.velocity))
+		train.velocity=train.velocity+train.last_accel
+	else
+		train.last_accel=0
 	end
 	
 	--move
