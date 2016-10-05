@@ -1,7 +1,11 @@
 --trackplacer.lua
 --holds code for the track-placing system. the default 'track' item will be a craftitem that places rails as needed. this will neither place or change switches nor place vertical rails.
 
-local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_player(table.concat({t, ...}, " ")) end
+local print=function(player, t, ...) minetest.log("action", table.concat({t, ...}, " "))
+   if player then
+      minetest.chat_send_player(player,table.concat({t, ...}, " "))
+   end
+end
 
 --all new trackplacer code
 local tp={
@@ -214,7 +218,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 	      local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 	      --print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
 	      if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
-		 print("[advtrains]railtype not workable by trackworker")
+		 print(placer, "[advtrains]railtype not workable by trackworker")
 		 return
 	      end
 	      local modext=tp.tracks[nnprefix].twrotate[suffix]
@@ -226,7 +230,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 		 local modpos
 		 for k,v in pairs(modext) do if v==rotation then modpos=k end end
 		    if not modpos then
-		       print("[advtrains]rail not workable by trackworker")
+		       print(placer,"[advtrains]rail not workable by trackworker")
 		       return
 		    end
 		    minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
@@ -247,7 +251,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 			
 			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
-				print("[advtrains]railtype not workable by trackworker")
+				print(user,"[advtrains]railtype not workable by trackworker")
 				return
 			end
 			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
