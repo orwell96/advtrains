@@ -205,9 +205,13 @@ minetest.register_craftitem("advtrains:trackworker",{
 	wield_image = "advtrains_trackworker.png",
 	stack_max = 1,
 	on_place = function(itemstack, placer, pointed_thing)
+	   local name = placer:get_player_name()
+	   if not name then
+	      return
+	   end
 	   if pointed_thing.type=="node" then
 	      local pos=pointed_thing.under
-	      if minetest.is_protected(pos, placer) then
+	      if minetest.is_protected(pos, name) then
 		 return
 	      end
 	      local node=minetest.get_node(pos)
@@ -218,7 +222,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 	      local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 	      --print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
 	      if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
-		 print(placer, "[advtrains]railtype not workable by trackworker")
+		 print(name, "[advtrains]railtype not workable by trackworker")
 		 return
 	      end
 	      local modext=tp.tracks[nnprefix].twrotate[suffix]
@@ -239,10 +243,14 @@ minetest.register_craftitem("advtrains:trackworker",{
 	   end
 	end,
 	on_use=function(itemstack, user, pointed_thing)
+	        local name = user:get_player_name()
+		if not name then
+		   return
+		end
 		if pointed_thing.type=="node" then
 			local pos=pointed_thing.under
 			local node=minetest.get_node(pos)
-			if minetest.is_protected(pos, user) then
+			if minetest.is_protected(pos, name) then
 			   return
 			end
 			
@@ -251,7 +259,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
 			
 			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
-				print(user,"[advtrains]railtype not workable by trackworker")
+				print(name,"[advtrains]railtype not workable by trackworker")
 				return
 			end
 			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
@@ -259,7 +267,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			--invalidate trains
 			advtrains.invalidate_all_paths()
 		else
-			print(dump(tp.tracks))
+			print(name, dump(tp.tracks))
 		end
 	end,
 })
