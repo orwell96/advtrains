@@ -445,7 +445,33 @@ advtrains.register_wagon("wagon_default", "steam",{
 	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
 
-advtrains.register_train_type("subway", {"regular", "default"})
+advtrains.register_train_type("electric", {"default"})
+
+advtrains.register_wagon("engine_japan", "electric",{
+	mesh="advtrains_engine_japan.b3d",
+	textures = {"advtrains_engine_japan.png"},
+	attach_offset={x=0, y=10, z=10},
+	view_offset={x=0, y=6, z=0},
+	visual_size = {x=1, y=1},
+	wagon_span=2,
+	is_locomotive=true,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
+}, "Japanese Train Engine", "green.png")
+
+advtrains.register_wagon("wagon_japan", "electric",{
+	mesh="advtrains_wagon_japan.b3d",
+	textures = {"advtrains_wagon_japan.png"},
+	attach_offset={x=0, y=10, z=10},
+	view_offset={x=0, y=6, z=0},
+	visual_size = {x=1, y=1},
+	wagon_span=2,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
+}, "Japanese Train Wagon", "blue.png")
+
+
+advtrains.register_train_type("subway", {"default"})
 
 advtrains.register_wagon("subway_wagon", "subway",{
 	mesh="advtrains_subway_train.b3d",

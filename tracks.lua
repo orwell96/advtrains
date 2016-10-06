@@ -47,6 +47,9 @@ local t_30deg={
 		swrcr=conns(0,9),
 		vst1=conns(8,0,0,0.5,0.25),
 		vst2=conns(8,0,0.5,1,0.75),
+		vst31=conns(8,0,0,0.33,0.16),
+		vst32=conns(8,0,0.33,0.66,0.5),
+		vst33=conns(8,0,0.66,1,0.83),
 	},
 	description={
 		st="straight",
@@ -55,8 +58,11 @@ local t_30deg={
 		swlcr="left switch (curve)",
 		swrst="right switch (straight)",
 		swrcr="right switch (curve)",
-		vst1="vertical lower node",
-		vst2="vertical upper node",
+		vst1="steep uphill 1/2",
+		vst2="steep uphill 2/2",
+		vst31="uphill 1/3",
+		vst32="uphill 2/3",
+		vst33="uphill 3/3",
 	},
 	switch={
 		swlst="swlcr",
@@ -87,7 +93,7 @@ local t_30deg={
 		["swlst"]="swrst",
 	},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={vst1=true, vst2=true},
+	increativeinv={vst1=true, vst2=true, vst31=true, vst32=true, vst33=true},
 }
 local t_45deg={
 	regstep=2,
@@ -319,7 +325,7 @@ advtrains.register_tracks("default", {
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
 	description="New Default Train Track",
-	formats={vst1={true, false, true}, vst2={true, false, true}},
+	formats={vst1={true, false, true}, vst2={true, false, true}, vst31={true}, vst32={true}, vst33={true}},
 }, t_30deg)
 
 --bumpers. temporary registration. later: integrate to register_tracks.
