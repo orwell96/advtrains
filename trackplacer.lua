@@ -177,10 +177,14 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 		wield_image = imgprefix.."_placer.png",
 		groups={},
 		on_place = function(itemstack, placer, pointed_thing)
+		        local name = placer:get_player_name()
+			if not name then
+			   return itemstack
+			end
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above
 				local upos=pointed_thing.under
-				if minetest.is_protected(pos,placer) and minetest.is_protected(upos,placer) then
+				if minetest.is_protected(pos,name) and minetest.is_protected(upos,name) then
 				   return itemstack
 				end
 				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
