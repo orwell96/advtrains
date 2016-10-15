@@ -8,6 +8,9 @@ end)
 function advtrains.set_trainhud(name, text)
 	local hud = advtrains.hud[name]
 	local player=minetest.get_player_by_name(name)
+	if not player then
+	   return
+	end
 	if not hud then
 		hud = {}
 		advtrains.hud[name] = hud
