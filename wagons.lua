@@ -418,7 +418,7 @@ advtrains.register_wagon("yellowwagon", "steam",{textures = {"yellow.png"}})
 	this function will be called when the velocity vector changes or every 2 seconds.
 ]]
 advtrains.register_wagon("newlocomotive", "steam",{
-	mesh="newlocomotive.b3d",
+	mesh="advtrains_engine_steam.b3d",
 	textures = {"advtrains_newlocomotive.png"},
 	is_locomotive=true,
 	attach_offset={x=5, y=10, z=-10},
@@ -426,12 +426,12 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	--[[update_animation=function(self, velocity)
-		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
-			self.object:set_animation({x=1,y=60}, math.floor(velocity))
-			self.old_anim_velocity=advtrains.abs_ceil(velocity)
-		end
-	end]]
+	update_animation=function(self, velocity)
+		--if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
+			self.object:set_animation({x=1,y=60}, 100)--math.floor(velocity))
+			--self.old_anim_velocity=advtrains.abs_ceil(velocity)
+		--end
+	end,
 	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
 advtrains.register_wagon("wagon_default", "steam",{
@@ -445,7 +445,7 @@ advtrains.register_wagon("wagon_default", "steam",{
 	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
 
-advtrains.register_train_type("electric", {"default"})
+advtrains.register_train_type("electric", {"regular", "default"}, 20)
 
 advtrains.register_wagon("engine_japan", "electric",{
 	mesh="advtrains_engine_japan.b3d",
@@ -471,7 +471,7 @@ advtrains.register_wagon("wagon_japan", "electric",{
 }, "Japanese Train Wagon", "blue.png")
 
 
-advtrains.register_train_type("subway", {"default"})
+advtrains.register_train_type("subway", {"default"}, 15)
 
 advtrains.register_wagon("subway_wagon", "subway",{
 	mesh="advtrains_subway_train.b3d",
