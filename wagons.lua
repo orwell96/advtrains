@@ -25,10 +25,6 @@ function wagon:on_rightclick(clicker)
 		print("[advtrains] not initiaalized")
 		return
 	end
-	if clicker:get_player_control().sneak then
-		advtrains.split_train_at_wagon(self)
-		return
-	end
 	if clicker:get_player_control().aux1 then
 		--advtrains.dumppath(self:train().path)
 		--minetest.chat_send_all("at index "..(self:train().index or "nil"))
@@ -36,18 +32,11 @@ function wagon:on_rightclick(clicker)
 		minetest.chat_send_all(dump(self:train()))
 		return
 	end	
-	if self.driver and clicker == self.driver then
-		advtrains.player_to_wagon_mapping[self.driver:get_player_name()]=nil
-		advtrains.set_trainhud(self.driver:get_player_name(), "")
-		self.driver = nil
-		self.driver_name = nil
-		clicker:set_detach()
-		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
-	elseif not self.driver then
-		self.driver = clicker
-		advtrains.player_to_wagon_mapping[clicker:get_player_name()]=self
-		clicker:set_attach(self.object, "", self.attach_offset, {x=0,y=0,z=0})
-		clicker:set_eye_offset(self.view_offset, self.view_offset)
+	local no=self:get_seatno(clicker:get_player_name())
+	if no then
+		self:get_off(no)
+	else
+		self:show_get_on_form(clicker:get_player_name())
 	end
 end
 
@@ -65,6 +54,7 @@ function wagon:on_activate(staticdata, dtime_s)
 			self.train_id=tmp.train_id
 			self.wagon_flipped=tmp.wagon_flipped
 			self.owner=tmp.owner
+			self.seatp=tmp.seatp
 		end
 
 	end
@@ -98,6 +88,7 @@ function wagon:on_activate(staticdata, dtime_s)
 		self.initialized=true
 	end
 	advtrains.update_trainpart_properties(self.train_id)
+	minetest.after(1, function() self:reattach_all() end)
 end
 
 function wagon:get_staticdata()
@@ -108,6 +99,7 @@ function wagon:get_staticdata()
 		train_id=self.train_id,
 		wagon_flipped=self.wagon_flipped,
 		owner=self.owner,
+		seatp=self.seatp,
 	})
 end
 
@@ -122,7 +114,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 	end
 	
 	if minetest.setting_getbool("creative_mode") then
-		self:destroy()
+		if not self:destroy() then return end
 		
 		local inv = puncher:get_inventory()
 		if not inv:contains_item("main", self.name) then
@@ -135,7 +127,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 			return
 		end
 
-		self:destroy()
+		if not self:destroy() then return end
 
 		local inv = puncher:get_inventory()
 		for _,item in ipairs(self.drops or {self.name}) do
@@ -149,7 +141,10 @@ function wagon:destroy()
 	-- single left-click shows warning
 	-- shift leftclick destroys
 	-- not when a driver is inside
-	if self.driver then return false end
+	
+	for _,_ in pairs(self.seatp) do
+		return
+	end
 	
 	if self.custom_may_destroy then
 		if not self.custom_may_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction) then
@@ -168,7 +163,7 @@ function wagon:destroy()
 	advtrains.update_trainpart_properties(self.train_id)
 	advtrains.wagon_save[self.unique_id]=nil
 	if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
-	return
+	return true
 end
 
 
@@ -196,15 +191,15 @@ function wagon:on_step(dtime)
 	end
 
 	--re-attach driver if he got lost
-	if not self.driver and self.driver_name then
-		local clicker=minetest.get_player_by_name(self.driver_name)
-		if clicker then
-			self.driver = clicker
-			advtrains.player_to_wagon_mapping[clicker:get_player_name()]=self
-			clicker:set_attach(self.object, "", self.attach_offset, {x=0,y=0,z=0})
-			clicker:set_eye_offset(self.view_offset, self.view_offset)
-		end
-	end
+	--if not self.driver and self.driver_name then
+	--	local clicker=minetest.get_player_by_name(self.driver_name)
+	--	if clicker then
+	--		self.driver = clicker
+	--		advtrains.player_to_wagon_mapping[clicker:get_player_name()]=self
+	--		clicker:set_attach(self.object, "", self.attach_offset, {x=0,y=0,z=0})
+	--		clicker:set_eye_offset(self.view_offset, self.view_offset)
+	--	end
+	--end
 
 	--custom on_step function
 	if self.custom_on_step then
@@ -212,31 +207,34 @@ function wagon:on_step(dtime)
 	end
 
 	--driver control
-	if self.driver and self.is_locomotive then
-		if self.driver:get_player_control_bits()~=self.old_player_control_bits then
-			local pc=self.driver:get_player_control()
-			if pc.sneak then --stop
-				self:train().tarvelocity=0
-			elseif (not self.wagon_flipped and pc.up) or (self.wagon_flipped and pc.down) then --faster
-				self:train().tarvelocity=math.min(self:train().tarvelocity+1, advtrains.all_traintypes[self:train().traintype].max_speed or 10)
-			elseif (not self.wagon_flipped and pc.down) or (self.wagon_flipped and pc.up) then --slower
-				self:train().tarvelocity=math.max(self:train().tarvelocity-1, -(advtrains.all_traintypes[self:train().traintype].max_speed or 10))
-			elseif pc.aux1 then --slower
-				if true or math.abs(self:train().velocity)<=3 then--TODO debug
-					advtrains.player_to_wagon_mapping[self.driver:get_player_name()]=nil
-					self.driver:set_detach()
-					self.driver:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
-					advtrains.set_trainhud(self.driver:get_player_name(), "")
-					self.driver = nil
-					self.driver_name = nil
-					return--(don't let it crash because of statement below)
-				else
-					minetest.chat_send_player(self.driver:get_player_name(), "Can't get off driving train!")
-				end
+	for seatno, seat in ipairs(self.seats) do
+		if seat.driving_ctrl_access then
+			if not self.seatp then
+				self.seatp={}
 			end
-			self.old_player_control_bits=self.driver:get_player_control_bits()
+			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
+			if driver and driver:get_player_control_bits()~=self.old_player_control_bits then
+				local pc=driver:get_player_control()
+				if pc.sneak then --stop
+					self:train().tarvelocity=0
+				elseif (not self.wagon_flipped and pc.up) or (self.wagon_flipped and pc.down) then --faster
+					self:train().tarvelocity=math.min(self:train().tarvelocity+1, advtrains.all_traintypes[self:train().traintype].max_speed or 10)
+				elseif (not self.wagon_flipped and pc.down) or (self.wagon_flipped and pc.up) then --slower
+					self:train().tarvelocity=math.max(self:train().tarvelocity-1, -(advtrains.all_traintypes[self:train().traintype].max_speed or 10))
+				elseif pc.aux1 then --slower
+					if true or math.abs(self:train().velocity)<=3 then--TODO debug
+						self:get_off(seatno)
+						return
+					else
+						minetest.chat_send_player(driver:get_player_name(), "Can't get off driving train!")
+					end
+				end
+				self.old_player_control_bits=driver:get_player_control_bits()
+			end
+			if driver then
+				advtrains.set_trainhud(driver:get_player_name(), advtrains.hud_train_format(self:train(), self.wagon_flipped))
+			end
 		end
-		advtrains.set_trainhud(self.driver:get_player_name(), advtrains.hud_train_format(self:train(), self.wagon_flipped))
 	end
 
 	local gp=self:train()
@@ -339,6 +337,7 @@ function wagon:on_step(dtime)
 		end
 	end
 	
+	
 	self.old_velocity_vector=velocityvec
 	self.old_acceleration_vector=accelerationvec
 	self.old_yaw=yaw
@@ -362,6 +361,89 @@ function advtrains.get_real_path_index(train, pit)
 	return index
 end
 
+function wagon:get_on(clicker, seatno)
+	if not self.seatp then
+		self.seatp={}
+	end
+	if not self.seats[seatno] then return end
+	if self.seatp[seatno] then
+		self:get_off(seatno)
+	end
+	self.seatp[seatno] = clicker:get_player_name()
+	advtrains.player_to_wagon_mapping[clicker:get_player_name()]={wagon=self, seatno=seatno}
+	clicker:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
+	clicker:set_eye_offset(self.seats[seatno].view_offset, self.seats[seatno].view_offset)
+end
+function wagon:get_off_plr(pname)
+	local no=self:get_seatno(pname)
+	if no then
+		self:get_off(no)
+	end
+end
+function wagon:get_seatno(pname)
+	for no, cont in ipairs(self.seatp) do
+		if cont==pname then
+			return no
+		end
+	end
+	return nil
+end
+function wagon:get_off(seatno)
+	if not self.seatp[seatno] then return end
+	local pname = self.seatp[seatno]
+	local clicker = minetest.get_player_by_name(pname)
+	advtrains.player_to_wagon_mapping[pname]=nil
+	advtrains.set_trainhud(pname, "")
+	if clicker then
+		clicker:set_detach()
+		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
+	end
+	self.seatp[seatno]=nil
+end
+function wagon:show_get_on_form(pname)
+	if not self.initialized then return end
+	local form, comma="size[5,7]label[0.5,0.5;Select seat:]textlist[0.5,1;4,6;seat;", ""
+	for seatno, seattbl in ipairs(self.seats) do
+		local addtext, colorcode="", ""
+		if self.seatp and self.seatp[seatno] then
+			colorcode="#FF0000"
+			addtext=" ("..self.seatp[seatno]..")"
+		end
+		form=form..comma..colorcode..seattbl.name..addtext
+		comma=","
+	end
+	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form..";0,false")
+end
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+	local uid=string.match(formname, "^advtrains_geton_(.+)$")
+	if uid and fields.seat then
+		local val=minetest.explode_textlist_event(fields.seat)
+		if val and val.type=="CHG" then
+			--get on
+			for _,wagon in pairs(minetest.luaentities) do
+				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+					wagon:get_on(player, val.index)
+					minetest.show_formspec(player:get_player_name(), "none", "")
+				end
+			end
+		end
+	end
+end)
+function wagon:reattach_all()
+	for seatno, pname in pairs(self.seatp) do
+		local p=minetest.get_player_by_name(pname)
+		if p then
+			self:get_on(p ,seatno)
+		end
+	end
+end
+minetest.register_on_joinplayer(function(player)
+	for _,wagon in pairs(minetest.luaentities) do
+		if wagon.is_wagon and wagon.initialized then
+			wagon:reattach_all()
+		end
+	end
+end)
 
 function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 	setmetatable(prototype, {__index=wagon})
@@ -421,8 +503,20 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	mesh="advtrains_engine_steam.b3d",
 	textures = {"advtrains_newlocomotive.png"},
 	is_locomotive=true,
-	attach_offset={x=5, y=10, z=-10},
-	view_offset={x=0, y=6, z=0},
+	seats = {
+		{
+			name="Driver Stand (left)",
+			attach_offset={x=-5, y=10, z=-10},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+		{
+			name="Driver Stand (right)",
+			attach_offset={x=5, y=10, z=-10},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+	},
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
@@ -437,8 +531,13 @@ advtrains.register_wagon("newlocomotive", "steam",{
 advtrains.register_wagon("wagon_default", "steam",{
 	mesh="wagon.b3d",
 	textures = {"advtrains_wagon.png"},
-	attach_offset={x=0, y=10, z=0},
-	view_offset={x=0, y=6, z=0},
+	seats = {
+		{
+			name="Default Seat",
+			attach_offset={x=0, y=10, z=0},
+			view_offset={x=0, y=6, z=0},
+		},
+	},
 	visual_size = {x=1, y=1},
 	wagon_span=1.8,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
@@ -450,8 +549,14 @@ advtrains.register_train_type("electric", {"regular", "default"}, 20)
 advtrains.register_wagon("engine_japan", "electric",{
 	mesh="advtrains_engine_japan.b3d",
 	textures = {"advtrains_engine_japan.png"},
-	attach_offset={x=0, y=10, z=10},
-	view_offset={x=0, y=6, z=0},
+	seats = {
+		{
+			name="Default Seat (driver stand)",
+			attach_offset={x=0, y=10, z=0},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+	},
 	visual_size = {x=1, y=1},
 	wagon_span=2,
 	is_locomotive=true,
@@ -462,8 +567,13 @@ advtrains.register_wagon("engine_japan", "electric",{
 advtrains.register_wagon("wagon_japan", "electric",{
 	mesh="advtrains_wagon_japan.b3d",
 	textures = {"advtrains_wagon_japan.png"},
-	attach_offset={x=0, y=10, z=10},
-	view_offset={x=0, y=6, z=0},
+	seats = {
+		{
+			name="Default Seat",
+			attach_offset={x=0, y=10, z=0},
+			view_offset={x=0, y=6, z=0},
+		},
+	},
 	visual_size = {x=1, y=1},
 	wagon_span=2,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
@@ -476,8 +586,14 @@ advtrains.register_train_type("subway", {"default"}, 15)
 advtrains.register_wagon("subway_wagon", "subway",{
 	mesh="advtrains_subway_train.b3d",
 	textures = {"advtrains_subway_train.png"},
-	attach_offset={x=0, y=10, z=0},
-	view_offset={x=0, y=6, z=0},
+	seats = {
+		{
+			name="Default Seat (driver stand)",
+			attach_offset={x=0, y=10, z=0},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+	},
 	visual_size = {x=1, y=1},
 	wagon_span=1.8,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
