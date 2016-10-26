@@ -556,7 +556,6 @@ advtrains.register_wagon("newlocomotive", "steam",{
 		--  ^ Uses texture (string)
 			attached = self.object,
 		})
-		minetest.chat_send_all("added ParticleSpawner")
 	end,
 	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
