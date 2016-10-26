@@ -193,6 +193,9 @@ function wagon:on_step(dtime)
 	elseif not self.initialized then
 		self.initialized=true
 	end
+	if not self.seatp then
+		self.seatp={}
+	end
 
 	--re-attach driver if he got lost
 	--if not self.driver and self.driver_name then
@@ -213,9 +216,6 @@ function wagon:on_step(dtime)
 	--driver control
 	for seatno, seat in ipairs(self.seats) do
 		if seat.driving_ctrl_access then
-			if not self.seatp then
-				self.seatp={}
-			end
 			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
 			if driver and driver:get_player_control_bits()~=self.old_player_control_bits then
 				local pc=driver:get_player_control()
