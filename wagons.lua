@@ -89,6 +89,10 @@ function wagon:on_activate(staticdata, dtime_s)
 	end
 	advtrains.update_trainpart_properties(self.train_id)
 	minetest.after(1, function() self:reattach_all() end)
+	
+	if self.custom_on_activate then
+		self:custom_on_activate(staticdata_table, dtime_s)
+	end
 end
 
 function wagon:get_staticdata()
@@ -189,6 +193,9 @@ function wagon:on_step(dtime)
 	elseif not self.initialized then
 		self.initialized=true
 	end
+	if not self.seatp then
+		self.seatp={}
+	end
 
 	--re-attach driver if he got lost
 	--if not self.driver and self.driver_name then
@@ -203,15 +210,12 @@ function wagon:on_step(dtime)
 
 	--custom on_step function
 	if self.custom_on_step then
-		self.custom_on_step(self, dtime)
+		self:custom_on_step(self, dtime)
 	end
 
 	--driver control
 	for seatno, seat in ipairs(self.seats) do
 		if seat.driving_ctrl_access then
-			if not self.seatp then
-				self.seatp={}
-			end
 			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
 			if driver and driver:get_player_control_bits()~=self.old_player_control_bits then
 				local pc=driver:get_player_control()
@@ -525,6 +529,33 @@ advtrains.register_wagon("newlocomotive", "steam",{
 			self.object:set_animation({x=1,y=60}, 100)--math.floor(velocity))
 			--self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		--end
+	end,
+	custom_on_activate = function(self, staticdata_table, dtime_s)
+		minetest.add_particlespawner({
+			amount = 10,
+			time = 0,
+		--  ^ If time is 0 has infinite lifespan and spawns the amount on a per-second base
+			minpos = {x=0, y=2, z=1.2},
+			maxpos = {x=0, y=2, z=1.2},
+			minvel = {x=0, y=1.8, z=0},
+			maxvel = {x=0, y=2, z=0},
+			minacc = {x=0, y=-0.1, z=0},
+			maxacc = {x=0, y=-0.3, z=0},
+			minexptime = 2,
+			maxexptime = 4,
+			minsize = 1,
+			maxsize = 5,
+		--  ^ The particle's properties are random values in between the bounds:
+		--  ^ minpos/maxpos, minvel/maxvel (velocity), minacc/maxacc (acceleration),
+		--  ^ minsize/maxsize, minexptime/maxexptime (expirationtime)
+			collisiondetection = true,
+		--  ^ collisiondetection: if true uses collision detection
+			vertical = false,
+		--  ^ vertical: if true faces player using y axis only
+			texture = "smoke_puff.png",
+		--  ^ Uses texture (string)
+			attached = self.object,
+		})
 	end,
 	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
