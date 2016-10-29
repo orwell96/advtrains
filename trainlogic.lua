@@ -246,11 +246,12 @@ function advtrains.train_step(id, train, dtime)
 	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
 	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
 	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
-	if train.check_trainpartload<=0 and posfront and posback then
-		--print(minetest.pos_to_string(posfront))
+	if train.check_trainpartload<=0 then
+		local ori_pos=advtrains.get_real_index_position(path, train.index) --not much to calculate
+		
 		local should_check=false
 		for _,p in ipairs(minetest.get_connected_players()) do
-			should_check=should_check or ((vector.distance(posfront, p:getpos())<node_range) and (vector.distance(posback, p:getpos())<node_range))
+			should_check=should_check or ((vector.distance(ori_pos, p:getpos())<node_range))
 		end
 		if should_check then
 			--it is better to iterate luaentites only once
@@ -274,7 +275,7 @@ function advtrains.train_step(id, train, dtime)
 				elseif advtrains.wagon_save[w_id] then
 					--print(w_id.." not loaded, but save available")
 					--spawn a new and initialize it with the properties from wagon_save
-					local le=minetest.env:add_entity(posfront, advtrains.wagon_save[w_id].entity_name):get_luaentity()
+					local le=minetest.env:add_entity(ori_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
 					for k,v in pairs(advtrains.wagon_save[w_id]) do
 						le[k]=v
 					end
@@ -287,7 +288,7 @@ function advtrains.train_step(id, train, dtime)
 				end
 			end
 		end
-		train.check_trainpartload=10
+		train.check_trainpartload=2
 	end
 	
 	
