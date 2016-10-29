@@ -174,6 +174,12 @@ end
 function wagon:on_step(dtime)
 	local t=os.clock()
 	local pos = self.object:getpos()
+	
+	if not pos then
+		print("["..self.unique_id.."][fatal] missing position (object:getpos() returned nil)")
+		return
+	end
+	
 	if not self.initialized_pre then 
 		print("[advtrains] wagon stepping while not yet initialized_pre, returning")
 		self.object:setvelocity({x=0,y=0,z=0})
@@ -267,6 +273,10 @@ function wagon:on_step(dtime)
 	--for path to be available. if not, skip step
 	if not advtrains.get_or_create_path(self.train_id, gp) then
 		self.object:setvelocity({x=0, y=0, z=0})
+		return
+	end
+	if not self.pos_in_train then
+		print("["..self.unique_id.."][fatal] no pos_in_train set.")
 		return
 	end
 	
