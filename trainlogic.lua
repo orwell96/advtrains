@@ -1,7 +1,8 @@
 --trainlogic.lua
 --controls train entities stuff about connecting/disconnecting/colliding trains and other things
 
-local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
+--local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
+local print=function() end
 
 local benchmark=false
 --printbm=function(str, t) print("[advtrains]"..str.." "..((os.clock()-t)*1000).."ms") end
@@ -95,7 +96,7 @@ advtrains.save = function()
 	-- update wagon saves
 	for _,wagon in pairs(minetest.luaentities) do
 		if wagon.is_wagon and wagon.initialized then
-			advtrains.wagon_save[wagon.unique_id]=advtrains.merge_tables(wagon)--so, will only copy non_metatable elements
+			wagon:get_staticdata()
 		end
 	end
 	--cross out userdata
@@ -140,6 +141,7 @@ minetest.register_globalstep(function(dtime)
 		for k,v in pairs(advtrains.trains) do
 			--advtrains.update_trainpart_properties(k)
 			if #v.trainparts==0 then
+				print("[advtrains][train "..k.."] has empty trainparts, removing.")
 				advtrains.trains[k]=nil
 			end
 		end
@@ -248,6 +250,7 @@ function advtrains.train_step(id, train, dtime)
 	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
 	if train.check_trainpartload<=0 then
 		local ori_pos=advtrains.get_real_index_position(path, train.index) --not much to calculate
+		print("[advtrains][train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
 		
 		local should_check=false
 		for _,p in ipairs(minetest.get_connected_players()) do
@@ -276,11 +279,7 @@ function advtrains.train_step(id, train, dtime)
 					--print(w_id.." not loaded, but save available")
 					--spawn a new and initialize it with the properties from wagon_save
 					local le=minetest.env:add_entity(ori_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
-					for k,v in pairs(advtrains.wagon_save[w_id]) do
-						le[k]=v
-					end
-					advtrains.wagon_save[w_id].name=nil
-					advtrains.wagon_save[w_id].object=nil
+					le:init_from_wagon_save(w_id)
 				else
 					print(w_id.." not loaded and no save available")
 					--what the hell...
