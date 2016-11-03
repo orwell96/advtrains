@@ -1,6 +1,6 @@
 --atan2 counts angles clockwise, minetest does counterclockwise
-local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
---local print=function() end
+--local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
+local print=function() end
 
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
