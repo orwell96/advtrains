@@ -1,6 +1,6 @@
 --atan2 counts angles clockwise, minetest does counterclockwise
---local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
-local print=function() end
+local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
+--local print=function() end
 
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
@@ -11,19 +11,14 @@ local wagon={
 	textures = {"black.png"},
 	is_wagon=true,
 	wagon_span=1,--how many index units of space does this wagon consume
-	attach_offset={x=0, y=0, z=0},
-	view_offset={x=0, y=0, z=0},
+	has_inventory=false,
 }
 
 
 
 function wagon:on_rightclick(clicker)
-	--print("[advtrains] wagon rightclick")
+	if not self:ensure_init() then return end
 	if not clicker or not clicker:is_player() then
-		return
-	end
-	if not self.initialized then
-		print("[advtrains] not initiaalized")
 		return
 	end
 	if clicker:get_player_control().aux1 then
@@ -68,10 +63,11 @@ function wagon:on_activate(sd_uid, dtime_s)
 	self.entity_name=self.name
 	
 	--duplicates?
-	for _,wagon in pairs(minetest.luaentities) do
+	for ao_id,wagon in pairs(minetest.luaentities) do
 		if wagon.is_wagon and wagon.initialized and wagon.unique_id==self.unique_id and wagon~=self then--i am a duplicate!
-			print("[advtrains][wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] duplicate found, removing")
+			print("[advtrains][wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] duplicate found(ao_id:"..ao_id.."), removing")
 			self.object:remove()
+			minetest.after(0.5, function() advtrains.update_trainpart_properties(self.train_id) end)
 			return
 		end
 	end
@@ -84,6 +80,11 @@ end
 function wagon:get_staticdata()
 	if not self:ensure_init() then return end
 	print("[advtrains][wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: saving to wagon_save")
+	--serialize inventory, if it has one
+	if self.has_inventory then
+		local inv=minetest.get_inventory({type="detached", name="advtrains_wgn_"..self.unique_id})
+		self.ser_inv=advtrains.serialize_inventory(inv)
+	end
 	--save to table before being unloaded
 	advtrains.wagon_save[self.unique_id]=advtrains.merge_tables(self)
 	advtrains.wagon_save[self.unique_id].entity_name=self.name
@@ -100,6 +101,7 @@ function wagon:init_new_instance(train_id, properties)
 			self[k]=v
 		end
 	end
+	self:init_shared()
 	self.initialized=true
 	print("init_new_instance "..self.unique_id.." ("..self.train_id..")")
 	return self.unique_id
@@ -119,10 +121,36 @@ function wagon:init_from_wagon_save(uid)
 		self.object:remove()
 		return
 	end
+	self:init_shared()
 	self.initialized=true
 	minetest.after(1, function() self:reattach_all() end)
 	print("init_from_wagon_save "..self.unique_id.." ("..self.train_id..")")
 	advtrains.update_trainpart_properties(self.train_id)
+end
+function wagon:init_shared()
+	if self.has_inventory then
+		local uid_noptr=self.unique_id..""
+		--to be used later
+		local inv=minetest.create_detached_inventory("advtrains_wgn_"..self.unique_id, {
+			allow_move = function(inv, from_list, from_index, to_list, to_index, count, player)
+				return count
+			end,
+			allow_put = function(inv, listname, index, stack, player)
+				return stack:get_count()
+			end,
+			allow_take = function(inv, listname, index, stack, player)
+				return stack:get_count()
+			end
+		})
+		if self.ser_inv then
+			advtrains.deserialize_inventory(self.ser_inv, inv)
+		end
+		if self.inventory_list_sizes then
+			for lst, siz in pairs(self.inventory_list_sizes) do
+				inv:set_size(lst, siz)
+			end
+		end
+	end
 end
 function wagon:ensure_init()
 	if self.initialized then return true end
@@ -422,7 +450,13 @@ function wagon:get_off(seatno)
 end
 function wagon:show_get_on_form(pname)
 	if not self.initialized then return end
-	local form, comma="size[5,7]label[0.5,0.5;Select seat:]textlist[0.5,1;4,6;seat;", ""
+	if #self.seats==0 then
+		if self.has_inventory and self.get_inventory_formspec then
+			minetest.show_formspec(pname, "advtrains_inv_"..self.unique_id, self:get_inventory_formspec())
+		end
+		return
+	end
+	local form, comma="size[5,8]label[0.5,0.5;Select seat:]textlist[0.5,1;4,6;seat;", ""
 	for seatno, seattbl in ipairs(self.seats) do
 		local addtext, colorcode="", ""
 		if self.seatp and self.seatp[seatno] then
@@ -432,18 +466,28 @@ function wagon:show_get_on_form(pname)
 		form=form..comma..colorcode..seattbl.name..addtext
 		comma=","
 	end
-	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form..";0,false")
+	form=form..";0,false]"
+	if self.has_inventory and self.get_inventory_formspec then
+		form=form.."button_exit[1,7;3,1;inv;Show Inventory]"
+	end
+	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form)
 end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local uid=string.match(formname, "^advtrains_geton_(.+)$")
-	if uid and fields.seat then
-		local val=minetest.explode_textlist_event(fields.seat)
-		if val and val.type=="CHG" then
-			--get on
-			for _,wagon in pairs(minetest.luaentities) do
-				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
-					wagon:get_on(player, val.index)
-					minetest.show_formspec(player:get_player_name(), "none", "")
+	if uid then
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+				if fields.inv then
+					if wagon.has_inventory and wagon.get_inventory_formspec then
+						minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..uid, wagon:get_inventory_formspec())
+					end
+				elseif fields.seat then
+					local val=minetest.explode_textlist_event(fields.seat)
+					if val and val.type~="INV" then
+					--get on
+						wagon:get_on(player, val.index)
+						minetest.show_formspec(player:get_player_name(), "none", "")
+					end
 				end
 			end
 		end
@@ -595,6 +639,25 @@ advtrains.register_wagon("wagon_default", "steam",{
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
+advtrains.register_wagon("wagon_box", "steam",{
+	mesh="wagon.b3d",
+	textures = {"advtrains_wagon_box.png"},
+	seats = {},
+	visual_size = {x=1, y=1},
+	wagon_span=1.8,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
+	has_inventory = true,
+	get_inventory_formspec = function(self)
+		return "size[8,11]"..
+			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
+			"list[current_player;main;0,7;8,4;]"..
+			"listring[]"
+	end,
+	inventory_list_sizes = {
+		box=8*6,
+	},
+}, "Box Wagon", "advtrains_wagon_inv.png")
 
 advtrains.register_train_type("electric", {"regular", "default"}, 20)
 

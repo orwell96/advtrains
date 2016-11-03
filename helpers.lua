@@ -224,3 +224,26 @@ end
 function advtrains.abs_ceil(i)
 	return math.ceil(math.abs(i))*math.sign(i)
 end
+
+function advtrains.serialize_inventory(inv)
+	local ser={}
+	local liszts=inv:get_lists()
+	for lisztname, liszt in pairs(liszts) do
+		ser[lisztname]={}
+		for idx, item in ipairs(liszt) do
+			local istring=item:to_string()
+			if istring~="" then
+				ser[lisztname][idx]=istring
+			end
+		end
+	end
+	return minetest.serialize(ser)
+end
+function advtrains.deserialize_inventory(sers, inv)
+	local ser=minetest.deserialize(sers)
+	if ser then
+		inv:set_lists(ser)
+		return true
+	end
+	return false
+end

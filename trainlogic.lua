@@ -769,6 +769,7 @@ function advtrains.invalidate_all_paths()
 			v.restore_add_index=v.index-math.floor(v.index+0.5)
 		end
 		v.path=nil
+		v.path_dist=nil
 		v.index=nil
 		v.min_index_on_track=nil
 		v.max_index_on_track=nil
