@@ -602,8 +602,8 @@ advtrains.register_wagon("newlocomotive", "steam",{
 		--  ^ If time is 0 has infinite lifespan and spawns the amount on a per-second base
 			minpos = {x=0, y=2, z=1.2},
 			maxpos = {x=0, y=2, z=1.2},
-			minvel = {x=0, y=1.8, z=0},
-			maxvel = {x=0, y=2, z=0},
+			minvel = {x=-0.2, y=1.8, z=-0.2},
+			maxvel = {x=0.2, y=2, z=0.2},
 			minacc = {x=0, y=-0.1, z=0},
 			maxacc = {x=0, y=-0.3, z=0},
 			minexptime = 2,
