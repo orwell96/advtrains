@@ -100,7 +100,6 @@ function wagon:init_new_instance(train_id, properties)
 			self[k]=v
 		end
 	end
-	minetest.after(1, function() self:reattach_all() end)
 	self.initialized=true
 	print("init_new_instance "..self.unique_id.." ("..self.train_id..")")
 	return self.unique_id
@@ -121,6 +120,7 @@ function wagon:init_from_wagon_save(uid)
 		return
 	end
 	self.initialized=true
+	minetest.after(1, function() self:reattach_all() end)
 	print("init_from_wagon_save "..self.unique_id.." ("..self.train_id..")")
 	advtrains.update_trainpart_properties(self.train_id)
 end
