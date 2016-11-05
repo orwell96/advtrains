@@ -65,3 +65,4 @@ end
 
 
 advtrains.register_platform("default:stonebrick")
+advtrains.register_platform("default:sandstonebrick")
