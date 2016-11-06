@@ -325,11 +325,12 @@ function advtrains.train_step(id, train, dtime)
 	end
 	
 	--move
+	--TODO 3,5 + 0.7
 	train.index=train.index and train.index+((train.velocity/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
 	
 end
 
---the 'leader' concept has been overthrown, we won't rely on MT's "buggy object management"
+
 --structure of train table:
 --[[
 trains={
@@ -501,6 +502,7 @@ function advtrains.add_wagon_to_train(wagon, train_id, index)
 	--this is not the usual case!!!
 	--we may set initialized because the wagon has no chance to step()
 	wagon.initialized=true
+	--TODO is this art or can we throw it away?
 	advtrains.update_trainpart_properties(train_id)
 end
 function advtrains.update_trainpart_properties(train_id, invert_flipstate)
@@ -788,6 +790,10 @@ end
 
 local nonblocknodes={
 	"default:fence_wood",
+	"default:fence_acacia_wood",
+	"default:fence_aspen_wood",
+	"default:fence_pine_wood",
+	"default:fence_junglewood",
 	"default:torch",
 	
 	"default:sign_wall",

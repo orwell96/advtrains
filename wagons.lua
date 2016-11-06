@@ -625,7 +625,7 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
 advtrains.register_wagon("wagon_default", "steam",{
-	mesh="wagon.b3d",
+	mesh="advtrains_wagon.b3d",
 	textures = {"advtrains_wagon.png"},
 	seats = {
 		{
@@ -640,7 +640,7 @@ advtrains.register_wagon("wagon_default", "steam",{
 	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
 advtrains.register_wagon("wagon_box", "steam",{
-	mesh="wagon.b3d",
+	mesh="advtrains_wagon.b3d",
 	textures = {"advtrains_wagon_box.png"},
 	seats = {},
 	visual_size = {x=1, y=1},
@@ -657,7 +657,7 @@ advtrains.register_wagon("wagon_box", "steam",{
 	inventory_list_sizes = {
 		box=8*6,
 	},
-}, "Box Wagon", "advtrains_wagon_inv.png")
+}, "Box Wagon", "advtrains_wagon_box_inv.png")
 
 advtrains.register_train_type("electric", {"regular", "default"}, 20)
 
@@ -673,7 +673,7 @@ advtrains.register_wagon("engine_japan", "electric",{
 		},
 	},
 	visual_size = {x=1, y=1},
-	wagon_span=2,
+	wagon_span=2.4,
 	is_locomotive=true,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
@@ -690,11 +690,72 @@ advtrains.register_wagon("wagon_japan", "electric",{
 		},
 	},
 	visual_size = {x=1, y=1},
-	wagon_span=2,
+	wagon_span=2.4,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 }, "Japanese Train Wagon", "blue.png")
 
+advtrains.register_wagon("engine_industrial", "electric",{
+	mesh="advtrains_engine_industrial.b3d",
+	textures = {"advtrains_engine_industrial.png"},
+	seats = {
+		{
+			name="Driver Stand (left)",
+			attach_offset={x=-5, y=10, z=-10},
+			view_offset={x=0, y=10, z=0},
+			driving_ctrl_access=true,
+		},
+		{
+			name="Driver Stand (right)",
+			attach_offset={x=5, y=10, z=-10},
+			view_offset={x=0, y=10, z=0},
+			driving_ctrl_access=true,
+		},
+	},
+	visual_size = {x=1, y=1},
+	wagon_span=2.6,
+	is_locomotive=true,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
+}, "Industrial Train Engine", "advtrains_engine_industrial_inv.png")
+advtrains.register_wagon("wagon_tank", "electric",{
+	mesh="advtrains_wagon_tank.b3d",
+	textures = {"advtrains_wagon_tank.png"},
+	seats = {},
+	visual_size = {x=1, y=1},
+	wagon_span=1.8,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
+	has_inventory = true,
+	get_inventory_formspec = function(self)
+		return "size[8,11]"..
+			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
+			"list[current_player;main;0,7;8,4;]"..
+			"listring[]"
+	end,
+	inventory_list_sizes = {
+		box=8*6,
+	},
+}, "Industrial tank wagon", "advtrains_wagon_tank_inv.png")
+advtrains.register_wagon("wagon_wood", "electric",{
+	mesh="advtrains_wagon_wood.b3d",
+	textures = {"advtrains_wagon_wood.png"},
+	seats = {},
+	visual_size = {x=1, y=1},
+	wagon_span=1.8,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	drops={"default:steelblock 4"},
+	has_inventory = true,
+	get_inventory_formspec = function(self)
+		return "size[8,11]"..
+			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
+			"list[current_player;main;0,7;8,4;]"..
+			"listring[]"
+	end,
+	inventory_list_sizes = {
+		box=8*6,
+	},
+}, "Industrial wood wagon", "advtrains_wagon_wood_inv.png")
 
 advtrains.register_train_type("subway", {"default"}, 15)
 
@@ -715,21 +776,6 @@ advtrains.register_wagon("subway_wagon", "subway",{
 	is_locomotive=true,
 	drops={"default:steelblock 4"},
 }, "Subway Passenger Wagon", "advtrains_subway_train_inv.png")
---[[
-advtrains.register_wagon("wagontype1",{on_rightclick=function(self, clicker)
-	if clicker:get_player_control().sneak then
-		advtrains.disconnect_train_before_wagon(self)
-		return
-	end
-	--just debugging. look for first active wagon and attach to it.
-	for _,v in pairs(minetest.luaentities) do
-		if v.is_wagon and v.unique_id and v.unique_id~=self.unique_id then
-			self.train_id=v.unique_id
-		end
-	end
-	if not self.train_id then minetest.chat_send_all("not found") return end
-	minetest.chat_send_all(self.train_id.." found and attached.")
-end})
-]]
+
 
 
