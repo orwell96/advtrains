@@ -155,6 +155,12 @@ minetest.register_globalstep(function(dtime)
 	for k,v in pairs(advtrains.trains) do
 		advtrains.train_step(k, v, dtime)
 	end
+	
+	--see tracks.lua
+	if advtrains.detector.clean_step_before then
+		advtrains.detector.finalize_restore()
+	end
+	
 	printbm("trainsteps", t)
 	endstep()
 end)
@@ -204,6 +210,41 @@ function advtrains.train_step(id, train, dtime)
 		if train.tarvelocity<0 then train.tarvelocity=0 end
 	end
 	
+	--update advtrains.detector
+	if not train.detector_old_index then
+		train.detector_old_index = math.floor(train_end_index)
+		train.detector_old_end_index = math.floor(train_end_index)
+	end
+	local ifo, ifn, ibo, ibn = train.detector_old_index, math.floor(train.index), train.detector_old_end_index, math.floor(train_end_index)
+	if ifn>ifo then
+		for i=ifo, ifn do
+			if path[i] then
+				advtrains.detector.enter_node(path[i], id)
+			end
+		end
+	elseif ifn<ifo then
+		for i=ifn, ifo do
+			if path[i] then
+				advtrains.detector.leave_node(path[i], id)
+			end
+		end
+	end
+	if ibn<ibo then
+		for i=ibn, ibn do
+			if path[i] then
+				advtrains.detector.enter_node(path[i], id)
+			end
+		end
+	elseif ibn>ibo then
+		for i=ibo, ibn do
+			if path[i] then
+				advtrains.detector.leave_node(path[i], id)
+			end
+		end
+	end
+	train.detector_old_index = math.floor(train.index)
+	train.detector_old_end_index = math.floor(train_end_index)
+	
 	if train_moves then
 		--check for collisions by finding objects
 		--front
@@ -224,23 +265,26 @@ function advtrains.train_step(id, train, dtime)
 				end
 			end
 		end
-		--new train collisions (only search in the direction of the driving train)
-		local coll_search_radius=2
-		local coll_grace=0
+		--heh, new collision again.
+		--this time, based on NODES and the advtrains.detector.on_node table.
 		local collpos
+		local coll_grace=1
 		if train.velocity>0 then
 			collpos=advtrains.get_real_index_position(path, train.index-coll_grace)
 		elseif train.velocity<0 then
 			collpos=advtrains.get_real_index_position(path, train_end_index+coll_grace)
 		end
 		if collpos then
-			local objrefs=minetest.get_objects_inside_radius(collpos, coll_search_radius)
-			for _,v in pairs(objrefs) do
-				local le=v:get_luaentity()
-				if le and le.is_wagon and le.initialized and le.train_id~=id then
-					train.recently_collided_with_env=true
-					train.velocity=-0.5*train.velocity
-					train.tarvelocity=0
+			local rcollpos=advtrains.round_vector_floor_y(collpos)
+			for x=-1,1 do
+				for z=-1,1 do
+					local testpts=minetest.pos_to_string(vector.add(rcollpos, {x=x, y=0, z=z}))
+					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
+						--collides
+						train.recently_collided_with_env=true
+						train.velocity=-0.5*train.velocity
+						train.tarvelocity=0
+					end
 				end
 			end
 		end
@@ -775,6 +819,10 @@ function advtrains.invalidate_all_paths()
 		v.index=nil
 		v.min_index_on_track=nil
 		v.max_index_on_track=nil
+		
+		advtrains.detector.setup_restore()
+		v.detector_old_index=nil
+		v.detector_old_end_index=nil
 	end
 end
 

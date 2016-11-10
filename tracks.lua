@@ -237,8 +237,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 	}, def.common or {})
 	--make trackplacer base def
 	advtrains.trackplacer.register_tracktype(def.nodename_prefix, preset.tpdefault)
-	advtrains.trackplacer.register_track_placer(def.nodename_prefix, def.texture_prefix, def.description)
-	
+	advtrains.trackplacer.register_track_placer(def.nodename_prefix, def.texture_prefix, def.description)			
 	for suffix, conns in pairs(preset.variant) do
 		for rotid, rotation in ipairs(preset.rotation) do
 			if not def.formats[suffix] or def.formats[suffix][rotid] then
@@ -246,6 +245,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				if preset.switch[suffix] then
 					switchfunc, mesecontbl=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix])
 				end
+				
 				minetest.register_node(def.nodename_prefix.."_"..suffix..rotation, advtrains.merge_tables(
 					common_def, 
 					make_overdef(
@@ -293,6 +293,70 @@ function advtrains.get_track_connections(name, param2)
 	return (nodedef.connect1 + 4 * noderot)%16, (nodedef.connect2  + 4 * noderot)%16, nodedef.rely1 or 0, nodedef.rely2 or 0, nodedef.railheight or 0
 end
 
+--detector code
+--holds a table with nodes on which trains are on.
+
+advtrains.detector = {}
+advtrains.detector.on_node = {}
+advtrains.detector.on_node_restore = {}
+--set if paths were invalidated before. tells trainlogic.lua to call advtrains.detector.finalize_restore()
+advtrains.detector.clean_step_before = false
+
+--when train enters a node, call this
+--The entry already being contained in advtrains.detector.on_node_restore will not trigger an on_train_enter event on the node.  (when path is reset, this is saved).
+function advtrains.detector.enter_node(pos, train_id)
+	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
+	--print("enterNode "..pts.." "..train_id)
+	if not advtrains.detector.on_node[pts] then
+		advtrains.detector.on_node[pts]=train_id
+		if advtrains.detector.on_node_restore[pts] then
+			advtrains.detector.on_node_restore[pts]=nil
+		else
+			advtrains.detector.call_enter_callback(advtrains.round_vector_floor_y(pos), train_id)
+		end
+	end
+end
+function advtrains.detector.leave_node(pos, train_id)
+	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
+	--print("leaveNode "..pts.." "..train_id)
+	if advtrains.detector.on_node[pts] then
+		advtrains.detector.call_leave_callback(advtrains.round_vector_floor_y(pos), train_id)
+		advtrains.detector.on_node[pts]=nil
+	end
+end
+--called immediately before invalidating paths
+function advtrains.detector.setup_restore()
+	--print("setup_restore")
+	advtrains.detector.on_node_restore = advtrains.detector.on_node
+	advtrains.detector.on_node = {}
+end
+--called one step after invalidating paths, when all trains have restored their path and called enter_node for their contents.
+function advtrains.detector.finalize_restore()
+	--print("finalize_restore")
+	for pts, train_id in pairs(advtrains.detector.on_node_restore) do
+		--print("called leave callback "..pts.." "..train_id)
+		advtrains.detector.call_leave_callback(minetest.string_to_pos(pts), train_id)
+	end
+	advtrains.detector.on_node_restore = {}
+end
+function advtrains.detector.call_enter_callback(pos, train_id)
+	--print("instructed to call enter calback")
+
+	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
+	local mregnode=minetest.registered_nodes[node.name]
+	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_enter then
+		mregnode.advtrains.on_train_enter(pos, train_id)
+	end 
+end
+function advtrains.detector.call_leave_callback(pos, train_id)
+	--print("instructed to call leave calback")
+
+	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
+	local mregnode=minetest.registered_nodes[node.name]
+	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_leave then
+		mregnode.advtrains.on_train_leave(pos, train_id)
+	end 
+end
 --END code, BEGIN definition
 --definition format: ([] optional)
 --[[{
