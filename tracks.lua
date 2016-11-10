@@ -95,6 +95,29 @@ local t_30deg={
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={vst1=true, vst2=true, vst31=true, vst32=true, vst33=true},
 }
+local t_30deg_straightonly={
+	regstep=1,
+	variant={
+		st=conns(0,8),
+	},
+	description={
+		st="straight",
+	},
+	switch={
+	},
+	switchmc={
+	},
+	trackplacer={
+	},
+	tpsingle={
+	},
+	tpdefault="st",
+	trackworker={
+		["st"]="st",
+	},
+	rotation={"", "_30", "_45", "_60"},
+	increativeinv={st},
+}
 local t_45deg={
 	regstep=2,
 	variant={
@@ -377,7 +400,7 @@ advtrains.register_tracks("regular", {
 	nodename_prefix="advtrains:track",
 	texture_prefix="advtrains_track",
 	shared_model="trackplane.b3d",
-	description="Regular Train Track",
+	description="Deprecated Track",
 	formats={vst1={}, vst2={}},
 }, t_45deg)
 
@@ -388,84 +411,25 @@ advtrains.register_tracks("default", {
 	models_prefix="advtrains_dtrack",
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
-	description="New Default Train Track",
+	description="Track",
 	formats={vst1={true, false, true}, vst2={true, false, true}, vst31={true}, vst32={true}, vst33={true}},
 }, t_30deg)
 
---bumpers. temporary registration. later: integrate to register_tracks.
-function advtrains.register_bumpers(tracktype, def, preset)
-	local common_def=advtrains.merge_tables({
-		description = def.description,
-		drawtype = "mesh",
-		paramtype="light",
-		paramtype2="facedir",
-		walkable = false,
-		selection_box = {
-			type = "fixed",
-			fixed = {-1/2, -1/2, -1/2, 1/2, -1/2+1/16, 1/2},
-		},
-		rely1=0,
-		rely2=0,
-		railheight=0,
-		can_dig=function(pos)
-			return not advtrains.is_train_at_pos(pos)
-		end,
-		after_dig_node=function(pos)
-			advtrains.invalidate_all_paths()
-			advtrains.reset_trackdb_position(pos)
-		end,
-		after_place_node=function(pos)
-			advtrains.reset_trackdb_position(pos)
-		end,
-	}, def.common or {})
-	local function cycle_conns(conns, rotid)
-		local add=(rotid-1)*preset.regstep
-		return {
-			conn1=(conns.conn1+add)%16,
-			conn2=(conns.conn2+add)%16,
-			rely1=conns.rely1 or 0,
-			rely2=conns.rely2 or 0,
-			railheight=conns.railheight or 0,
-		}
-	end
-	
-	for rotid, rotation in ipairs(preset.rotation) do
-		local img_suffix="bumper"..rotation
-		
-		local crea=1
-		if rotid==1 then crea=0 end
-		
-		minetest.register_node(def.nodename_prefix.."_".."bumper"..rotation, advtrains.merge_tables(
-			common_def, 
-			{
-				mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
-				tiles = {def.shared_texture or (def.texture_prefix.."_"..img_suffix..".png")},
-				--inventory_image = def.texture_prefix.."_"..img_suffix..".png",
-				--wield_image = def.texture_prefix.."_"..img_suffix..".png",
-				description=def.description.."(".."bumper"..rotation..")",
-				on_rightclick=switchfunc,
-				groups = {
-					attached_node=1,
-					--["advtrains_track_"..tracktype]=1, not a rail...
-					dig_immediate=2,
-				},
-				}
-		))
-		
-		--advtrains.trackplacer.add_single_conn(def.nodename_prefix, "bumper", rotation, cycle_conns({conn1=0, conn2=8}, rotid))
-		advtrains.trackplacer.add_worked(def.nodename_prefix, "bumper", rotation, nil)
-	end
-end
-
-advtrains.register_bumpers("default", {
-	nodename_prefix="advtrains:dtrack",
-	texture_prefix="advtrains_dtrack",
-	models_prefix="advtrains_dtrack",
+--bumpers
+advtrains.register_tracks("default", {
+	nodename_prefix="advtrains:dtrack_bumper",
+	texture_prefix="advtrains_dtrack_bumper",
+	models_prefix="advtrains_dtrack_bumper",
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
-	description="New Default Train Track",
-	formats={vst1={true}, vst2={true}},
-}, t_30deg)
+	description="Bumper",
+	formats={},
+}, t_30deg_straightonly)
+--legacy bumpers
+for _,rot in ipairs({"", "_30", "_45", "_60"}) do
+	minetest.register_alias("advtrains:dtrack_bumper"..rot, "advtrains:dtrack_bumper_st"..rot)
+end
+
 
 
 
