@@ -6,7 +6,6 @@ function advtrains.register_platform(preset)
 		minetest.log("warning", "[advtrains] register_platform couldn't find preset node "..preset)
 		return
 	end
-	minetest.log("action", dump(ndef))
 	local btex=ndef.tiles
 	if type(btex)=="table" then
 		btex=btex[1]
