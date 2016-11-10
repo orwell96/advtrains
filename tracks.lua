@@ -76,6 +76,7 @@ local t_30deg={
 		swrst="on",
 		swrcr="off",
 	},
+	regtp=true,
 	trackplacer={
 		st=true,
 		cr=true,
@@ -107,6 +108,31 @@ local t_30deg_straightonly={
 	},
 	switchmc={
 	},
+	regtp=true,
+	trackplacer={
+	},
+	tpsingle={
+	},
+	tpdefault="st",
+	trackworker={
+		["st"]="st",
+	},
+	rotation={"", "_30", "_45", "_60"},
+	increativeinv={st},
+}
+local t_30deg_straightonly_noplacer={
+	regstep=1,
+	variant={
+		st=conns(0,8),
+	},
+	description={
+		st="straight",
+	},
+	switch={
+	},
+	switchmc={
+	},
+	regtp=false,
 	trackplacer={
 	},
 	tpsingle={
@@ -152,6 +178,7 @@ local t_45deg={
 		swrst="on",
 		swrcr="off",
 	},
+	regtp=true,
 	trackplacer={
 		st=true,
 		cr=true,
@@ -195,7 +222,8 @@ function advtrains.register_tracks(tracktype, def, preset)
 			advtrains.reset_trackdb_position(pos)
 		end
 		return switchfunc, {effector = {
-			["action_"..mesecon_state] = switchfunc
+			["action_"..mesecon_state] = switchfunc,
+			rules=advtrains.meseconrules
 		}}
 	end
 	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, in_creative_inv)
@@ -260,7 +288,9 @@ function advtrains.register_tracks(tracktype, def, preset)
 	}, def.common or {})
 	--make trackplacer base def
 	advtrains.trackplacer.register_tracktype(def.nodename_prefix, preset.tpdefault)
-	advtrains.trackplacer.register_track_placer(def.nodename_prefix, def.texture_prefix, def.description)			
+	if preset.regtp then
+		advtrains.trackplacer.register_track_placer(def.nodename_prefix, def.texture_prefix, def.description)			
+	end
 	for suffix, conns in pairs(preset.variant) do
 		for rotid, rotation in ipairs(preset.rotation) do
 			if not def.formats[suffix] or def.formats[suffix][rotid] then
@@ -268,22 +298,29 @@ function advtrains.register_tracks(tracktype, def, preset)
 				if preset.switch[suffix] then
 					switchfunc, mesecontbl=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix])
 				end
-				
+				local adef={}
+				if def.get_additional_definiton then
+					adef=def.get_additional_definiton(def, preset, suffix, rotation)
+				end
+
 				minetest.register_node(def.nodename_prefix.."_"..suffix..rotation, advtrains.merge_tables(
 					common_def, 
 					make_overdef(
 						suffix, rotation,
 						cycle_conns(conns, rotid),
 						switchfunc, mesecontbl, preset.increativeinv[suffix]
-						)
+						),
+					adef
 					)
 				)
 				--trackplacer
-				if preset.trackplacer[suffix] then
-					advtrains.trackplacer.add_double_conn(def.nodename_prefix, suffix, rotation, cycle_conns(conns, rotid))
-				end
-				if preset.tpsingle[suffix] then
-					advtrains.trackplacer.add_single_conn(def.nodename_prefix, suffix, rotation, cycle_conns(conns, rotid))
+				if preset.regtp then
+					if preset.trackplacer[suffix] then
+						advtrains.trackplacer.add_double_conn(def.nodename_prefix, suffix, rotation, cycle_conns(conns, rotid))
+					end
+					if preset.tpsingle[suffix] then
+						advtrains.trackplacer.add_single_conn(def.nodename_prefix, suffix, rotation, cycle_conns(conns, rotid))
+					end
 				end
 				advtrains.trackplacer.add_worked(def.nodename_prefix, suffix, rotation, preset.trackworker[suffix])
 			end
@@ -430,10 +467,58 @@ for _,rot in ipairs({"", "_30", "_45", "_60"}) do
 	minetest.register_alias("advtrains:dtrack_bumper"..rot, "advtrains:dtrack_bumper_st"..rot)
 end
 
-
-
-
-
+if mesecon then
+	advtrains.register_tracks("default", {
+		nodename_prefix="advtrains:dtrack_detector_off",
+		texture_prefix="advtrains_dtrack_detector",
+		models_prefix="advtrains_dtrack_detector",
+		models_suffix=".b3d",
+		shared_texture="advtrains_dtrack_rail.png",
+		description="Detector Rail",
+		formats={},
+		get_additional_definiton = function(def, preset, suffix, rotation)
+			return {
+				mesecons = {
+					receptor = {
+						state = mesecon.state.off,
+						rules = advtrains.meseconrules
+					}
+				},
+				advtrains = {
+					on_train_enter=function(pos, train_id)
+						minetest.swap_node(pos, {name="advtrains:dtrack_detector_on".."_"..suffix..rotation})
+						mesecon.receptor_on(pos, advtrains.meseconrules)
+					end
+				}
+			}
+		end
+	}, t_30deg_straightonly)
+	advtrains.register_tracks("default", {
+		nodename_prefix="advtrains:dtrack_detector_on",
+		texture_prefix="advtrains_dtrack_detector",
+		models_prefix="advtrains_dtrack_detector",
+		models_suffix=".b3d",
+		shared_texture="advtrains_dtrack_rail_detector_on.png",
+		description="Detector(on)(you hacker you)",
+		formats={},
+		get_additional_definiton = function(def, preset, suffix, rotation)
+			return {
+				mesecons = {
+					receptor = {
+						state = mesecon.state.on,
+						rules = advtrains.meseconrules
+					}
+				},
+				advtrains = {
+					on_train_leave=function(pos, train_id)
+						minetest.swap_node(pos, {name="advtrains:dtrack_detector_off".."_"..suffix..rotation})
+						mesecon.receptor_off(pos, advtrains.meseconrules)
+					end
+				}
+			}
+		end
+	}, t_30deg_straightonly_noplacer)
+end
 --TODO legacy
 --I know lbms are better for this purpose
 for name,rep in pairs({swl_st="swlst", swr_st="swrst", swl_cr="swlcr", swr_cr="swrcr", }) do

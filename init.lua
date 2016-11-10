@@ -12,10 +12,13 @@ print = function(t) minetest.log("action", t) minetest.chat_send_all(t) end
 dofile(advtrains.modpath.."/helpers.lua");
 dofile(advtrains.modpath.."/debugitems.lua");
 
+advtrains.meseconrules = mesecon.rules.pplate
+
 dofile(advtrains.modpath.."/trainlogic.lua");
 dofile(advtrains.modpath.."/trainhud.lua")
 dofile(advtrains.modpath.."/trackplacer.lua")
 dofile(advtrains.modpath.."/tracks.lua")
+dofile(advtrains.modpath.."/atc.lua")
 dofile(advtrains.modpath.."/wagons.lua")
 
 dofile(advtrains.modpath.."/pseudoload.lua");
