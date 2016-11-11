@@ -677,7 +677,7 @@ advtrains.register_wagon("engine_japan", "electric",{
 	is_locomotive=true,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
-}, "Japanese Train Engine", "green.png")
+}, "Japanese Train Engine", "advtrains_engine_japan_inv.png")
 
 advtrains.register_wagon("wagon_japan", "electric",{
 	mesh="advtrains_wagon_japan.b3d",
@@ -693,7 +693,7 @@ advtrains.register_wagon("wagon_japan", "electric",{
 	wagon_span=2.3,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
-}, "Japanese Train Wagon", "blue.png")
+}, "Japanese Train Wagon", "advtrains_wagon_japan_inv.png")
 
 advtrains.register_wagon("engine_industrial", "electric",{
 	mesh="advtrains_engine_industrial.b3d",
