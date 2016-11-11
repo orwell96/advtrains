@@ -1,12 +1,6 @@
 --trackplacer.lua
 --holds code for the track-placing system. the default 'track' item will be a craftitem that places rails as needed. this will neither place or change switches nor place vertical rails.
 
-local print=function(player, t, ...) minetest.log("action", table.concat({t, ...}, " "))
-   if player then
-      minetest.chat_send_player(player,table.concat({t, ...}, " "))
-   end
-end
-
 --all new trackplacer code
 local tp={
 	tracks={}
@@ -209,42 +203,46 @@ minetest.register_craftitem("advtrains:trackworker",{
 	wield_image = "advtrains_trackworker.png",
 	stack_max = 1,
 	on_place = function(itemstack, placer, pointed_thing)
-	   local name = placer:get_player_name()
-	   if not name then
-	      return
-	   end
-	   if pointed_thing.type=="node" then
-	      local pos=pointed_thing.under
-	      if minetest.is_protected(pos, name) then
-		 return
-	      end
-	      local node=minetest.get_node(pos)
-	      
-	      --if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
-	      if advtrains.is_train_at_pos(pos) then return end
-	      
-	      local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
-	      --print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
-	      if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
-		 print(name, "[advtrains]railtype not workable by trackworker")
-		 return
-	      end
-	      local modext=tp.tracks[nnprefix].twrotate[suffix]
+		local name = placer:get_player_name()
+		if not name then
+			return
+		end
+		if pointed_thing.type=="node" then
+			local pos=pointed_thing.under
+			if minetest.is_protected(pos, name) then
+				return
+			end
+			local node=minetest.get_node(pos)
 
-	      if rotation==modext[#modext] then --increase param2
-		 minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
-		 return
-	      else
-		 local modpos
-		 for k,v in pairs(modext) do if v==rotation then modpos=k end end
-		    if not modpos then
-		       print(placer,"[advtrains]rail not workable by trackworker")
-		       return
-		    end
-		    minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
-	      end
-	      advtrains.invalidate_all_paths()
-	   end
+			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
+			if advtrains.is_train_at_pos(pos) then return end
+
+			local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
+			--print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
+			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
+				nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
+				rotation = ""
+				if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
+					minetest.chat_send_player(placer:get_player_name(), "This node can't be rotated using the trackworker!")
+					return
+				end
+			end
+			local modext=tp.tracks[nnprefix].twrotate[suffix]
+
+			if rotation==modext[#modext] then --increase param2
+				minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
+				return
+			else
+				local modpos
+				for k,v in pairs(modext) do if v==rotation then modpos=k end end
+					if not modpos then
+						minetest.chat_send_player(placer:get_player_name(), "This node can't be rotated using the trackworker!")
+					return
+				end
+				minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
+			end
+			advtrains.invalidate_all_paths()
+		end
 	end,
 	on_use=function(itemstack, user, pointed_thing)
 	        local name = user:get_player_name()
@@ -260,12 +258,16 @@ minetest.register_craftitem("advtrains:trackworker",{
 			
 			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 			if advtrains.is_train_at_pos(pos) then return end
-			local nnprefix, suffix, rotation=string.match(node.name, "^([^_]+)_([^_]+)(_?.*)$")
-			
-			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
-				print(name,"[advtrains]railtype not workable by trackworker")
-				return
-			end
+			local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
+	        --print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
+		    if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
+			  nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
+			  rotation = ""
+			  if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
+			    minetest.chat_send_player(user:get_player_name(), "This node can't be changed using the trackworker!")
+			    return
+			  end
+		    end
 			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
 			minetest.set_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
 			--invalidate trains
