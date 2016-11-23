@@ -486,7 +486,8 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					if val and val.type~="INV" then
 					--get on
 						wagon:get_on(player, val.index)
-						minetest.show_formspec(player:get_player_name(), "none", "")
+						--will work with the new close_formspec functionality. close exactly this formspec.
+						minetest.show_formspec(player:get_player_name(), formname, "")
 					end
 				end
 			end
