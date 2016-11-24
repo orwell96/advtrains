@@ -261,6 +261,9 @@ function wagon:on_step(dtime)
 				local pc=driver:get_player_control()
 				
 				advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
+				if pc.aux1 and pc.sneak then
+					self:get_off(seatno)
+				end
 				
 				self.old_player_control_bits=driver:get_player_control_bits()
 			end

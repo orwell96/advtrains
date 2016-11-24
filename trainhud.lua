@@ -36,6 +36,7 @@ function advtrains.on_control_change(pc, train, flip)
 			train.brake = false
 			train.brake_hold_state = 0
 		end
+		--shift+use:see wagons.lua
 	else
 		if pc.up then
 			train.tarvelocity = train.tarvelocity + 1
