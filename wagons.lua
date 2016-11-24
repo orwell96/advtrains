@@ -438,6 +438,16 @@ function wagon:get_off(seatno)
 	if clicker then
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
+		local objpos=advtrains.round_vector_floor_y(self.object:getpos())
+		local yaw=self.object:getyaw()
+		local isx=(yaw < math.pi/4) or (yaw > 3*math.pi/4 and yaw < 5*math.pi/4) or (yaw > 7*math.pi/4)
+		--abuse helper function
+		for _,r in ipairs({-1, 1}) do
+			local p=vector.add({x=isx and r or 0, y=0, z=not isx and r or 0}, objpos)
+			if minetest.get_item_group(minetest.get_node(p).name, "platform")>0 then
+				minetest.after(0.2, function() clicker:setpos({x=p.x, y=p.y+1, z=p.z}) end)
+			end
+		end
 	end
 	self.seatp[seatno]=nil
 end

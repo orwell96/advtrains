@@ -15,7 +15,7 @@ function advtrains.register_platform(preset)
 	minetest.register_node("advtrains:platform_low_"..nodename, {
 		description = desc.." Platform (low)",
 		tiles = {btex.."^advtrains_platform.png", btex, btex, btex, btex, btex},
-		groups = {cracky = 1, not_blocking_trains = 1},
+		groups = {cracky = 1, not_blocking_trains = 1, platform=1},
 		sounds = default.node_sound_stone_defaults(),
 		drawtype = "nodebox",
 		node_box = {
@@ -32,7 +32,7 @@ function advtrains.register_platform(preset)
 	minetest.register_node("advtrains:platform_high_"..nodename, {
 		description = desc.." Platform (high)",
 		tiles = {btex.."^advtrains_platform.png", btex, btex, btex, btex, btex},
-		groups = {cracky = 1, not_blocking_trains = 1},
+		groups = {cracky = 1, not_blocking_trains = 1, platform=2},
 		sounds = default.node_sound_stone_defaults(),
 		drawtype = "nodebox",
 		node_box = {
