@@ -259,24 +259,16 @@ function wagon:on_step(dtime)
 			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
 			if driver and driver:get_player_control_bits()~=self.old_player_control_bits then
 				local pc=driver:get_player_control()
-				if pc.sneak then --stop
-					self:train().tarvelocity=0
-				elseif (not self.wagon_flipped and pc.up) or (self.wagon_flipped and pc.down) then --faster
-					self:train().tarvelocity=math.min(self:train().tarvelocity+1, advtrains.all_traintypes[self:train().traintype].max_speed or 10)
-				elseif (not self.wagon_flipped and pc.down) or (self.wagon_flipped and pc.up) then --slower
-					self:train().tarvelocity=math.max(self:train().tarvelocity-1, -(advtrains.all_traintypes[self:train().traintype].max_speed or 10))
-				elseif pc.aux1 then --slower
-					if true or math.abs(self:train().velocity)<=3 then--TODO debug
-						self:get_off(seatno)
-						return
-					else
-						minetest.chat_send_player(driver:get_player_name(), "Can't get off driving train!")
-					end
+				
+				advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
+				if pc.aux1 and pc.sneak then
+					self:get_off(seatno)
 				end
+				
 				self.old_player_control_bits=driver:get_player_control_bits()
 			end
 			if driver then
-				advtrains.set_trainhud(driver:get_player_name(), advtrains.hud_train_format(self:train(), self.wagon_flipped))
+				advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
 			end
 		end
 	end
@@ -310,7 +302,8 @@ function wagon:on_step(dtime)
 		return
 	end
 	if not self.pos_in_train then
-		print("["..self.unique_id.."][fatal] no pos_in_train set.")
+		--why ever. but better continue next step...
+		advtrains.update_trainpart_properties(self.train_id)
 		return
 	end
 	
@@ -347,7 +340,7 @@ function wagon:on_step(dtime)
 	end
 	
 	--FIX: use index of the wagon, not of the train.
-	local velocity=gp.velocity/(gp.path_dist[math.floor(index)] or 1)
+	local velocity=(gp.velocity*gp.movedir)/(gp.path_dist[math.floor(index)] or 1)
 	local acceleration=(gp.last_accel or 0)/(gp.path_dist[math.floor(index)] or 1)
 	local factor=index-math.floor(index)
 	local actual_pos={x=first_pos.x-(first_pos.x-second_pos.x)*factor, y=first_pos.y-(first_pos.y-second_pos.y)*factor, z=first_pos.z-(first_pos.z-second_pos.z)*factor,}
@@ -414,7 +407,7 @@ function wagon:get_on(clicker, seatno)
 		self.seatp={}
 	end
 	if not self.seats[seatno] then return end
-	if self.seatp[seatno] then
+	if self.seatp[seatno] and self.seatp[seatno]~=clicker:get_player_name() then
 		self:get_off(seatno)
 	end
 	self.seatp[seatno] = clicker:get_player_name()
@@ -441,10 +434,20 @@ function wagon:get_off(seatno)
 	local pname = self.seatp[seatno]
 	local clicker = minetest.get_player_by_name(pname)
 	advtrains.player_to_wagon_mapping[pname]=nil
-	advtrains.set_trainhud(pname, "")
+	advtrains.clear_driver_hud(pname)
 	if clicker then
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
+		local objpos=advtrains.round_vector_floor_y(self.object:getpos())
+		local yaw=self.object:getyaw()
+		local isx=(yaw < math.pi/4) or (yaw > 3*math.pi/4 and yaw < 5*math.pi/4) or (yaw > 7*math.pi/4)
+		--abuse helper function
+		for _,r in ipairs({-1, 1}) do
+			local p=vector.add({x=isx and r or 0, y=0, z=not isx and r or 0}, objpos)
+			if minetest.get_item_group(minetest.get_node(p).name, "platform")>0 then
+				minetest.after(0.2, function() clicker:setpos({x=p.x, y=p.y+1, z=p.z}) end)
+			end
+		end
 	end
 	self.seatp[seatno]=nil
 end
@@ -486,7 +489,8 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					if val and val.type~="INV" then
 					--get on
 						wagon:get_on(player, val.index)
-						minetest.show_formspec(player:get_player_name(), "none", "")
+						--will work with the new close_formspec functionality. close exactly this formspec.
+						minetest.show_formspec(player:get_player_name(), formname, "")
 					end
 				end
 			end

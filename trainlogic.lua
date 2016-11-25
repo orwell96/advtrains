@@ -34,8 +34,10 @@ function endstep()
 	end
 end
 
+--TODO: these values need to be integrated when i remove traintypes.
 advtrains.train_accel_force=2--per second and divided by number of wagons
 advtrains.train_brake_force=3--per second, not divided by number of wagons
+advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
 advtrains.audit_interval=30
@@ -171,6 +173,9 @@ function advtrains.train_step(id, train, dtime)
 	if not train.velocity then
 		train.velocity=0
 	end
+	if not train.movedir or (train.movedir~=1 and train.movedir~=-1) then
+		train.movedir=1
+	end
 	--very unimportant thing: check if couple is here
 	if train.couple_eid_front and (not minetest.luaentities[train.couple_eid_front] or not minetest.luaentities[train.couple_eid_front].is_couple) then train.couple_eid_front=nil end
 	if train.couple_eid_back and (not minetest.luaentities[train.couple_eid_back] or not minetest.luaentities[train.couple_eid_back].is_couple) then train.couple_eid_back=nil end
@@ -201,13 +206,12 @@ function advtrains.train_step(id, train, dtime)
 	local back_off_track=train.min_index_on_track and train_end_index<train.min_index_on_track
 	if front_off_track and back_off_track then--allow movement in both directions
 		if train.tarvelocity>1 then train.tarvelocity=1 end
-		if train.tarvelocity<-1 then train.tarvelocity=-1 end
 	elseif front_off_track then--allow movement only backward
-		if train.tarvelocity>0 then train.tarvelocity=0 end
-		if train.tarvelocity<-1 then train.tarvelocity=-1 end
+		if train.movedir==1 and train.tarvelocity>0 then train.tarvelocity=0 end
+		if train.movedir==-1 and train.tarvelocity>1 then train.tarvelocity=1 end
 	elseif back_off_track then--allow movement only forward
-		if train.tarvelocity>1 then train.tarvelocity=1 end
-		if train.tarvelocity<0 then train.tarvelocity=0 end
+		if train.movedir==-1 and train.tarvelocity>0 then train.tarvelocity=0 end
+		if train.movedir==1 and train.tarvelocity>1 then train.tarvelocity=1 end
 	end
 	
 	--update advtrains.detector
@@ -269,9 +273,9 @@ function advtrains.train_step(id, train, dtime)
 		--this time, based on NODES and the advtrains.detector.on_node table.
 		local collpos
 		local coll_grace=1
-		if train.velocity>0 then
+		if train.movedir==1 then
 			collpos=advtrains.get_real_index_position(path, train.index-coll_grace)
-		elseif train.velocity<0 then
+		else
 			collpos=advtrains.get_real_index_position(path, train_end_index+coll_grace)
 		end
 		if collpos then
@@ -282,7 +286,8 @@ function advtrains.train_step(id, train, dtime)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
 						--collides
 						train.recently_collided_with_env=true
-						train.velocity=-0.5*train.velocity
+						train.velocity=0.5*train.velocity
+						train.movedir=train.movedir*-1
 						train.tarvelocity=0
 					end
 				end
@@ -345,32 +350,41 @@ function advtrains.train_step(id, train, dtime)
 	if train.locomotives_in_train==0 then
 		train.tarvelocity=0
 	end
+	--make brake adjust the tarvelocity if necessary
+	if train.brake and (math.ceil(train.velocity)-1)<train.tarvelocity then
+		train.tarvelocity=math.max((math.ceil(train.velocity)-1), 0)
+	end
 	--apply tarvel(but with physics in mind!)
 	if train.velocity~=train.tarvelocity then
 		local applydiff=0
 		local mass=#train.trainparts
-		local diff=math.abs(train.tarvelocity)-math.abs(train.velocity)
+		local diff=train.tarvelocity-train.velocity
 		if diff>0 then--accelerating, force will be brought on only by locomotives.
 			--print("accelerating with default force")
 			applydiff=(math.min((advtrains.train_accel_force*train.locomotives_in_train*dtime)/mass, math.abs(diff)))
 		else--decelerating
 			if front_off_track or back_off_track or train.recently_collided_with_env then --every wagon has a brake, so not divided by mass.
 				--print("braking with emergency force")
-				applydiff=(math.min((advtrains.train_emerg_force*dtime), math.abs(diff)))
-			else
+				applydiff= -(math.min((advtrains.train_emerg_force*dtime), math.abs(diff)))
+			elseif train.brake then
 				--print("braking with default force")
-				applydiff=(math.min((advtrains.train_brake_force*dtime), math.abs(diff)))
+				--no math.min, because it can grow beyond tarvelocity, see up there
+				--dont worry, it will never fall below zero.
+				applydiff= -((advtrains.train_brake_force*dtime))
+			else
+				--print("roll")
+				applydiff= -(math.min((advtrains.train_roll_force*dtime), math.abs(diff)))
 			end
 		end
-		train.last_accel=(applydiff*math.sign(train.tarvelocity-train.velocity))
-		train.velocity=train.velocity+train.last_accel
+		train.last_accel=(applydiff*train.movedir)
+		train.velocity=math.min(math.max( train.velocity+applydiff , 0), advtrains.all_traintypes[train.traintype].max_speed)
 	else
 		train.last_accel=0
 	end
 	
 	--move
 	--TODO 3,5 + 0.7
-	train.index=train.index and train.index+((train.velocity/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
+	train.index=train.index and train.index+(((train.velocity*train.movedir)/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
 	
 end
 
