@@ -257,18 +257,23 @@ function wagon:on_step(dtime)
 	for seatno, seat in ipairs(self.seats) do
 		if seat.driving_ctrl_access then
 			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
+			local get_off_pressed=false
 			if driver and driver:get_player_control_bits()~=self.old_player_control_bits then
 				local pc=driver:get_player_control()
 				
 				advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
 				if pc.aux1 and pc.sneak then
-					self:get_off(seatno)
+					get_off_pressed=true
 				end
 				
 				self.old_player_control_bits=driver:get_player_control_bits()
 			end
 			if driver then
-				advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
+				if get_off_pressed then
+					self:get_off(seatno)
+				else
+					advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
+				end
 			end
 		end
 	end
