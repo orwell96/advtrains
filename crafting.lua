@@ -32,11 +32,19 @@ minetest.register_craft({
 })
 
 minetest.register_craft({
-	output = 'advtrains:dtrack_bumper 2',
+	output = 'advtrains:dtrack_bumper_placer 2',
 	recipe = {
 		{'default:wood', 'dye:red'},
 		{'default:steel_ingot', 'default:steel_ingot'},
 		{'advtrains:dtrack_placer', 'advtrains:dtrack_placer'},
+	},
+})
+minetest.register_craft({
+	type="shapeless",
+	output = 'advtrains:dtrack_detector_off_placer',
+	recipe = {
+		"advtrains:dtrack_placer",
+		"mesecons:wire_00000000_off"
 	},
 })
 --signals
