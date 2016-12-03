@@ -93,7 +93,7 @@ minetest.register_craft({
 	},
 })
 minetest.register_craft({
-	output = 'advtrains:wagon_default_box',
+	output = 'advtrains:wagon_box',
 	recipe = {
 		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
 		{'default:steelblock', 'default:junglewood', 'default:steelblock'},
