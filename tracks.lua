@@ -5,7 +5,7 @@
 --If the old non-model rails on straight tracks should be replaced by the new...
 --false: no
 --true: yes
-advtrains.register_straight_rep_lbm=true
+advtrains.register_replacement_lbms=false
 
 --[[TracksDefinition
 nodename_prefix
@@ -538,6 +538,7 @@ for name,rep in pairs({swl_st="swlst", swr_st="swrst", swl_cr="swlcr", swr_cr="s
     })
 end
 
+if advtrains.register_replacement_lbms then
 minetest.register_lbm({
 	name = "advtrains:ramp_replacement_1",
 --  In the following two fields, also group:groupname will work.
@@ -550,7 +551,6 @@ minetest.register_lbm({
 	nodenames = {"advtrains:track_vert2"},
 	action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst2", param2=(node.param2+2)%4}) end,
 })
-if advtrains.register_straight_rep_lbm then
 	minetest.register_abm({
 		name = "advtrains:st_rep_1",
 	--  In the following two fields, also group:groupname will work.
