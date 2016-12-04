@@ -427,7 +427,7 @@ function wagon:get_off_plr(pname)
 	end
 end
 function wagon:get_seatno(pname)
-	for no, cont in ipairs(self.seatp) do
+	for no, cont in pairs(self.seatp) do
 		if cont==pname then
 			return no
 		end
