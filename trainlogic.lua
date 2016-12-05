@@ -487,8 +487,19 @@ function advtrains.pathpredict(id, train)
 		train.path_dist[-1]=vector.distance(train.last_pos, train.last_pos_prev)
 	end
 	
+	local pregen_front=2
+	local pregen_back=2
+	if train.velocity>0 then
+		if train.movedir>0 then
+			pregen_front=2+math.ceil(train.velocity*0.15) --assumes server step of 0.1 seconds, +50% tolerance
+		else
+			pregen_back=2+math.ceil(train.velocity*0.15)
+		end
+	end
+	
+	
 	local maxn=advtrains.maxN(train.path)
-	while (maxn-train.index) < 2 do--pregenerate
+	while (maxn-train.index) < pregen_front do--pregenerate
 		--print("[advtrains]maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
 		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.traintype)
 		if conway then
@@ -505,7 +516,7 @@ function advtrains.pathpredict(id, train)
 	end
 	
 	local minn=advtrains.minN(train.path)
-	while (train.index-minn) < (train.trainlen or 0) + 2 do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
+	while (train.index-minn) < (train.trainlen or 0) + pregen_back do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
 		--print("[advtrains]minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.traintype)
 		if conway then

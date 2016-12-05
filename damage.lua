@@ -1,7 +1,7 @@
 --damage.lua
 --a globalstep that damages players overrolled by trains.
 
-advtrains.player_to_wagon_mapping={}
+advtrains.player_to_train_mapping={}
 
 local tmr=0
 minetest.register_globalstep(function(dtime)
@@ -13,7 +13,7 @@ minetest.register_globalstep(function(dtime)
 		for _, object in pairs(minetest.get_objects_inside_radius(pos, 1)) do
 			local le=object:get_luaentity()
 			if le and le.is_wagon and le.initialized and le:train() then
-				if (not advtrains.player_to_wagon_mapping[player:get_player_name()] or le.train_id~=advtrains.player_to_wagon_mapping[player:get_player_name()].train_id) and math.abs(le:train().velocity)>2 then
+				if (not advtrains.player_to_train_mapping[player:get_player_name()] or le.train_id~=advtrains.player_to_train_mapping[player:get_player_name()]) and math.abs(le:train().velocity)>2 then
 					--player:punch(object, 1000, {damage={fleshy=3*math.abs(le:train().velocity)}})
 					player:set_hp(player:get_hp()-math.abs(le:train().velocity)-3)
 				end
