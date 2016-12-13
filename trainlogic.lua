@@ -675,17 +675,18 @@ function advtrains.try_connect_trains(id1, id2)
 		
 		if not frontpos1 or not frontpos2 or not backpos1 or not backpos2 then return end
 		
+		local couple_spawnradius=0.7
 		--case 1 (first train is front)
-		if vector.distance(frontpos2, backpos1)<0.5 then
+		if vector.distance(frontpos2, backpos1)<couple_spawnradius then
 			advtrains.spawn_couple_if_neccessary(backpos1, frontpos2, id1, id2, true, false)
 			--case 2 (second train is front)
-		elseif vector.distance(frontpos1, backpos2)<0.5 then
+		elseif vector.distance(frontpos1, backpos2)<couple_spawnradius then
 			advtrains.spawn_couple_if_neccessary(backpos2, frontpos1, id2, id1, true, false)
 			--case 3 
-		elseif vector.distance(backpos2, backpos1)<0.5 then
+		elseif vector.distance(backpos2, backpos1)<couple_spawnradius then
 			advtrains.spawn_couple_if_neccessary(backpos1, backpos2, id1, id2, true, true)
 			--case 4 
-		elseif vector.distance(frontpos2, frontpos1)<0.5 then
+		elseif vector.distance(frontpos2, frontpos1)<couple_spawnradius then
 			advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
 		end
 	end
