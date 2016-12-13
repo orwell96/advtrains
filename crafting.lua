@@ -13,20 +13,10 @@ minetest.register_craft({
 })
 minetest.register_craft({
 	type = "shapeless",
-	output = 'advtrains:dtrack_vst1 2',
+	output = 'advtrains:dtrack_slopeplacer 2',
 	recipe = {
 		"advtrains:dtrack_placer",
 		"advtrains:dtrack_placer",
-		"default:gravel",
-	},
-})
-minetest.register_craft({
-	type = "shapeless",
-	output = 'advtrains:dtrack_vst2 2',
-	recipe = {
-		"advtrains:dtrack_placer",
-		"advtrains:dtrack_placer",
-		"default:gravel",
 		"default:gravel",
 	},
 })

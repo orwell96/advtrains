@@ -93,8 +93,22 @@ local t_30deg={
 		["swlcr"]="swrcr",
 		["swlst"]="swrst",
 	},
+	regsp=true,
+	slopenodes={
+		vst1=true, vst2=true,
+		vst31=true, vst32=true, vst33=true,
+	},
+	slopeplacer={
+		[2]={"vst1", "vst2"},
+		[3]={"vst31", "vst32", "vst33"},
+		max=3,--highest entry
+	},
+	slopeplacer_45={
+		[2]={"vst1_45", "vst2_45"},
+		max=2,
+	},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={vst1=true, vst2=true, vst31=true, vst32=true, vst33=true},
+	increativeinv={},
 }
 local t_30deg_straightonly={
 	regstep=1,
@@ -117,6 +131,7 @@ local t_30deg_straightonly={
 	trackworker={
 		["st"]="st",
 	},
+	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={st},
 }
@@ -141,6 +156,7 @@ local t_30deg_straightonly_noplacer={
 	trackworker={
 		["st"]="st",
 	},
+	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={st},
 }
@@ -195,6 +211,7 @@ local t_45deg={
 		["swlcr"]="swrcr",
 		["swlst"]="swrst",
 	},
+	slopenodes={},
 	rotation={"", "_45"},
 	increativeinv={vst1=true, vst2=true}
 }
@@ -226,7 +243,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			rules=advtrains.meseconrules
 		}}
 	end
-	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, in_creative_inv)
+	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, in_creative_inv, drop_slope)
 		local img_suffix=suffix..rotation
 		return {
 			mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
@@ -248,7 +265,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				not_blocking_trains=1,
 			},
 			mesecons=mesecontbl,
-			drop = increativeinv and def.nodename_prefix.."_"..suffix..rotation or def.nodename_prefix.."_placer",
+			drop = increativeinv and def.nodename_prefix.."_"..suffix..rotation or (drop_slope and def.nodename_prefix.."_slopeplacer" or def.nodename_prefix.."_placer"),
 			}
 	end
 	local function cycle_conns(conns, rotid)
@@ -291,6 +308,9 @@ function advtrains.register_tracks(tracktype, def, preset)
 	if preset.regtp then
 		advtrains.trackplacer.register_track_placer(def.nodename_prefix, def.texture_prefix, def.description)			
 	end
+	if preset.regsp then
+		advtrains.slope.register_placer(def, preset)			
+	end
 	for suffix, conns in pairs(preset.variant) do
 		for rotid, rotation in ipairs(preset.rotation) do
 			if not def.formats[suffix] or def.formats[suffix][rotid] then
@@ -308,7 +328,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 					make_overdef(
 						suffix, rotation,
 						cycle_conns(conns, rotid),
-						switchfunc, mesecontbl, preset.increativeinv[suffix]
+						switchfunc, mesecontbl, preset.increativeinv[suffix], preset.slopenodes[suffix]
 						),
 					adef
 					)
@@ -417,6 +437,101 @@ function advtrains.detector.call_leave_callback(pos, train_id)
 		mregnode.advtrains.on_train_leave(pos, train_id)
 	end 
 end
+
+-- slope placer. Defined in register_tracks.
+--crafted with rail and gravel
+local sl={}
+function sl.register_placer(def, preset)
+	minetest.register_craftitem(def.nodename_prefix.."_slopeplacer",{
+		description = def.description.." Slope",
+		inventory_image = def.texture_prefix.."_slopeplacer.png",
+		wield_image = def.texture_prefix.."_slopeplacer.png",
+		groups={},
+		on_place = sl.create_slopeplacer_on_place(def, preset)
+	})
+end
+--(itemstack, placer, pointed_thing)
+function sl.create_slopeplacer_on_place(def, preset)
+	return function(istack, player, pt)
+		if not pt.type=="node" then 
+			minetest.chat_send_player(player:get_player_name(), "Can't place: not pointing at node")
+			return istack 
+		end
+		local pos=pt.above
+		if not pos then 
+			minetest.chat_send_player(player:get_player_name(), "Can't place: not pointing at node")
+			return istack
+		end
+		local node=minetest.get_node(pos)
+		if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to then
+			minetest.chat_send_player(player:get_player_name(), "Can't place: space occupied!")
+			return istack
+		end
+		if minetest.is_protected(pos, player:get_player_name()) then 
+			minetest.chat_send_player(player:get_player_name(), "Can't place: protected position!")
+			return istack
+		end
+		--determine player orientation (only horizontal component)
+		--get_look_horizontal may not be available
+		local yaw=player.get_look_horizontal and player:get_look_horizontal() or player:get_look_yaw()
+		
+		--rounding unit vectors is a nice way for selecting 1 of 8 directions since sin(30°) is 0.5.
+		dirvec={x=math.floor(math.sin(-yaw)+0.5), y=0, z=math.floor(math.cos(-yaw)+0.5)}
+		--translate to direction to look up inside the preset table
+		local param2, rot45=({
+			[-1]={
+				[-1]=2,
+				[0]=3,
+				[1]=3,
+				},
+			[0]={
+				[-1]=2,
+				[1]=0,
+				},
+			[1]={
+				[-1]=1,
+				[0]=1,
+				[1]=0,
+				},
+		})[dirvec.x][dirvec.z], dirvec.x~=0 and dirvec.z~=0
+		local lookup=preset.slopeplacer
+		if rot45 then lookup=preset.slopeplacer_45 end
+		
+		--go unitvector forward and look how far the next node is
+		local step=1
+		while step<=lookup.max do
+			local node=minetest.get_node(vector.add(pos, dirvec))
+			--next node solid?
+			if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to or minetest.is_protected(pos, player:get_player_name()) then 
+				--do slopes of this distance exist?
+				if lookup[step] then
+					if istack:get_count()>=step then
+						--start placing
+						local placenodes=lookup[step]
+						while step>0 do
+							minetest.set_node(pos, {name=def.nodename_prefix.."_"..placenodes[step], param2=param2})
+							istack:take_item()
+							step=step-1
+							pos=vector.subtract(pos, dirvec)
+						end
+					else
+						minetest.chat_send_player(player:get_player_name(), "Can't place: Not enough slope items left ("..step.." required)")
+					end
+				else
+					minetest.chat_send_player(player:get_player_name(), "Can't place: There's no slope of length "..step)
+				end
+				return istack
+			end
+			step=step+1
+			pos=vector.add(pos, dirvec)
+		end
+		minetest.chat_send_player(player:get_player_name(), "Can't place: no supporting node at upper end.")
+		return itemstack
+	end
+end
+
+advtrains.slope=sl
+
 --END code, BEGIN definition
 --definition format: ([] optional)
 --[[{
