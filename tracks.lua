@@ -473,7 +473,7 @@ function sl.create_slopeplacer_on_place(def, preset)
 		end
 		--determine player orientation (only horizontal component)
 		--get_look_horizontal may not be available
-		local yaw=player.get_look_horizontal and player:get_look_horizontal() or player:get_look_yaw()
+		local yaw=player.get_look_horizontal and player:get_look_horizontal() or (player:get_look_yaw() - math.pi/2)
 		
 		--rounding unit vectors is a nice way for selecting 1 of 8 directions since sin(30°) is 0.5.
 		dirvec={x=math.floor(math.sin(-yaw)+0.5), y=0, z=math.floor(math.cos(-yaw)+0.5)}
