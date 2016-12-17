@@ -416,7 +416,7 @@ function wagon:get_on(clicker, seatno)
 		self:get_off(seatno)
 	end
 	self.seatp[seatno] = clicker:get_player_name()
-	advtrains.player_to_wagon_mapping[clicker:get_player_name()]={wagon=self, seatno=seatno}
+	advtrains.player_to_train_mapping[clicker:get_player_name()]=self.train_id
 	clicker:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
 	clicker:set_eye_offset(self.seats[seatno].view_offset, self.seats[seatno].view_offset)
 end
@@ -427,7 +427,7 @@ function wagon:get_off_plr(pname)
 	end
 end
 function wagon:get_seatno(pname)
-	for no, cont in ipairs(self.seatp) do
+	for no, cont in pairs(self.seatp) do
 		if cont==pname then
 			return no
 		end
@@ -438,7 +438,7 @@ function wagon:get_off(seatno)
 	if not self.seatp[seatno] then return end
 	local pname = self.seatp[seatno]
 	local clicker = minetest.get_player_by_name(pname)
-	advtrains.player_to_wagon_mapping[pname]=nil
+	advtrains.player_to_train_mapping[pname]=nil
 	advtrains.clear_driver_hud(pname)
 	if clicker then
 		clicker:set_detach()

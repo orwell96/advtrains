@@ -13,30 +13,28 @@ minetest.register_craft({
 })
 minetest.register_craft({
 	type = "shapeless",
-	output = 'advtrains:dtrack_vst1 2',
+	output = 'advtrains:dtrack_slopeplacer 2',
 	recipe = {
 		"advtrains:dtrack_placer",
 		"advtrains:dtrack_placer",
-		"default:gravel",
-	},
-})
-minetest.register_craft({
-	type = "shapeless",
-	output = 'advtrains:dtrack_vst2 2',
-	recipe = {
-		"advtrains:dtrack_placer",
-		"advtrains:dtrack_placer",
-		"default:gravel",
 		"default:gravel",
 	},
 })
 
 minetest.register_craft({
-	output = 'advtrains:dtrack_bumper 2',
+	output = 'advtrains:dtrack_bumper_placer 2',
 	recipe = {
 		{'default:wood', 'dye:red'},
 		{'default:steel_ingot', 'default:steel_ingot'},
 		{'advtrains:dtrack_placer', 'advtrains:dtrack_placer'},
+	},
+})
+minetest.register_craft({
+	type="shapeless",
+	output = 'advtrains:dtrack_detector_off_placer',
+	recipe = {
+		"advtrains:dtrack_placer",
+		"mesecons:wire_00000000_off"
 	},
 })
 --signals
@@ -85,7 +83,7 @@ minetest.register_craft({
 	},
 })
 minetest.register_craft({
-	output = 'advtrains:wagon_default_box',
+	output = 'advtrains:wagon_box',
 	recipe = {
 		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
 		{'default:steelblock', 'default:junglewood', 'default:steelblock'},
