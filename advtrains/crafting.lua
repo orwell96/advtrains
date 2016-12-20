@@ -65,39 +65,7 @@ minetest.register_craft({
 	},
 })
 
---wagons
-minetest.register_craft({
-	output = 'advtrains:newlocomotive',
-	recipe = {
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'dye:black', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-	},
-})
-minetest.register_craft({
-	output = 'advtrains:wagon_default',
-	recipe = {
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'dye:dark_green', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-	},
-})
-minetest.register_craft({
-	output = 'advtrains:wagon_box',
-	recipe = {
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'default:junglewood', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-	},
-})
-minetest.register_craft({
-	output = 'advtrains:subway_wagon',
-	recipe = {
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'dye:yellow', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-	},
-})
+
 
 --misc_nodes
 --crafts for platforms see misc_nodes.lua

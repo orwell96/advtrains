@@ -491,7 +491,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					end
 				elseif fields.seat then
 					local val=minetest.explode_textlist_event(fields.seat)
-					if val and val.type~="INV" then
+					if val and val.type~="INV" and not self.seatp[player:get_player_name()] then
 					--get on
 						wagon:get_on(player, val.index)
 						--will work with the new close_formspec functionality. close exactly this formspec.
@@ -521,9 +521,9 @@ end)
 
 function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 	setmetatable(prototype, {__index=wagon})
-	minetest.register_entity("advtrains:"..sysname,prototype)
+	minetest.register_entity(":advtrains:"..sysname,prototype)
 	
-	minetest.register_craftitem("advtrains:"..sysname, {
+	minetest.register_craftitem(":advtrains:"..sysname, {
 		description = desc,
 		inventory_image = inv_img,
 		wield_image = inv_img,
@@ -577,194 +577,11 @@ advtrains.register_wagon("yellowwagon", "steam",{textures = {"yellow.png"}})
 	wagons can define update_animation(self, velocity) if they have a speed-dependent animation
 	this function will be called when the velocity vector changes or every 2 seconds.
 ]]
-advtrains.register_wagon("newlocomotive", "steam",{
-	mesh="advtrains_engine_steam.b3d",
-	textures = {"advtrains_newlocomotive.png"},
-	is_locomotive=true,
-	seats = {
-		{
-			name="Driver Stand (left)",
-			attach_offset={x=-5, y=10, z=-10},
-			view_offset={x=0, y=6, z=0},
-			driving_ctrl_access=true,
-		},
-		{
-			name="Driver Stand (right)",
-			attach_offset={x=5, y=10, z=-10},
-			view_offset={x=0, y=6, z=0},
-			driving_ctrl_access=true,
-		},
-	},
-	visual_size = {x=1, y=1},
-	wagon_span=1.85,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	update_animation=function(self, velocity)
-		--if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
-			self.object:set_animation({x=1,y=60}, 100)--math.floor(velocity))
-			--self.old_anim_velocity=advtrains.abs_ceil(velocity)
-		--end
-	end,
-	custom_on_activate = function(self, staticdata_table, dtime_s)
-		minetest.add_particlespawner({
-			amount = 10,
-			time = 0,
-		--  ^ If time is 0 has infinite lifespan and spawns the amount on a per-second base
-			minpos = {x=0, y=2, z=1.2},
-			maxpos = {x=0, y=2, z=1.2},
-			minvel = {x=-0.2, y=1.8, z=-0.2},
-			maxvel = {x=0.2, y=2, z=0.2},
-			minacc = {x=0, y=-0.1, z=0},
-			maxacc = {x=0, y=-0.3, z=0},
-			minexptime = 2,
-			maxexptime = 4,
-			minsize = 1,
-			maxsize = 5,
-		--  ^ The particle's properties are random values in between the bounds:
-		--  ^ minpos/maxpos, minvel/maxvel (velocity), minacc/maxacc (acceleration),
-		--  ^ minsize/maxsize, minexptime/maxexptime (expirationtime)
-			collisiondetection = true,
-		--  ^ collisiondetection: if true uses collision detection
-			vertical = false,
-		--  ^ vertical: if true faces player using y axis only
-			texture = "smoke_puff.png",
-		--  ^ Uses texture (string)
-			attached = self.object,
-		})
-	end,
-	drops={"default:steelblock 4"},
-}, "Steam Engine", "advtrains_newlocomotive_inv.png")
-advtrains.register_wagon("wagon_default", "steam",{
-	mesh="advtrains_wagon.b3d",
-	textures = {"advtrains_wagon.png"},
-	seats = {
-		{
-			name="Default Seat",
-			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
-		},
-	},
-	visual_size = {x=1, y=1},
-	wagon_span=1.8,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-}, "Passenger Wagon", "advtrains_wagon_inv.png")
-advtrains.register_wagon("wagon_box", "steam",{
-	mesh="advtrains_wagon.b3d",
-	textures = {"advtrains_wagon_box.png"},
-	seats = {},
-	visual_size = {x=1, y=1},
-	wagon_span=1.8,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-	has_inventory = true,
-	get_inventory_formspec = function(self)
-		return "size[8,11]"..
-			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
-			"list[current_player;main;0,7;8,4;]"..
-			"listring[]"
-	end,
-	inventory_list_sizes = {
-		box=8*6,
-	},
-}, "Box Wagon", "advtrains_wagon_box_inv.png")
+
 
 advtrains.register_train_type("electric", {"regular", "default"}, 20)
 
-advtrains.register_wagon("engine_japan", "electric",{
-	mesh="advtrains_engine_japan.b3d",
-	textures = {"advtrains_engine_japan.png"},
-	seats = {
-		{
-			name="Default Seat (driver stand)",
-			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
-			driving_ctrl_access=true,
-		},
-	},
-	visual_size = {x=1, y=1},
-	wagon_span=2.5,
-	is_locomotive=true,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-}, "Japanese Train Engine", "advtrains_engine_japan_inv.png")
 
-advtrains.register_wagon("wagon_japan", "electric",{
-	mesh="advtrains_wagon_japan.b3d",
-	textures = {"advtrains_wagon_japan.png"},
-	seats = {
-		{
-			name="Default Seat",
-			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
-		},
-	},
-	visual_size = {x=1, y=1},
-	wagon_span=2.3,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-}, "Japanese Train Wagon", "advtrains_wagon_japan_inv.png")
-
-advtrains.register_wagon("engine_industrial", "electric",{
-	mesh="advtrains_engine_industrial.b3d",
-	textures = {"advtrains_engine_industrial.png"},
-	seats = {
-		{
-			name="Driver Stand (left)",
-			attach_offset={x=-5, y=10, z=-10},
-			view_offset={x=0, y=10, z=0},
-			driving_ctrl_access=true,
-		},
-		{
-			name="Driver Stand (right)",
-			attach_offset={x=5, y=10, z=-10},
-			view_offset={x=0, y=10, z=0},
-			driving_ctrl_access=true,
-		},
-	},
-	visual_size = {x=1, y=1},
-	wagon_span=2.6,
-	is_locomotive=true,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-}, "Industrial Train Engine", "advtrains_engine_industrial_inv.png")
-advtrains.register_wagon("wagon_tank", "electric",{
-	mesh="advtrains_wagon_tank.b3d",
-	textures = {"advtrains_wagon_tank.png"},
-	seats = {},
-	visual_size = {x=1, y=1},
-	wagon_span=2.2,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-	has_inventory = true,
-	get_inventory_formspec = function(self)
-		return "size[8,11]"..
-			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
-			"list[current_player;main;0,7;8,4;]"..
-			"listring[]"
-	end,
-	inventory_list_sizes = {
-		box=8*6,
-	},
-}, "Industrial tank wagon", "advtrains_wagon_tank_inv.png")
-advtrains.register_wagon("wagon_wood", "electric",{
-	mesh="advtrains_wagon_wood.b3d",
-	textures = {"advtrains_wagon_wood.png"},
-	seats = {},
-	visual_size = {x=1, y=1},
-	wagon_span=1.8,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	drops={"default:steelblock 4"},
-	has_inventory = true,
-	get_inventory_formspec = function(self)
-		return "size[8,11]"..
-			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
-			"list[current_player;main;0,7;8,4;]"..
-			"listring[]"
-	end,
-	inventory_list_sizes = {
-		box=8*6,
-	},
-}, "Industrial wood wagon", "advtrains_wagon_wood_inv.png")
 
 advtrains.register_train_type("subway", {"default"}, 15)
 
