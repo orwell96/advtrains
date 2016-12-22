@@ -1,7 +1,9 @@
 
-advtrains.register_wagon("subway_wagon", "subway",{
+advtrains.register_wagon("subway_wagon", {
 	mesh="advtrains_subway_train.b3d",
 	textures = {"advtrains_subway_train.png"},
+	drives_on={default=true},
+	max_speed=15,
 	seats = {
 		{
 			name="Default Seat (driver stand)",

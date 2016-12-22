@@ -94,14 +94,14 @@ function advtrains.set_trainhud(name, text)
 end
 function advtrains.hud_train_format(train, flip)
 	local fct=flip and -1 or 1
-	if not train or not train.traintype then return "" end
+	if not train then return "" end
 	
-	local max=advtrains.all_traintypes[train.traintype].max_speed or 10
+	local max=train.max_speed or 10
 	local vel=advtrains.abs_ceil(train.velocity)
 	local tvel=advtrains.abs_ceil(train.tarvelocity)
 	local topLine, firstLine, secondLine
 	
-	topLine=train.traintype.."  ["..mletter[fct*train.movedir].."]  "..(train.brake and "="..( train.brake_hold_state==2 and "^" or "" ).."B=" or "")
+	topLine="Train".."  ["..mletter[fct*train.movedir].."]  "..(train.brake and "="..( train.brake_hold_state==2 and "^" or "" ).."B=" or "")
 	firstLine="Speed: |"..string.rep("+", vel)..string.rep("_", max-vel)..">"
 	secondLine="Target: |"..string.rep("+", tvel)..string.rep("_", max-tvel)..">"
 	

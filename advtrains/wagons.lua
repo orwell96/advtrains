@@ -491,7 +491,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					end
 				elseif fields.seat then
 					local val=minetest.explode_textlist_event(fields.seat)
-					if val and val.type~="INV" and not self.seatp[player:get_player_name()] then
+					if val and val.type~="INV" and not wagon.seatp[player:get_player_name()] then
 					--get on
 						wagon:get_on(player, val.index)
 						--will work with the new close_formspec functionality. close exactly this formspec.
@@ -519,7 +519,7 @@ minetest.register_on_joinplayer(function(player)
 	end
 end)
 
-function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
+function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 	setmetatable(prototype, {__index=wagon})
 	minetest.register_entity(":advtrains:"..sysname,prototype)
 	
@@ -537,12 +537,12 @@ function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 			local node=minetest.env:get_node_or_nil(pointed_thing.under)
 			if not node then print("[advtrains]Ignore at placer position") return itemstack end
 			local nodename=node.name
-			if(not advtrains.is_track_and_drives_on(nodename, advtrains.all_traintypes[traintype].drives_on)) then
+			if(not advtrains.is_track_and_drives_on(nodename, prototype.drives_on)) then
 				print("[advtrains]no track here, not placing.")
 				return itemstack
 			end
 			local conn1=advtrains.get_track_connections(node.name, node.param2)
-			local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1), traintype)
+			local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 			
 			local ob=minetest.env:add_entity(pointed_thing.under, "advtrains:"..sysname)
 			if not ob then
@@ -564,44 +564,10 @@ function advtrains.register_wagon(sysname, traintype, prototype, desc, inv_img)
 		end,
 	})
 end
-advtrains.register_train_type("steam", {"regular", "default"})
-
---[[advtrains.register_wagon("blackwagon", "steam",{textures = {"black.png"}})
-advtrains.register_wagon("bluewagon", "steam",{textures = {"blue.png"}})
-advtrains.register_wagon("greenwagon", "steam",{textures = {"green.png"}})
-advtrains.register_wagon("redwagon", "steam",{textures = {"red.png"}})
-advtrains.register_wagon("yellowwagon", "steam",{textures = {"yellow.png"}})
-]]
 
 --[[
 	wagons can define update_animation(self, velocity) if they have a speed-dependent animation
 	this function will be called when the velocity vector changes or every 2 seconds.
 ]]
-
-
-advtrains.register_train_type("electric", {"regular", "default"}, 20)
-
-
-
-advtrains.register_train_type("subway", {"default"}, 15)
-
-advtrains.register_wagon("subway_wagon", "subway",{
-	mesh="advtrains_subway_train.b3d",
-	textures = {"advtrains_subway_train.png"},
-	seats = {
-		{
-			name="Default Seat (driver stand)",
-			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
-			driving_ctrl_access=true,
-		},
-	},
-	visual_size = {x=1, y=1},
-	wagon_span=1.8,
-	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	is_locomotive=true,
-	drops={"default:steelblock 4"},
-}, "Subway Passenger Wagon", "advtrains_subway_train_inv.png")
-
 
 

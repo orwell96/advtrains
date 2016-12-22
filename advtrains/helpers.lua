@@ -55,15 +55,14 @@ rely1, rely2 tell to which height the connections are pointed to. 1 means it wil
 
 ]]
 
-function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
+function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	local mid=advtrains.round_vector_floor_y(midreal)
-	local drives_on=advtrains.all_traintypes[traintype].drives_on
 	
-	if not advtrains.get_rail_info_at(advtrains.round_vector_floor_y(prev), traintype) then
+	if not advtrains.get_rail_info_at(advtrains.round_vector_floor_y(prev), drives_on) then
 		return nil
 	end
 	
-	local midnode_ok, middir1, middir2, midrely1, midrely2=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), traintype)
+	local midnode_ok, middir1, middir2, midrely1, midrely2=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), drives_on)
 	if not midnode_ok then
 		return nil 
 	end
@@ -104,7 +103,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 		return nil
 	end
 	
-	local nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), traintype)
+	local nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
 	
 	--is it a rail?
 	if(not nextnode_ok) then
@@ -112,7 +111,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
-		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), traintype)
+		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
 		if(not nextnode_ok) then
 			--print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
@@ -125,7 +124,7 @@ function advtrains.conway(midreal, prev, traintype)--in order prev,mid,return
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
-		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), traintype)
+		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
 		if(not nextnode_ok) then
 			--print("[advtrains]in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil

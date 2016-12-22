@@ -346,17 +346,17 @@ function advtrains.register_tracks(tracktype, def, preset)
 			end
 		end
 	end
-	table.insert(advtrains.all_tracktypes, tracktype)
+	advtrains.all_tracktypes[tracktype]=true
 end
 
 
-function advtrains.is_track_and_drives_on(nodename, drives_on)
+function advtrains.is_track_and_drives_on(nodename, drives_on_p)
 	if not minetest.registered_nodes[nodename] then
 		return false
 	end
 	local nodedef=minetest.registered_nodes[nodename]
-	for k,v in ipairs(drives_on) do
-		if nodedef.groups["advtrains_track_"..v] then
+	for k,v in pairs(drives_on_p) do
+		if nodedef.groups["advtrains_track_"..k] then
 			return true
 		end
 	end

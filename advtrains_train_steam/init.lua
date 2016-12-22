@@ -1,7 +1,9 @@
-advtrains.register_wagon("newlocomotive", "steam",{
+advtrains.register_wagon("newlocomotive", {
 	mesh="advtrains_engine_steam.b3d",
 	textures = {"advtrains_newlocomotive.png"},
 	is_locomotive=true,
+	drives_on={default=true},
+	max_speed=10,
 	seats = {
 		{
 			name="Driver Stand (left)",
@@ -19,12 +21,12 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	update_animation=function(self, velocity)
+	--update_animation=function(self, velocity)
 		--if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
-			self.object:set_animation({x=1,y=60}, 100)--math.floor(velocity))
+	--		self.object:set_animation({x=1,y=60}, 100)--math.floor(velocity))
 			--self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		--end
-	end,
+	--end,
 	custom_on_activate = function(self, staticdata_table, dtime_s)
 		minetest.add_particlespawner({
 			amount = 10,
@@ -54,9 +56,11 @@ advtrains.register_wagon("newlocomotive", "steam",{
 	end,
 	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
-advtrains.register_wagon("wagon_default", "steam",{
+advtrains.register_wagon("wagon_default", {
 	mesh="advtrains_wagon.b3d",
 	textures = {"advtrains_wagon.png"},
+	drives_on={default=true},
+	max_speed=10,
 	seats = {
 		{
 			name="Default Seat",
@@ -69,9 +73,11 @@ advtrains.register_wagon("wagon_default", "steam",{
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
-advtrains.register_wagon("wagon_box", "steam",{
+advtrains.register_wagon("wagon_box", {
 	mesh="advtrains_wagon.b3d",
 	textures = {"advtrains_wagon_box.png"},
+	drives_on={default=true},
+	max_speed=10,
 	seats = {},
 	visual_size = {x=1, y=1},
 	wagon_span=1.8,

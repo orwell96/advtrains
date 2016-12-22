@@ -1,6 +1,8 @@
-advtrains.register_wagon("engine_japan", "electric",{
+advtrains.register_wagon("engine_japan", {
 	mesh="advtrains_engine_japan.b3d",
 	textures = {"advtrains_engine_japan.png"},
+	drives_on={default=true},
+	max_speed=20,
 	seats = {
 		{
 			name="Default Seat (driver stand)",
@@ -16,9 +18,11 @@ advtrains.register_wagon("engine_japan", "electric",{
 	drops={"default:steelblock 4"},
 }, "Japanese Train Engine", "advtrains_engine_japan_inv.png")
 
-advtrains.register_wagon("wagon_japan", "electric",{
+advtrains.register_wagon("wagon_japan", {
 	mesh="advtrains_wagon_japan.b3d",
 	textures = {"advtrains_wagon_japan.png"},
+	drives_on={default=true},
+	max_speed=20,
 	seats = {
 		{
 			name="Default Seat",

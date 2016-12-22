@@ -1,6 +1,8 @@
-advtrains.register_wagon("engine_industrial", "electric",{
+advtrains.register_wagon("engine_industrial", {
 	mesh="advtrains_engine_industrial.b3d",
 	textures = {"advtrains_engine_industrial.png"},
+	drives_on={default=true},
+	max_speed=20,
 	seats = {
 		{
 			name="Driver Stand (left)",
@@ -21,10 +23,12 @@ advtrains.register_wagon("engine_industrial", "electric",{
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 }, "Industrial Train Engine", "advtrains_engine_industrial_inv.png")
-advtrains.register_wagon("wagon_tank", "electric",{
+advtrains.register_wagon("wagon_tank", {
 	mesh="advtrains_wagon_tank.b3d",
 	textures = {"advtrains_wagon_tank.png"},
 	seats = {},
+	drives_on={default=true},
+	max_speed=20,
 	visual_size = {x=1, y=1},
 	wagon_span=2.2,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
@@ -40,10 +44,12 @@ advtrains.register_wagon("wagon_tank", "electric",{
 		box=8*6,
 	},
 }, "Industrial tank wagon", "advtrains_wagon_tank_inv.png")
-advtrains.register_wagon("wagon_wood", "electric",{
+advtrains.register_wagon("wagon_wood", {
 	mesh="advtrains_wagon_wood.b3d",
 	textures = {"advtrains_wagon_wood.png"},
 	seats = {},
+	drives_on={default=true},
+	max_speed=20,
 	visual_size = {x=1, y=1},
 	wagon_span=1.8,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},

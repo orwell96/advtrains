@@ -101,7 +101,7 @@ function advtrains.save_trackdb()
 end
 ]]--end temp outcomment
 advtrains.trackdb={}
-advtrains.fpath_tdb=minetest.get_worldpath().."/advtrains_trackdb"
+advtrains.fpath_tdb=minetest.get_worldpath().."/advtrains_trackdb2"
 local file, err = io.open(advtrains.fpath_tdb, "r")
 if not file then
 	local er=err or "Unknown Error"
@@ -133,34 +133,38 @@ end
 --false  if it's not a rail or the train does not drive on this rail, but it is loaded or
 --nil    if the node is neither loaded nor in trackdb
 --the distraction between false and nil will be needed only in special cases.(train initpos)
-function advtrains.get_rail_info_at(pos, traintype)
+function advtrains.get_rail_info_at(pos, drives_on)
 	local node=minetest.get_node_or_nil(pos)
 	if not node then
 		--try raildb
 		local rdp=vector.round(pos)
 		local dbe=(advtrains.trackdb[traintype] and advtrains.trackdb[traintype][rdp.y] and advtrains.trackdb[traintype][rdp.y][rdp.x] and advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z])
 		if dbe then
-			return true, dbe.conn1, dbe.conn2, dbe.rely1 or 0, dbe.rely2 or 0, dbe.railheight or 0
+			for tt,_ in pairs(drives_on) do
+				if not dbe.tracktype or tt==dbe.tracktype then
+					return true, dbe.conn1, dbe.conn2, dbe.rely1 or 0, dbe.rely2 or 0, dbe.railheight or 0
+				end
+			end
 		else
 			return nil
 		end
 	end
 	local nodename=node.name
-	if(not advtrains.is_track_and_drives_on(nodename, advtrains.all_traintypes[traintype].drives_on)) then
+	if(not advtrains.is_track_and_drives_on(nodename, drives_on)) then
 		return false
 	end
-	local conn1, conn2, rely1, rely2, railheight=advtrains.get_track_connections(node.name, node.param2)
+	local conn1, conn2, rely1, rely2, railheight, tracktype=advtrains.get_track_connections(node.name, node.param2)
 	
 	--already in trackdb?
 	local rdp=vector.round(pos)
-	if not (advtrains.trackdb[traintype] and advtrains.trackdb[traintype][rdp.y] and advtrains.trackdb[traintype][rdp.y][rdp.x] and advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z]) then--TODO is this necessary?
-		if not advtrains.trackdb[traintype] then advtrains.trackdb[traintype]={} end
-		if not advtrains.trackdb[traintype][rdp.y] then advtrains.trackdb[traintype][rdp.y]={} end
-		if not advtrains.trackdb[traintype][rdp.y][rdp.x] then advtrains.trackdb[traintype][rdp.y][rdp.x]={} end
-		advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z]={
+	if not (advtrains.trackdb and advtrains.trackdb[rdp.y] and advtrains.trackdb[rdp.y][rdp.x] and advtrains.trackdb[rdp.y][rdp.x][rdp.z]) then--TODO is this necessary?
+		if not advtrains.trackdb then advtrains.trackdb={} end
+		if not advtrains.trackdb[rdp.y] then advtrains.trackdb[rdp.y]={} end
+		if not advtrains.trackdb[rdp.y][rdp.x] then advtrains.trackdb[rdp.y][rdp.x]={} end
+		advtrains.trackdb[rdp.y][rdp.x][rdp.z]={
 			conn1=conn1, conn2=conn2,
 			rely1=rely1, rely2=rely2,
-			railheight=railheight
+			railheight=railheight, tracktype=tracktype
 		}
 	end
 	
@@ -168,13 +172,11 @@ function advtrains.get_rail_info_at(pos, traintype)
 end
 function advtrains.reset_trackdb_position(pos)
 	local rdp=vector.round(pos)
-	for tt, _ in pairs(advtrains.all_traintypes) do
-		if not advtrains.trackdb[tt] then advtrains.trackdb[tt]={} end
-		if not advtrains.trackdb[tt][rdp.y] then advtrains.trackdb[tt][rdp.y]={} end
-		if not advtrains.trackdb[tt][rdp.y][rdp.x] then advtrains.trackdb[tt][rdp.y][rdp.x]={} end
-		advtrains.trackdb[tt][rdp.y][rdp.x][rdp.z]=nil
-		advtrains.get_rail_info_at(pos, tt)--to restore it.
-	end
+	if not advtrains.trackdb then advtrains.trackdb={} end
+	if not advtrains.trackdb[rdp.y] then advtrains.trackdb[rdp.y]={} end
+	if not advtrains.trackdb[rdp.y][rdp.x] then advtrains.trackdb[rdp.y][rdp.x]={} end
+	advtrains.trackdb[rdp.y][rdp.x][rdp.z]=nil
+	advtrains.get_rail_info_at(pos)--to restore it.
 end
 	
 

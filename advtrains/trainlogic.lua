@@ -1,8 +1,8 @@
 --trainlogic.lua
 --controls train entities stuff about connecting/disconnecting/colliding trains and other things
 
---local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
-local print=function() end
+local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
+--local print=function() end
 
 local benchmark=false
 --printbm=function(str, t) print("[advtrains]"..str.." "..((os.clock()-t)*1000).."ms") end
@@ -34,20 +34,12 @@ function endstep()
 	end
 end
 
---TODO: these values need to be integrated when i remove traintypes.
 advtrains.train_accel_force=2--per second and divided by number of wagons
 advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
 advtrains.audit_interval=30
-
-advtrains.all_traintypes={}
-function advtrains.register_train_type(name, drives_on, max_speed)
-	advtrains.all_traintypes[name]={}
-	advtrains.all_traintypes[name].drives_on=drives_on
-	advtrains.all_traintypes[name].max_speed=max_speed or 10
-end
 
 
 advtrains.trains={}
@@ -168,7 +160,10 @@ minetest.register_globalstep(function(dtime)
 end)
 
 function advtrains.train_step(id, train, dtime)
-	
+	--Legacy: set drives_on and max_speed
+	if not train.drives_on or not train.max_speed then
+		advtrains.update_trainpart_properties(id)
+	end
 	--TODO check for all vars to be present
 	if not train.velocity then
 		train.velocity=0
@@ -377,7 +372,7 @@ function advtrains.train_step(id, train, dtime)
 			end
 		end
 		train.last_accel=(applydiff*train.movedir)
-		train.velocity=math.min(math.max( train.velocity+applydiff , 0), advtrains.all_traintypes[train.traintype].max_speed)
+		train.velocity=math.min(math.max( train.velocity+applydiff , 0), train.max_speed or 10)
 	else
 		train.last_accel=0
 	end
@@ -420,14 +415,13 @@ wagon_proto={
 ]]
 
 --returns new id
-function advtrains.create_new_train_at(pos, pos_prev, traintype)
+function advtrains.create_new_train_at(pos, pos_prev)
 	local newtrain_id=os.time()..os.clock()
 	while advtrains.trains[newtrain_id] do newtrain_id=os.time()..os.clock() end--ensure uniqueness(will be unneccessary)
 	
 	advtrains.trains[newtrain_id]={}
 	advtrains.trains[newtrain_id].last_pos=pos
 	advtrains.trains[newtrain_id].last_pos_prev=pos_prev
-	advtrains.trains[newtrain_id].traintype=traintype
 	advtrains.trains[newtrain_id].tarvelocity=0
 	advtrains.trains[newtrain_id].velocity=0
 	advtrains.trains[newtrain_id].trainparts={}
@@ -448,7 +442,7 @@ function advtrains.pathpredict(id, train)
 			return false
 		end
 		
-		local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(train.last_pos), train.traintype)
+		local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(train.last_pos), train.drives_on)
 		
 		if node_ok==nil then
 			--block not loaded, do nothing
@@ -466,7 +460,7 @@ function advtrains.pathpredict(id, train)
 			return false
 		end
 		
-		local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(train.last_pos_prev), train.traintype)
+		local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(train.last_pos_prev), train.drives_on)
 		
 		if prevnode_ok==nil then
 			--block not loaded, do nothing
@@ -501,7 +495,7 @@ function advtrains.pathpredict(id, train)
 	local maxn=advtrains.maxN(train.path)
 	while (maxn-train.index) < pregen_front do--pregenerate
 		--print("[advtrains]maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
-		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.traintype)
+		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
 		if conway then
 			train.path[maxn+1]=conway
 			train.max_index_on_track=maxn
@@ -518,7 +512,7 @@ function advtrains.pathpredict(id, train)
 	local minn=advtrains.minN(train.path)
 	while (train.index-minn) < (train.trainlen or 0) + pregen_back do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
 		--print("[advtrains]minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
-		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.traintype)
+		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
 		if conway then
 			train.path[minn-1]=conway
 			train.min_index_on_track=minn
@@ -576,6 +570,8 @@ function advtrains.add_wagon_to_train(wagon, train_id, index)
 end
 function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local train=advtrains.trains[train_id]
+	train.drives_on=advtrains.all_tracktypes
+	train.max_speed=100
 	local rel_pos=0
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
@@ -595,6 +591,15 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 				end
 				rel_pos=rel_pos+wagon.wagon_span
 				any_loaded=true
+				
+				if wagon.drives_on then
+					for k,_ in pairs(train.drives_on) do
+						if not wagon.drives_on[k] then
+							train.drives_on[k]=nil
+						end
+					end
+				end
+				train.max_speed=math.min(train.max_speed, wagon.max_speed)
 			end
 		end
 		if not any_loaded then
@@ -617,7 +622,7 @@ function advtrains.split_train_at_wagon(wagon)
 		print("split_train: pos_for_new_train not set")
 		return false
 	end
-	local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.traintype)
+	local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.drives_on)
 	if not node_ok then
 		print("split_train: pos_for_new_train "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." not loaded or is not a rail")
 		return false
@@ -628,14 +633,14 @@ function advtrains.split_train_at_wagon(wagon)
 		return false
 	end
 	
-	local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.traintype)
+	local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.drives_on)
 	if not prevnode_ok then
 		print("split_train: pos_for_new_train_prev "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." not loaded or is not a rail")
 		return false
 	end
 	
 	--create subtrain
-	local newtrain_id=advtrains.create_new_train_at(pos_for_new_train, pos_for_new_train_prev, train.traintype)
+	local newtrain_id=advtrains.create_new_train_at(pos_for_new_train, pos_for_new_train_prev)
 	local newtrain=advtrains.trains[newtrain_id]
 	--insert all wagons to new train
 	for k,v in ipairs(train.trainparts) do
@@ -669,7 +674,7 @@ function advtrains.try_connect_trains(id1, id2)
 	local frontpos1=advtrains.get_real_index_position(train1.path, train1.index)
 	local backpos1=advtrains.get_real_index_position(train1.path, advtrains.get_train_end_index(train1))
 	--couple logic
-	if train1.traintype==train2.traintype then
+	--if train1.traintype==train2.traintype then
 		local frontpos2=advtrains.get_real_index_position(train2.path, train2.index)
 		local backpos2=advtrains.get_real_index_position(train2.path, advtrains.get_train_end_index(train2))
 		
@@ -689,7 +694,7 @@ function advtrains.try_connect_trains(id1, id2)
 		elseif vector.distance(frontpos2, frontpos1)<couple_spawnradius then
 			advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
 		end
-	end
+	--end
 end
 --true when trains are facing each other. needed on colliding.
 -- check done by iterating paths and checking their direction
