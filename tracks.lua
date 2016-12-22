@@ -584,6 +584,30 @@ for _,rot in ipairs({"", "_30", "_45", "_60"}) do
 	minetest.register_alias("advtrains:dtrack_bumper"..rot, "advtrains:dtrack_bumper_st"..rot)
 end
 
+advtrains.register_tracks("default", {
+		nodename_prefix="advtrains:dtrack_stop",
+		texture_prefix="advtrains_dtrack_stop",
+		models_prefix="advtrains_dtrack",
+		models_suffix=".b3d",
+		shared_texture="advtrains_dtrack_rail_stop.png",
+		description="Stop and reverse rail",
+		formats={},
+		get_additional_definiton = function(def, preset, suffix, rotation)
+			return {
+				advtrains = {
+					on_train_enter=function(pos, train_id)
+					   local train = advtrains.trains[train_id];
+					   local endsp = train.tarvelocity;
+					   train.tarvelocity = 0;
+					   train.velocity = 0;
+					   minetest.after(10,function(t,sp) 	train.movedir = -train.movedir; t.tarvelocity=sp; end, train, endsp);
+					end
+				}
+			}
+		end
+}, t_30deg_straightonly)
+
+
 if mesecon then
 	advtrains.register_tracks("default", {
 		nodename_prefix="advtrains:dtrack_detector_off",
