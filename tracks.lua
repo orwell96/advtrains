@@ -600,7 +600,8 @@ advtrains.register_tracks("default", {
 					   local endsp = train.tarvelocity;
 					   train.tarvelocity = 0;
 					   train.velocity = 0;
-					   minetest.after(10,function(t,sp) 	train.movedir = -train.movedir; t.tarvelocity=sp; end, train, endsp);
+					   minetest.swap_node(pos, {name="advtrains:dtrack".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
+					   minetest.after(10,function(t,sp,pos) 	train.movedir = -train.movedir; t.tarvelocity=sp;					   minetest.swap_node(pos, {name="advtrains:dtrack_stop".."_"..suffix..rotation, param2=minetest.get_node(pos).param2}); end, train, endsp,pos);
 					end
 				}
 			}
