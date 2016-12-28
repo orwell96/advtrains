@@ -325,10 +325,12 @@ function advtrains.train_step(id, train, dtime)
 				if found_uids[w_id] then
 					--print(w_id.." still loaded")
 				elseif advtrains.wagon_save[w_id] then
-					--print(w_id.." not loaded, but save available")
-					--spawn a new and initialize it with the properties from wagon_save
-					local le=minetest.env:add_entity(ori_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
-					le:init_from_wagon_save(w_id)
+				   --print(w_id.." not loaded, but save available")
+				   --spawn a new and initialize it with the properties from wagon_save
+				   local le=minetest.add_entity(ori_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
+				   if le then -- Don't crash if traintype has been removed
+				      le:init_from_wagon_save(w_id)
+				   end
 				else
 					print(w_id.." not loaded and no save available")
 					--what the hell...
