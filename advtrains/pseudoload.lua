@@ -176,7 +176,7 @@ function advtrains.reset_trackdb_position(pos)
 	if not advtrains.trackdb[rdp.y] then advtrains.trackdb[rdp.y]={} end
 	if not advtrains.trackdb[rdp.y][rdp.x] then advtrains.trackdb[rdp.y][rdp.x]={} end
 	advtrains.trackdb[rdp.y][rdp.x][rdp.z]=nil
-	advtrains.get_rail_info_at(pos)--to restore it.
+	advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)--to restore it.
 end
 	
 

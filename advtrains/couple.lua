@@ -140,7 +140,7 @@ minetest.register_entity("advtrains:couple", {
 		else
 			tp2=advtrains.get_real_index_position(train2.path, advtrains.get_train_end_index(train2))
 		end
-		if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<0.5) then
+		if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<1.5) then
 			self.object:remove()
 			return
 		else

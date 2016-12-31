@@ -2,6 +2,7 @@
 --controls train entities stuff about connecting/disconnecting/colliding trains and other things
 
 local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
+local sid=function(id) return string.sub(id, -4) end
 --local print=function() end
 
 local benchmark=false
@@ -130,15 +131,7 @@ minetest.register_globalstep(function(dtime)
 	advtrains.save_and_audit_timer=advtrains.save_and_audit_timer-dtime
 	if advtrains.save_and_audit_timer<=0 then
 		local t=os.clock()
-		--print("[advtrains] audit step")
-		--clean up orphaned trains
-		for k,v in pairs(advtrains.trains) do
-			--advtrains.update_trainpart_properties(k)
-			if #v.trainparts==0 then
-				print("[advtrains][train "..k.."] has empty trainparts, removing.")
-				advtrains.trains[k]=nil
-			end
-		end
+		
 		--save
 		advtrains.save()
 		advtrains.save_and_audit_timer=advtrains.audit_interval
@@ -244,26 +237,17 @@ function advtrains.train_step(id, train, dtime)
 	train.detector_old_index = math.floor(train.index)
 	train.detector_old_end_index = math.floor(train_end_index)
 	
+	--remove?
+	if #train.trainparts==0 then
+		print("[advtrains][train "..sid(id).."] has empty trainparts, removing.")
+		advtrains.detector.leave_node(path[train.detector_old_index], id)
+		advtrains.trains[id]=nil
+		return
+	end
+	
 	if train_moves then
 		--check for collisions by finding objects
-		--front
-		local search_radius=4
 		
-		--coupling
-		local couple_outward=1
-		local posfront=advtrains.get_real_index_position(path, train.index+couple_outward)
-		local posback=advtrains.get_real_index_position(path, train_end_index-couple_outward)
-		for _,pos in ipairs({posfront, posback}) do
-			if pos then
-				local objrefs=minetest.get_objects_inside_radius(pos, search_radius)
-				for _,v in pairs(objrefs) do
-					local le=v:get_luaentity()
-					if le and le.is_wagon and le.initialized and le.train_id~=id then
-						advtrains.try_connect_trains(id, le.train_id)
-					end
-				end
-			end
-		end
 		--heh, new collision again.
 		--this time, based on NODES and the advtrains.detector.on_node table.
 		local collpos
@@ -277,24 +261,29 @@ function advtrains.train_step(id, train, dtime)
 			local rcollpos=advtrains.round_vector_floor_y(collpos)
 			for x=-1,1 do
 				for z=-1,1 do
-					local testpts=minetest.pos_to_string(vector.add(rcollpos, {x=x, y=0, z=z}))
+					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
+					local testpts=minetest.pos_to_string(testpos)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
 						--collides
+						advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
+						
 						train.recently_collided_with_env=true
 						train.velocity=0.5*train.velocity
 						train.movedir=train.movedir*-1
 						train.tarvelocity=0
+						
 					end
 				end
 			end
 		end
 	end
 	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
+	--todo function will be taken by update_trainpart_properties
 	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
 	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
 	if train.check_trainpartload<=0 then
 		local ori_pos=advtrains.get_real_index_position(path, train.index) --not much to calculate
-		print("[advtrains][train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
+		--print("[advtrains][train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
 		
 		local should_check=false
 		for _,p in ipairs(minetest.get_connected_players()) do
@@ -664,38 +653,7 @@ end
 --->backpos's will match
 --4.   R<->F F<->R flip one of these trains and take it as new parent
 --->frontpos's will match
-function advtrains.try_connect_trains(id1, id2)
-	local train1=advtrains.trains[id1]
-	local train2=advtrains.trains[id2]
-	if not train1 or not train2 then return end
-	if not train1.path or not train2.path then return end
-	if #train1.trainparts==0 or #train2.trainparts==0 then return end
-	
-	local frontpos1=advtrains.get_real_index_position(train1.path, train1.index)
-	local backpos1=advtrains.get_real_index_position(train1.path, advtrains.get_train_end_index(train1))
-	--couple logic
-	--if train1.traintype==train2.traintype then
-		local frontpos2=advtrains.get_real_index_position(train2.path, train2.index)
-		local backpos2=advtrains.get_real_index_position(train2.path, advtrains.get_train_end_index(train2))
-		
-		if not frontpos1 or not frontpos2 or not backpos1 or not backpos2 then return end
-		
-		local couple_spawnradius=0.7
-		--case 1 (first train is front)
-		if vector.distance(frontpos2, backpos1)<couple_spawnradius then
-			advtrains.spawn_couple_if_neccessary(backpos1, frontpos2, id1, id2, true, false)
-			--case 2 (second train is front)
-		elseif vector.distance(frontpos1, backpos2)<couple_spawnradius then
-			advtrains.spawn_couple_if_neccessary(backpos2, frontpos1, id2, id1, true, false)
-			--case 3 
-		elseif vector.distance(backpos2, backpos1)<couple_spawnradius then
-			advtrains.spawn_couple_if_neccessary(backpos1, backpos2, id1, id2, true, true)
-			--case 4 
-		elseif vector.distance(frontpos2, frontpos1)<couple_spawnradius then
-			advtrains.spawn_couple_if_neccessary(frontpos1, frontpos2, id1, id2, false, false)
-		end
-	--end
-end
+
 --true when trains are facing each other. needed on colliding.
 -- check done by iterating paths and checking their direction
 --returns nil when not on the same track at all OR when required path items are not generated. this distinction may not always be needed.
@@ -713,72 +671,86 @@ function advtrains.trains_facing(train1, train2)
 	return nil
 end
 
---order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
---pos1 and pos2 are just needed to form a median.
-function advtrains.spawn_couple_if_neccessary(pos1, pos2, tid1, tid2, train1_is_backpos, train2_is_backpos)
-	--print("spawn_couple_if_neccessary..."..dump({pos1=pos1, pos2=pos2, train1_is_backpos=train1_is_backpos, train2_is_backpos=train2_is_backpos}))
-	local train1=advtrains.trains[tid1]
-	local train2=advtrains.trains[tid2]
+function advtrains.spawn_couple_on_collide(id1, pos, id2, t1_is_backpos)
+	print("COLLISION: "..sid(id1).." and "..sid(id2).." at "..minetest.pos_to_string(pos)..", t1_is_backpos="..(t1_is_backpos and "true" or "false"))
+	--TODO:
+	local train1=advtrains.trains[id1]
+	local train2=advtrains.trains[id2]
+	
+	local found
+	for i=advtrains.minN(train1.path), advtrains.maxN(train1.path) do
+		if vector.equals(train1.path[i], pos) then
+			found=true
+		end
+	end
+	if not found then
+		print("Err: pos not in path")
+		return 
+	end
+	
+	local frontpos2=train2.path[math.floor(train2.detector_old_index)]
+	local backpos2=train2.path[math.floor(train2.detector_old_end_index)]
+	local t2_is_backpos
+	print("End positions: "..minetest.pos_to_string(frontpos2)..minetest.pos_to_string(backpos2))
+	
+	if vector.equals(frontpos2, pos) then
+		t2_is_backpos=false
+	elseif vector.equals(backpos2, pos) then
+		t2_is_backpos=true
+	else
+		print("Err: not a endpos")
+		return --the collision position is not the end position.
+	end
+	print("t2_is_backpos="..(t2_is_backpos and "true" or "false"))
+	
 	local t1_has_couple
-	if train1_is_backpos then
+	if t1_is_backpos then
 		t1_has_couple=train1.couple_eid_back
 	else
 		t1_has_couple=train1.couple_eid_front
 	end
 	local t2_has_couple
-	if train2_is_backpos then
+	if t2_is_backpos then
 		t2_has_couple=train2.couple_eid_back
 	else
 		t2_has_couple=train2.couple_eid_front
 	end
 	
-	if t1_has_couple and t2_has_couple then
-		if t1_has_couple~=t2_has_couple then--what the hell
-			if minetest.object_refs[t2_has_couple] then minetest.object_refs[t2_has_couple]:remove() end
-			if train2_is_backpos then
-				train2.couple_eid_back=t1_has_couple
+	if t1_has_couple then
+		if minetest.object_refs[t1_has_couple] then minetest.object_refs[t1_has_couple]:remove() end
+	end
+	if t2_has_couple then
+		if minetest.object_refs[t2_has_couple] then minetest.object_refs[t2_has_couple]:remove() end
+	end
+	local obj=minetest.add_entity(pos, "advtrains:couple")
+	if not obj then print("failed creating object") return end
+	local le=obj:get_luaentity()
+	le.train_id_1=id1
+	le.train_id_2=id2
+	le.train1_is_backpos=t1_is_backpos
+	le.train2_is_backpos=t2_is_backpos
+	--find in object_refs
+	for aoi, compare in pairs(minetest.object_refs) do
+		if compare==obj then
+			if t1_is_backpos then
+				train1.couple_eid_back=aoi
 			else
-				train2.couple_eid_front=t1_has_couple
+				train1.couple_eid_front=aoi
 			end
-		end
-	--[[elseif t1_has_couple and not t2_has_couple then
-		if train2_is_backpos then
-			train2.couple_eid_back=t1_has_couple
-		else
-			train2.couple_eid_front=t1_has_couple
-		end
-	elseif not t1_has_couple and t2_has_couple then
-		if train1_is_backpos then
-			train1.couple_eid_back=t2_has_couple
-		else
-			train1.couple_eid_front=t2_has_couple
-		end]]
-	else
-		local pos=advtrains.pos_median(pos1, pos2)
-		local obj=minetest.add_entity(pos, "advtrains:couple")
-		if not obj then print("failed creating object") return end
-		local le=obj:get_luaentity()
-		le.train_id_1=tid1
-		le.train_id_2=tid2
-		le.train1_is_backpos=train1_is_backpos
-		le.train2_is_backpos=train2_is_backpos
-		--find in object_refs
-		for aoi, compare in pairs(minetest.object_refs) do
-			if compare==obj then
-				if train1_is_backpos then
-					train1.couple_eid_back=aoi
-				else
-					train1.couple_eid_front=aoi
-				end
-				if train2_is_backpos then
-					train2.couple_eid_back=aoi
-				else
-					train2.couple_eid_front=aoi
-				end
+			if t2_is_backpos then
+				train2.couple_eid_back=aoi
+			else
+				train2.couple_eid_front=aoi
 			end
 		end
 	end
+	print("Couple entity:"..dump(le))
+	
+	--also TODO: integrate check_trainpartload into update_trainpart_properties. 
 end
+--order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
+--pos1 and pos2 are just needed to form a median.
+
 
 function advtrains.do_connect_trains(first_id, second_id)
 	local first_wagoncnt=#advtrains.trains[first_id].trainparts
