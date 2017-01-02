@@ -4,10 +4,8 @@ advtrains={}
 
 advtrains.modpath = minetest.get_modpath("advtrains")
 
---print=function(text)
---	minetest.log("action", tostring(text) or "<non-string>")
---end
-print = function(t) minetest.log("action", t) minetest.chat_send_all(t) end
+print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
+sid=function(id) return string.sub(id, -4) end
 
 dofile(advtrains.modpath.."/helpers.lua");
 dofile(advtrains.modpath.."/debugitems.lua");

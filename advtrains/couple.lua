@@ -9,7 +9,6 @@ wagon
 
 wagons keep their couple entity minetest-internal id inside the field discouple_id. if it refers to nowhere, they will spawn a new one if player is near
 ]]
-local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
 
 
 minetest.register_entity("advtrains:discouple", {

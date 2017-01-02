@@ -386,7 +386,7 @@ advtrains.detector.clean_step_before = false
 --The entry already being contained in advtrains.detector.on_node_restore will not trigger an on_train_enter event on the node.  (when path is reset, this is saved).
 function advtrains.detector.enter_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	--print("enterNode "..pts.." "..train_id)
+	print("enterNode "..pts.." "..sid(train_id))
 	if not advtrains.detector.on_node[pts] then
 		advtrains.detector.on_node[pts]=train_id
 		if advtrains.detector.on_node_restore[pts] then
@@ -394,14 +394,18 @@ function advtrains.detector.enter_node(pos, train_id)
 		else
 			advtrains.detector.call_enter_callback(advtrains.round_vector_floor_y(pos), train_id)
 		end
+	else
+		print(""..pts.." already occupied")
 	end
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	--print("leaveNode "..pts.." "..train_id)
-	if advtrains.detector.on_node[pts] then
+	print("leaveNode "..pts.." "..sid(train_id))
+	if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]==train_id then
 		advtrains.detector.call_leave_callback(advtrains.round_vector_floor_y(pos), train_id)
 		advtrains.detector.on_node[pts]=nil
+	else
+		print(""..pts.." occupied by another train")
 	end
 end
 --called immediately before invalidating paths

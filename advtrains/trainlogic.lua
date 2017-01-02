@@ -1,12 +1,8 @@
 --trainlogic.lua
 --controls train entities stuff about connecting/disconnecting/colliding trains and other things
 
-local print=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
-local sid=function(id) return string.sub(id, -4) end
---local print=function() end
 
 local benchmark=false
---printbm=function(str, t) print("[advtrains]"..str.." "..((os.clock()-t)*1000).."ms") end
 local bm={}
 local bmlt=0
 local bmsteps=0
