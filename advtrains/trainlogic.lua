@@ -286,35 +286,7 @@ function advtrains.train_step(id, train, dtime)
 			should_check=should_check or ((vector.distance(ori_pos, p:getpos())<node_range))
 		end
 		if should_check then
-			--it is better to iterate luaentites only once
-			--print("check_trainpartload")
-			local found_uids={}
-			for _,wagon in pairs(minetest.luaentities) do
-				if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
-					if found_uids[wagon.unique_id] then
-						--duplicate found, delete it
-						if wagon.object then wagon.object:remove() end
-					else
-						found_uids[wagon.unique_id]=true
-					end
-				end
-			end
-			--print("found_uids: "..dump(found_uids))
-			--now iterate trainparts and check. then cross them out to see if there are wagons over for any reason
-			for pit, w_id in ipairs(train.trainparts) do
-				if found_uids[w_id] then
-					--print(w_id.." still loaded")
-				elseif advtrains.wagon_save[w_id] then
-					--print(w_id.." not loaded, but save available")
-					--spawn a new and initialize it with the properties from wagon_save
-					local le=minetest.env:add_entity(ori_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
-					le:init_from_wagon_save(w_id)
-				else
-					print(w_id.." not loaded and no save available")
-					--what the hell...
-					table.remove(train.trainparts, pit)
-				end
-			end
+			advtrains.update_trainpart_properties(id)
 		end
 		train.check_trainpartload=2
 	end
@@ -560,35 +532,51 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local rel_pos=0
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
-		local any_loaded=false
-		for _,wagon in pairs(minetest.luaentities) do
-			if wagon.is_wagon and wagon.initialized and wagon.unique_id==w_id then
-				rel_pos=rel_pos+wagon.wagon_span
-				wagon.train_id=train_id
-				wagon.pos_in_train=rel_pos
-				wagon.pos_in_trainparts=i
-				wagon.old_velocity_vector=nil
-				if wagon.is_locomotive then
-					count_l=count_l+1
+		local wagon=nil
+		for _,iwagon in pairs(minetest.luaentities) do
+			if iwagon.is_wagon and iwagon.initialized and iwagon.unique_id==w_id then
+				if wagon then
+					--duplicate
+					iwagon.object:remove()
+				else
+					wagon=iwagon
 				end
-				if invert_flipstate then
-					wagon.wagon_flipped = not wagon.wagon_flipped
-				end
-				rel_pos=rel_pos+wagon.wagon_span
-				any_loaded=true
-				
-				if wagon.drives_on then
-					for k,_ in pairs(train.drives_on) do
-						if not wagon.drives_on[k] then
-							train.drives_on[k]=nil
-						end
-					end
-				end
-				train.max_speed=math.min(train.max_speed, wagon.max_speed)
 			end
 		end
-		if not any_loaded then
-			print("update_trainpart_properties wagon "..w_id.." not loaded, ignoring it.")
+		if not wagon then
+			if advtrains.wagon_save[w_id] then
+				--spawn a new and initialize it with the properties from wagon_save
+				wagon=minetest.env:add_entity(train.last_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
+				wagon:init_from_wagon_save(w_id)
+			end
+		end
+		if wagon then
+			rel_pos=rel_pos+wagon.wagon_span
+			wagon.train_id=train_id
+			wagon.pos_in_train=rel_pos
+			wagon.pos_in_trainparts=i
+			wagon.old_velocity_vector=nil
+			if wagon.is_locomotive then
+				count_l=count_l+1
+			end
+			if invert_flipstate then
+				wagon.wagon_flipped = not wagon.wagon_flipped
+			end
+			rel_pos=rel_pos+wagon.wagon_span
+			any_loaded=true
+			
+			if wagon.drives_on then
+				for k,_ in pairs(train.drives_on) do
+					if not wagon.drives_on[k] then
+						train.drives_on[k]=nil
+					end
+				end
+			end
+			train.max_speed=math.min(train.max_speed, wagon.max_speed)
+		else
+			print(w_id.." not loaded and no save available")
+			--what the hell...
+			table.remove(train.trainparts, pit)
 		end
 	end
 	train.trainlen=rel_pos
