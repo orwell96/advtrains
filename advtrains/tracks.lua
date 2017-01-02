@@ -387,26 +387,42 @@ advtrains.detector.clean_step_before = false
 function advtrains.detector.enter_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
 	print("enterNode "..pts.." "..sid(train_id))
-	if not advtrains.detector.on_node[pts] then
-		advtrains.detector.on_node[pts]=train_id
-		if advtrains.detector.on_node_restore[pts] then
-			advtrains.detector.on_node_restore[pts]=nil
+	if advtrains.detector.on_node[pts] then
+		if advtrains.trains[advtrains.detector.on_node[pts]] then
+			print(""..pts.." already occupied")
+			return false
 		else
-			advtrains.detector.call_enter_callback(advtrains.round_vector_floor_y(pos), train_id)
+			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
 		end
-	else
-		print(""..pts.." already occupied")
 	end
+	advtrains.detector.on_node[pts]=train_id
+	if advtrains.detector.on_node_restore[pts] then
+		advtrains.detector.on_node_restore[pts]=nil
+	else
+		advtrains.detector.call_enter_callback(advtrains.round_vector_floor_y(pos), train_id)
+	end
+	return true
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
 	print("leaveNode "..pts.." "..sid(train_id))
-	if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]==train_id then
+	if not advtrains.detector.on_node[pts] then
+		print(""..pts.." leave: nothing here")
+		return false
+	end
+	if advtrains.detector.on_node[pts]==train_id then
 		advtrains.detector.call_leave_callback(advtrains.round_vector_floor_y(pos), train_id)
 		advtrains.detector.on_node[pts]=nil
 	else
-		print(""..pts.." occupied by another train")
+		if advtrains.trains[advtrains.detector.on_node[pts]] then
+			print(""..pts.." occupied by another train")
+			return false
+		else
+			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
+			return false
+		end
 	end
+	return true
 end
 --called immediately before invalidating paths
 function advtrains.detector.setup_restore()
