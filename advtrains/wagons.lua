@@ -73,7 +73,7 @@ function wagon:on_activate(sd_uid, dtime_s)
 	end
 	
 	if self.custom_on_activate then
-		self:custom_on_activate(staticdata_table, dtime_s)
+		self:custom_on_activate(dtime_s)
 	end
 end
 
@@ -460,7 +460,7 @@ function wagon:show_get_on_form(pname)
 	if not self.initialized then return end
 	if #self.seats==0 then
 		if self.has_inventory and self.get_inventory_formspec then
-			minetest.show_formspec(pname, "advtrains_inv_"..self.unique_id, self:get_inventory_formspec())
+			minetest.show_formspec(pname, "advtrains_inv_"..self.unique_id, self:get_inventory_formspec(pname))
 		end
 		return
 	end
@@ -487,7 +487,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
 				if fields.inv then
 					if wagon.has_inventory and wagon.get_inventory_formspec then
-						minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..uid, wagon:get_inventory_formspec())
+						minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..uid, wagon:get_inventory_formspec(player:get_player_name()))
 					end
 				elseif fields.seat then
 					local val=minetest.explode_textlist_event(fields.seat)
