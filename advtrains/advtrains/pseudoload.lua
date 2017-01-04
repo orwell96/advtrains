@@ -1,5 +1,3 @@
-local print=function(t) minetest.log("action", t) minetest.chat_send_all(t) end
-
 --pseudoload.lua
 --responsible for keeping up a database of all rail nodes existant in the world, regardless of whether the mapchunk is loaded.
 
@@ -22,7 +20,7 @@ for tt, _ in pairs(advtrains.all_traintypes) do
 	local file, err = io.open(pl_fpath, "r")
 	if not file then
 		local er=err or "Unknown Error"
-		print("[advtrains]Failed loading advtrains trackdb save file "..er)
+		atprint("[advtrains]Failed loading advtrains trackdb save file "..er)
 	else
 		--custom format to save memory
 		while true do
@@ -30,7 +28,7 @@ for tt, _ in pairs(advtrains.all_traintypes) do
 			if not xbytes or #xbytes<2 then
 				break --eof reached
 			end
-			print(xbytes)
+			atprint(xbytes)
 			local ybytes=file:read(2)
 			local zbytes=file:read(2)
 			local x=(string.byte(xbytes[1])-128)*256+(string.byte(xbytes[2]))
@@ -76,13 +74,13 @@ function advtrains.save_trackdb()
 		local file, err = io.open(pl_fpath, "w")
 		if not file then
 			local er=err or "Unknown Error"
-			print("[advtrains]Failed saving advtrains trackdb save file "..er)
+			atprint("[advtrains]Failed saving advtrains trackdb save file "..er)
 		else
 			--custom format to save memory
 			for y,tyl in pairs(advtrains.trackdb[tt]) do
 				for x,txl in pairs(tyl) do
 					for z,rail in pairs(txl) do
-						print("write "..x.." "..y.." "..z.." "..minetest.serialize(rail))
+						atprint("write "..x.." "..y.." "..z.." "..minetest.serialize(rail))
 						file:write(string.char(math.floor(x/256)+128)..string.char((x%256)))
 						file:write(string.char(math.floor(y/256)+128)..string.char((y%256)))
 						file:write(string.char(math.floor(z/256)+128)..string.char((z%256)))
@@ -105,7 +103,7 @@ advtrains.fpath_tdb=minetest.get_worldpath().."/advtrains_trackdb2"
 local file, err = io.open(advtrains.fpath_tdb, "r")
 if not file then
 	local er=err or "Unknown Error"
-	print("[advtrains]Failed loading advtrains save file "..er)
+	atprint("[advtrains]Failed loading advtrains save file "..er)
 else
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then

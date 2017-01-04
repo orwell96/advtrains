@@ -233,7 +233,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			if advtrains.is_train_at_pos(pos) then return end
 
 			local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
-			--print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
+			--atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
 			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
 				nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
 				rotation = ""
@@ -274,7 +274,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 			if advtrains.is_train_at_pos(pos) then return end
 			local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
-	        --print(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
+	        --atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
 		    if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
 			  nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
 			  rotation = ""
@@ -288,7 +288,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			--invalidate trains
 			advtrains.invalidate_all_paths()
 		else
-			print(name, dump(tp.tracks))
+			atprint(name, dump(tp.tracks))
 		end
 	end,
 })

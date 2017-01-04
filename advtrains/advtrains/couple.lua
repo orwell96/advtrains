@@ -69,7 +69,7 @@ minetest.register_entity("advtrains:discouple", {
 			self.object:setvelocity(velocityvec)
 			self.updatepct_timer=2
 		end
-		printbm("discouple_step", t)
+		atprintbm("discouple_step", t)
 	end,
 })
 
@@ -122,7 +122,7 @@ minetest.register_entity("advtrains:couple", {
 	end,
 	on_step=function(self, dtime)
 		local t=os.clock()
-		if not self.train_id_1 or not self.train_id_2 then print("wtf no train ids?")return end
+		if not self.train_id_1 or not self.train_id_2 then atprint("wtf no train ids?")return end
 		local train1=advtrains.trains[self.train_id_1]
 		local train2=advtrains.trains[self.train_id_2]
 		if not train1 or not train2 or not train1.path or not train2.path or not train1.index or not train2.index then
@@ -151,6 +151,6 @@ minetest.register_entity("advtrains:couple", {
 				self.object:setpos(pos_median)
 			end
 		end
-		printbm("couple step", t)
+		atprintbm("couple step", t)
 	end,
 }) 

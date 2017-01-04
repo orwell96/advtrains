@@ -10,7 +10,7 @@ advtrains.fpath_atc=minetest.get_worldpath().."/advtrains_atc"
 local file, err = io.open(advtrains.fpath_atc, "r")
 if not file then
 	local er=err or "Unknown Error"
-	print("[advtrains]Failed loading advtrains atc save file "..er)
+	atprint("[advtrains]Failed loading advtrains atc save file "..er)
 else
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
@@ -44,11 +44,11 @@ end
 function atc.send_command(pos)
 	local pts=minetest.pos_to_string(pos)
 	if atc.controllers[pts] then
-		print("Called send_command at "..pts)
+		atprint("Called send_command at "..pts)
 		local train_id = advtrains.detector.on_node[pts]
 		if train_id then
 			if advtrains.trains[train_id] then
-				print("send_command inside if: "..sid(train_id))
+				atprint("send_command inside if: "..sid(train_id))
 				atc.train_reset_command(train_id)
 				local arrowconn=atc.controllers[pts].arrowconn
 				local train=advtrains.trains[train_id]
@@ -60,7 +60,7 @@ function atc.send_command(pos)
 										advtrains.round_vector_floor_y(train.path[index+train.movedir])
 								)
 						advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-						print("Sending ATC Command: "..atc.controllers[pts].command)
+						atprint("Sending ATC Command: "..atc.controllers[pts].command)
 					end
 				end
 			end
@@ -190,7 +190,7 @@ local matchptn={
 			train.movedir=train.movedir*-1
 			train.atc_arrow = not train.atc_arrow
 		else
-			print("ATC Reverse command warning: didn't reverse train!")
+			atprint("ATC Reverse command warning: didn't reverse train!")
 		end
 		return 1
 	end,
@@ -235,15 +235,15 @@ function atc.execute_atc_command(id, train)
 		end
 	end	
 	if is_cond then
-		print("Evaluating if statement: "..command)
-		print("Cond: "..(cond or "nil"))
-		print("Applies: "..(cond_applies and "true" or "false"))
-		print("Rest: "..rest)
+		atprint("Evaluating if statement: "..command)
+		atprint("Cond: "..(cond or "nil"))
+		atprint("Applies: "..(cond_applies and "true" or "false"))
+		atprint("Rest: "..rest)
 		--find end of conditional statement
 		local nest, pos, elsepos=0, 1
 		while nest>=0 do
 			if pos>#rest then
-				print("ATC command syntax error: I statement not closed: "..command)
+				minetest.chat_send_all("ATC command syntax error: I statement not closed: "..command)
 				atc.train_reset_command(id)
 				return
 			end
@@ -265,7 +265,7 @@ function atc.execute_atc_command(id, train)
 		else
 			command=string.sub(rest, elsepos+1, pos-2)..string.sub(rest, pos)
 		end
-		print("Result: "..command)
+		atprint("Result: "..command)
 		train.atc_command=command
 		atc.execute_atc_command(id, train)
 		return
@@ -275,7 +275,7 @@ function atc.execute_atc_command(id, train)
 			if match then
 				local patlen=func(id, train, match)
 				
-				print("Executing: "..string.sub(command, 1, patlen))
+				atprint("Executing: "..string.sub(command, 1, patlen))
 				
 				train.atc_command=string.sub(command, patlen+1)
 				if train.atc_delay<=0 and not train.atc_wait_finish then
@@ -286,7 +286,7 @@ function atc.execute_atc_command(id, train)
 			end
 		end
 	end
-	print("ATC command parse error: "..command)
+	minetest.chat_send_all("ATC command parse error: "..command)
 	atc.train_reset_command(id)
 end
 

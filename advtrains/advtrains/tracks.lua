@@ -370,10 +370,10 @@ end
 
 function advtrains.get_track_connections(name, param2)
 	local nodedef=minetest.registered_nodes[name]
-	if not nodedef then print("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 8, 0, 0, 0 end
+	if not nodedef then atprint("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 8, 0, 0, 0 end
 	local noderot=param2
 	if not param2 then noderot=0 end
-	if noderot > 3 then print("[advtrains] get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
+	if noderot > 3 then atprint("[advtrains] get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
 	
 	local tracktype
 	for k,_ in pairs(nodedef.groups) do
@@ -398,10 +398,10 @@ advtrains.detector.clean_step_before = false
 --The entry already being contained in advtrains.detector.on_node_restore will not trigger an on_train_enter event on the node.  (when path is reset, this is saved).
 function advtrains.detector.enter_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	--print("enterNode "..pts.." "..sid(train_id))
+	--atprint("enterNode "..pts.." "..sid(train_id))
 	if advtrains.detector.on_node[pts] then
 		if advtrains.trains[advtrains.detector.on_node[pts]] then
-			--print(""..pts.." already occupied")
+			--atprint(""..pts.." already occupied")
 			return false
 		else
 			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
@@ -417,9 +417,9 @@ function advtrains.detector.enter_node(pos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	--print("leaveNode "..pts.." "..sid(train_id))
+	--atprint("leaveNode "..pts.." "..sid(train_id))
 	if not advtrains.detector.on_node[pts] then
-		--print(""..pts.." leave: nothing here")
+		--atprint(""..pts.." leave: nothing here")
 		return false
 	end
 	if advtrains.detector.on_node[pts]==train_id then
@@ -427,7 +427,7 @@ function advtrains.detector.leave_node(pos, train_id)
 		advtrains.detector.on_node[pts]=nil
 	else
 		if advtrains.trains[advtrains.detector.on_node[pts]] then
-			--print(""..pts.." occupied by another train")
+			--atprint(""..pts.." occupied by another train")
 			return false
 		else
 			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
@@ -438,21 +438,21 @@ function advtrains.detector.leave_node(pos, train_id)
 end
 --called immediately before invalidating paths
 function advtrains.detector.setup_restore()
-	--print("setup_restore")
+	--atprint("setup_restore")
 	advtrains.detector.on_node_restore = advtrains.detector.on_node
 	advtrains.detector.on_node = {}
 end
 --called one step after invalidating paths, when all trains have restored their path and called enter_node for their contents.
 function advtrains.detector.finalize_restore()
-	--print("finalize_restore")
+	--atprint("finalize_restore")
 	for pts, train_id in pairs(advtrains.detector.on_node_restore) do
-		--print("called leave callback "..pts.." "..train_id)
+		--atprint("called leave callback "..pts.." "..train_id)
 		advtrains.detector.call_leave_callback(minetest.string_to_pos(pts), train_id)
 	end
 	advtrains.detector.on_node_restore = {}
 end
 function advtrains.detector.call_enter_callback(pos, train_id)
-	--print("instructed to call enter calback")
+	--atprint("instructed to call enter calback")
 
 	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
@@ -464,7 +464,7 @@ function advtrains.detector.call_enter_callback(pos, train_id)
 	advtrains.atc.trigger_controller_train_enter(pos, train_id)
 end
 function advtrains.detector.call_leave_callback(pos, train_id)
-	--print("instructed to call leave calback")
+	--atprint("instructed to call leave calback")
 
 	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
