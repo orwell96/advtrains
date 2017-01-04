@@ -190,7 +190,7 @@ local matchptn={
 			train.movedir=train.movedir*-1
 			train.atc_arrow = not train.atc_arrow
 		else
-			atprint("ATC Reverse command warning: didn't reverse train!")
+			minetest.chat_send_all("ATC Reverse command warning: didn't reverse train!")
 		end
 		return 1
 	end,
