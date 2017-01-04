@@ -36,7 +36,8 @@ advtrains.all_tracktypes={}
 --definition preparation
 local function conns(c1, c2, r1, r2, rh, rots) return {conn1=c1, conn2=c2, rely1=r1, rely2=r2, railheight=rh} end
 
-local t_30deg={
+local ap={}
+ap.t_30deg={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -110,7 +111,7 @@ local t_30deg={
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={},
 }
-local t_30deg_straightonly={
+ap.t_30deg_straightonly={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -135,7 +136,7 @@ local t_30deg_straightonly={
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={st},
 }
-local t_30deg_straightonly_noplacer={
+ap.t_30deg_straightonly_noplacer={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -160,7 +161,7 @@ local t_30deg_straightonly_noplacer={
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={st},
 }
-local t_45deg={
+ap.t_45deg={
 	regstep=2,
 	variant={
 		st=conns(0,8),
@@ -215,6 +216,7 @@ local t_45deg={
 	rotation={"", "_45"},
 	increativeinv={vst1=true, vst2=true}
 }
+advtrains.trackpresets = ap
 
 --definition format: ([] optional)
 --[[{
@@ -302,6 +304,9 @@ function advtrains.register_tracks(tracktype, def, preset)
 		after_place_node=function(pos)
 			advtrains.reset_trackdb_position(pos)
 		end,
+		on_place_rail=function(pos)
+			advtrains.reset_trackdb_position(pos)
+		end,
 	}, def.common or {})
 	--make trackplacer base def
 	advtrains.trackplacer.register_tracktype(def.nodename_prefix, preset.tpdefault)
@@ -386,10 +391,10 @@ advtrains.detector.clean_step_before = false
 --The entry already being contained in advtrains.detector.on_node_restore will not trigger an on_train_enter event on the node.  (when path is reset, this is saved).
 function advtrains.detector.enter_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	print("enterNode "..pts.." "..sid(train_id))
+	--print("enterNode "..pts.." "..sid(train_id))
 	if advtrains.detector.on_node[pts] then
 		if advtrains.trains[advtrains.detector.on_node[pts]] then
-			print(""..pts.." already occupied")
+			--print(""..pts.." already occupied")
 			return false
 		else
 			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
@@ -405,9 +410,9 @@ function advtrains.detector.enter_node(pos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	print("leaveNode "..pts.." "..sid(train_id))
+	--print("leaveNode "..pts.." "..sid(train_id))
 	if not advtrains.detector.on_node[pts] then
-		print(""..pts.." leave: nothing here")
+		--print(""..pts.." leave: nothing here")
 		return false
 	end
 	if advtrains.detector.on_node[pts]==train_id then
@@ -415,7 +420,7 @@ function advtrains.detector.leave_node(pos, train_id)
 		advtrains.detector.on_node[pts]=nil
 	else
 		if advtrains.trains[advtrains.detector.on_node[pts]] then
-			print(""..pts.." occupied by another train")
+			--print(""..pts.." occupied by another train")
 			return false
 		else
 			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
@@ -446,7 +451,10 @@ function advtrains.detector.call_enter_callback(pos, train_id)
 	local mregnode=minetest.registered_nodes[node.name]
 	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_enter then
 		mregnode.advtrains.on_train_enter(pos, train_id)
-	end 
+	end
+	
+	--atc code wants to be notified too
+	advtrains.atc.trigger_controller_train_enter(pos, train_id)
 end
 function advtrains.detector.call_leave_callback(pos, train_id)
 	--print("instructed to call leave calback")
@@ -576,7 +584,7 @@ advtrains.register_tracks("regular", {
 	shared_model="trackplane.b3d",
 	description="Deprecated Track",
 	formats={vst1={}, vst2={}},
-}, t_45deg)
+}, ap.t_45deg)
 
 
 advtrains.register_tracks("default", {
@@ -587,7 +595,7 @@ advtrains.register_tracks("default", {
 	shared_texture="advtrains_dtrack_rail.png",
 	description="Track",
 	formats={vst1={true, false, true}, vst2={true, false, true}, vst31={true}, vst32={true}, vst33={true}},
-}, t_30deg)
+}, ap.t_30deg)
 
 --bumpers
 advtrains.register_tracks("default", {
@@ -598,7 +606,7 @@ advtrains.register_tracks("default", {
 	shared_texture="advtrains_dtrack_rail.png",
 	description="Bumper",
 	formats={},
-}, t_30deg_straightonly)
+}, ap.t_30deg_straightonly)
 --legacy bumpers
 for _,rot in ipairs({"", "_30", "_45", "_60"}) do
 	minetest.register_alias("advtrains:dtrack_bumper"..rot, "advtrains:dtrack_bumper_st"..rot)
@@ -629,7 +637,7 @@ if mesecon then
 				}
 			}
 		end
-	}, t_30deg_straightonly)
+	}, ap.t_30deg_straightonly)
 	advtrains.register_tracks("default", {
 		nodename_prefix="advtrains:dtrack_detector_on",
 		texture_prefix="advtrains_dtrack_detector",
@@ -654,7 +662,7 @@ if mesecon then
 				}
 			}
 		end
-	}, t_30deg_straightonly_noplacer)
+	}, ap.t_30deg_straightonly_noplacer)
 end
 --TODO legacy
 --I know lbms are better for this purpose

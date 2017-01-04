@@ -119,6 +119,7 @@ advtrains.save = function()
 	file:close()
 	
 	advtrains.save_trackdb()
+	advtrains.atc.save()
 end
 minetest.register_on_shutdown(advtrains.save)
 
@@ -302,6 +303,24 @@ function advtrains.train_step(id, train, dtime)
 	if train.locomotives_in_train==0 then
 		train.tarvelocity=0
 	end
+	
+	--interpret ATC command
+	if train.atc_brake_target and train.atc_brake_target>=train.velocity then
+		train.atc_brake_target=nil
+	end
+	if train.atc_wait_finish then
+		if not train.atc_brake_target and train.velocity==train.tarvelocity then
+			train.atc_wait_finish=nil
+		end
+	end
+	if train.atc_command then
+		if train.atc_delay<=0 and not train.atc_wait_finish then
+			advtrains.atc.execute_atc_command(id, train)
+		else
+			train.atc_delay=train.atc_delay-dtime
+		end
+	end
+	
 	--make brake adjust the tarvelocity if necessary
 	if train.brake and (math.ceil(train.velocity)-1)<train.tarvelocity then
 		train.tarvelocity=math.max((math.ceil(train.velocity)-1), 0)
@@ -318,7 +337,7 @@ function advtrains.train_step(id, train, dtime)
 			if front_off_track or back_off_track or train.recently_collided_with_env then --every wagon has a brake, so not divided by mass.
 				--print("braking with emergency force")
 				applydiff= -(math.min((advtrains.train_emerg_force*dtime), math.abs(diff)))
-			elseif train.brake then
+			elseif train.brake or (train.atc_brake_target and train.atc_brake_target<train.velocity) then
 				--print("braking with default force")
 				--no math.min, because it can grow beyond tarvelocity, see up there
 				--dont worry, it will never fall below zero.

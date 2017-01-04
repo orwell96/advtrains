@@ -11,7 +11,7 @@ local mletter={[1]="F", [-1]="R", [0]="N"}
 function advtrains.on_control_change(pc, train, flip)
 	if pc.sneak then
 		if pc.up then
-			train.tarvelocity = advtrains.all_traintypes[train.traintype].max_speed or 10
+			train.tarvelocity = train.max_speed or 10
 		end
 		if pc.down then
 			train.tarvelocity = 0

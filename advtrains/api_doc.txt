@@ -103,7 +103,7 @@ minetest.register_node(nodename, {
 	after_place_node=function(pos)
 		advtrains.reset_trackdb_position(pos)
 	end,
-	^- the code in these 3 functions is required for advtrains to work.
+	^- the code in these 3 default minetest API functions is required for advtrains to work, however you can add your own code
 	
 	advtrains = {
 		on_train_enter=function(pos, train_id) end

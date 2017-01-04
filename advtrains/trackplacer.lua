@@ -129,7 +129,7 @@ function tp.bend_rail(originpos, conn, nnpref)
 		return false
 	end
 end
-function tp.placetrack(pos, nnpref)
+function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
 	--1. find all rails that are likely to be connected
 	local tr=tp.tracks[nnpref]
 	local p_rails={}
@@ -140,9 +140,16 @@ function tp.placetrack(pos, nnpref)
 	end
 	if #p_rails==0 then
 		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
+		if minetest.registered_nodes[nnpref.."_"..tr.default] and minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node then
+			minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node(pos, placer, itemstack, pointed_thing)
+		end
 	elseif #p_rails==1 then
 		tp.bend_rail(pos, p_rails[1], nnpref)
 		minetest.set_node(pos, tr.single_conn[p_rails[1]])
+		local nname=tr.single_conn[p_rails[1]].name
+		if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+			minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+		end
 	else
 		--iterate subsets
 		for k1, conn1 in ipairs(p_rails) do
@@ -152,6 +159,10 @@ function tp.placetrack(pos, nnpref)
 						tp.bend_rail(pos, conn1, nnpref)
 						tp.bend_rail(pos, conn2, nnpref)
 						minetest.set_node(pos, tr.double_conn[conn1.."_"..conn2])
+						local nname=tr.double_conn[conn1.."_"..conn2].name
+						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+							minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+						end
 						return
 					end
 				end
@@ -160,6 +171,10 @@ function tp.placetrack(pos, nnpref)
 		--not found
 		tp.bend_rail(pos, p_rails[1], nnpref)
 		minetest.set_node(pos, tr.single_conn[p_rails[1]])
+		local nname=tr.single_conn[p_rails[1]].name
+		if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+			minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+		end
 	end
 end
 
@@ -183,7 +198,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 				end
 				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
 					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
-					tp.placetrack(pos, nnprefix)
+					tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing)
 					if not minetest.setting_getbool("creative_mode") then
 						itemstack:take_item()
 					end
@@ -230,7 +245,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			local modext=tp.tracks[nnprefix].twrotate[suffix]
 
 			if rotation==modext[#modext] then --increase param2
-				minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
+				minetest.swap_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
 				return
 			else
 				local modpos
@@ -239,7 +254,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 						minetest.chat_send_player(placer:get_player_name(), "This node can't be rotated using the trackworker!")
 					return
 				end
-				minetest.set_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
+				minetest.swap_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
 			end
 			advtrains.invalidate_all_paths()
 		end
@@ -269,7 +284,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			  end
 		    end
 			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
-			minetest.set_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
+			minetest.swap_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
 			--invalidate trains
 			advtrains.invalidate_all_paths()
 		else
