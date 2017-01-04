@@ -134,11 +134,11 @@ end
 --nil    if the node is neither loaded nor in trackdb
 --the distraction between false and nil will be needed only in special cases.(train initpos)
 function advtrains.get_rail_info_at(pos, drives_on)
-	local node=minetest.get_node_or_nil(pos)
+	local rdp=advtrains.round_vector_floor_y(pos)
+	local node=minetest.get_node_or_nil(rdp)
 	if not node then
 		--try raildb
-		local rdp=vector.round(pos)
-		local dbe=(advtrains.trackdb[traintype] and advtrains.trackdb[traintype][rdp.y] and advtrains.trackdb[traintype][rdp.y][rdp.x] and advtrains.trackdb[traintype][rdp.y][rdp.x][rdp.z])
+		local dbe=(advtrains.trackdb[rdp.y] and advtrains.trackdb[rdp.y][rdp.x] and advtrains.trackdb[rdp.y][rdp.x][rdp.z])
 		if dbe then
 			for tt,_ in pairs(drives_on) do
 				if not dbe.tracktype or tt==dbe.tracktype then
@@ -156,7 +156,6 @@ function advtrains.get_rail_info_at(pos, drives_on)
 	local conn1, conn2, rely1, rely2, railheight, tracktype=advtrains.get_track_connections(node.name, node.param2)
 	
 	--already in trackdb?
-	local rdp=vector.round(pos)
 	if not (advtrains.trackdb and advtrains.trackdb[rdp.y] and advtrains.trackdb[rdp.y][rdp.x] and advtrains.trackdb[rdp.y][rdp.x][rdp.z]) then--TODO is this necessary?
 		if not advtrains.trackdb then advtrains.trackdb={} end
 		if not advtrains.trackdb[rdp.y] then advtrains.trackdb[rdp.y]={} end
@@ -171,7 +170,7 @@ function advtrains.get_rail_info_at(pos, drives_on)
 	return true, conn1, conn2, rely1, rely2, railheight
 end
 function advtrains.reset_trackdb_position(pos)
-	local rdp=vector.round(pos)
+	local rdp=advtrains.round_vector_floor_y(pos)
 	if not advtrains.trackdb then advtrains.trackdb={} end
 	if not advtrains.trackdb[rdp.y] then advtrains.trackdb[rdp.y]={} end
 	if not advtrains.trackdb[rdp.y][rdp.x] then advtrains.trackdb[rdp.y][rdp.x]={} end

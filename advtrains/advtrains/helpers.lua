@@ -58,11 +58,7 @@ rely1, rely2 tell to which height the connections are pointed to. 1 means it wil
 function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	local mid=advtrains.round_vector_floor_y(midreal)
 	
-	if not advtrains.get_rail_info_at(advtrains.round_vector_floor_y(prev), drives_on) then
-		return nil
-	end
-	
-	local midnode_ok, middir1, middir2, midrely1, midrely2=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(mid), drives_on)
+	local midnode_ok, middir1, middir2, midrely1, midrely2=advtrains.get_rail_info_at(mid, drives_on)
 	if not midnode_ok then
 		return nil 
 	end
@@ -72,7 +68,7 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	--print("[advtrains] in order mid1,mid2",middir1,middir2)
 	--try if it is dir1
 	local cor1=advtrains.dirCoordSet(mid, middir2)--<<<<
-	if math.floor(cor1.x+0.5)==math.floor(prev.x+0.5) and math.floor(cor1.z+0.5)==math.floor(prev.z+0.5) then--this was previous
+	if cor1.x==prev.x and cor1.z==prev.z then--this was previous
 		next=advtrains.dirCoordSet(mid, middir1)
 		if midrely1>=1 then
 			next.y=next.y+1
@@ -99,7 +95,7 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	--print("[advtrains]dir applied next pos: "..(next and minetest.pos_to_string(next) or "nil").."(chkdir is "..(chkdir or "nil")..", y-offset "..y_offset..")")
 	--is there a next
 	if not next then
-		--print("[advtrains]in conway: no next rail(nil), returning!")
+		print("[advtrains]in conway: no next rail(nil), returning!")
 		return nil
 	end
 	
@@ -107,31 +103,31 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	
 	--is it a rail?
 	if(not nextnode_ok) then
-		--print("[advtrains]in conway: next "..minetest.pos_to_string(next).." not a rail, trying one node below!")
+		print("[advtrains]in conway: next "..minetest.pos_to_string(next).." not a rail, trying one node below!")
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
 		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
 		if(not nextnode_ok) then
-			--print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
+			print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
 		end
 	end
 	
 	--is this next rail connecting to the mid?
 	if not ( (((nextdir1+8)%16)==chkdir and nextrely1==chkrely-y_offset) or (((nextdir2+8)%16)==chkdir and nextrely2==chkrely-y_offset) ) then
-		--print("[advtrains]in conway: next "..minetest.pos_to_string(next).." not connecting, trying one node below!")
+		print("[advtrains]in conway: next "..minetest.pos_to_string(next).." not connecting, trying one node below!")
 		next.y=next.y-1
 		y_offset=y_offset-1
 		
 		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
 		if(not nextnode_ok) then
-			--print("[advtrains]in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
+			print("[advtrains]in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
 			return nil
 		end
 		if not ( (((nextdir1+8)%16)==chkdir and nextrely1==chkrely) or (((nextdir2+8)%16)==chkdir and nextrely2==chkrely) ) then
-			--print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." rail not connecting, returning!")
-			--print("[advtrains] in order mid1,2,next1,2,chkdir "..middir1.." "..middir2.." "..nextdir1.." "..nextdir2.." "..chkdir)
+			print("[advtrains]in conway: one below "..minetest.pos_to_string(next).." rail not connecting, returning!")
+			print("[advtrains] in order mid1,2,next1,2,chkdir "..middir1.." "..middir2.." "..nextdir1.." "..nextdir2.." "..chkdir)
 			return nil
 		end
 	end

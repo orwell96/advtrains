@@ -36,7 +36,7 @@ advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
-advtrains.audit_interval=30
+advtrains.audit_interval=10
 
 
 advtrains.trains={}
@@ -70,7 +70,7 @@ end
 
 
 advtrains.save = function()
-	--print("[advtrains]saving")
+	print("[advtrains]saving")
 	advtrains.invalidate_all_paths()
 	local datastr = minetest.serialize(advtrains.trains)
 	if not datastr then
@@ -261,14 +261,18 @@ function advtrains.train_step(id, train, dtime)
 					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
 					local testpts=minetest.pos_to_string(testpos)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
-						--collides
-						advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
-						
-						train.recently_collided_with_env=true
-						train.velocity=0.5*train.velocity
-						train.movedir=train.movedir*-1
-						train.tarvelocity=0
-						
+						if advtrains.trains[advtrains.detector.on_node[testpts]] then
+							--collides
+							advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
+							
+							train.recently_collided_with_env=true
+							train.velocity=0.5*train.velocity
+							train.movedir=train.movedir*-1
+							train.tarvelocity=0
+						else
+							--unexistant train left in this place
+							advtrains.detector.on_node[testpts]=nil
+						end
 					end
 				end
 			end
@@ -422,6 +426,7 @@ function advtrains.pathpredict(id, train)
 		
 		if node_ok==nil then
 			--block not loaded, do nothing
+			print("[advtrains]last_pos not available")
 			return nil
 		elseif node_ok==false then
 			print("[advtrains]no track here, (fail) removing train.")
@@ -440,6 +445,7 @@ function advtrains.pathpredict(id, train)
 		
 		if prevnode_ok==nil then
 			--block not loaded, do nothing
+			print("[advtrains]prev not available")
 			return nil
 		elseif prevnode_ok==false then
 			print("[advtrains]no track at prev, (fail) removing train.")
@@ -468,7 +474,7 @@ function advtrains.pathpredict(id, train)
 	end
 	
 	
-	local maxn=advtrains.maxN(train.path)
+	local maxn=train.max_index_on_track or 0
 	while (maxn-train.index) < pregen_front do--pregenerate
 		--print("[advtrains]maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
 		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
@@ -478,14 +484,14 @@ function advtrains.pathpredict(id, train)
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update max_index_on_track
-			--print("over-generating path max to index "..maxn+1)
+			print("over-generating path max to index "..(maxn+1).." (position "..minetest.pos_to_string(train.path[maxn]).." )")
 			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
 		end
 		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
 		maxn=advtrains.maxN(train.path)
 	end
 	
-	local minn=advtrains.minN(train.path)
+	local minn=train.min_index_on_track or 0
 	while (train.index-minn) < (train.trainlen or 0) + pregen_back do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
 		--print("[advtrains]minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
@@ -495,7 +501,7 @@ function advtrains.pathpredict(id, train)
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update min_index_on_track
-			--print("over-generating path min to index "..minn-1)
+			print("over-generating path min to index "..(minn-1).." (position "..minetest.pos_to_string(train.path[minn]).." )")
 			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
 		end
 		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
@@ -509,12 +515,12 @@ function advtrains.pathpredict(id, train)
 		train.savedpos_off_track_index_offset=train.index-train.max_index_on_track
 		train.last_pos=train.path[train.max_index_on_track]
 		train.last_pos_prev=train.path[train.max_index_on_track-1]
-		--print("train is off-track (front), last positions kept at "..minetest.pos_to_string(train.last_pos).." / "..minetest.pos_to_string(train.last_pos_prev))
+		print("train is off-track (front), last positions kept at "..minetest.pos_to_string(train.last_pos).." / "..minetest.pos_to_string(train.last_pos_prev))
 	elseif train.min_index_on_track+1>train.index then --whoops, train went even more far. same behavior
 		train.savedpos_off_track_index_offset=train.index-train.min_index_on_track
 		train.last_pos=train.path[train.min_index_on_track+1]
 		train.last_pos_prev=train.path[train.min_index_on_track]
-		--print("train is off-track (back), last positions kept at "..minetest.pos_to_string(train.last_pos).." / "..minetest.pos_to_string(train.last_pos_prev))
+		print("train is off-track (back), last positions kept at "..minetest.pos_to_string(train.last_pos).." / "..minetest.pos_to_string(train.last_pos_prev))
 	else --regular case
 		train.savedpos_off_track_index_offset=nil
 		train.last_pos=train.path[math.floor(train.index+0.5)]
@@ -547,7 +553,7 @@ end
 function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local train=advtrains.trains[train_id]
 	train.drives_on=advtrains.all_tracktypes
-	train.max_speed=100
+	train.max_speed=20
 	local rel_pos=0
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
@@ -680,6 +686,8 @@ function advtrains.spawn_couple_on_collide(id1, pos, id2, t1_is_backpos)
 	local train1=advtrains.trains[id1]
 	local train2=advtrains.trains[id2]
 	
+	if not train1 or not train2 then return end
+	
 	local found
 	for i=advtrains.minN(train1.path), advtrains.maxN(train1.path) do
 		if vector.equals(train1.path[i], pos) then
@@ -696,9 +704,9 @@ function advtrains.spawn_couple_on_collide(id1, pos, id2, t1_is_backpos)
 	local t2_is_backpos
 	print("End positions: "..minetest.pos_to_string(frontpos2)..minetest.pos_to_string(backpos2))
 	
-	if vector.equals(frontpos2, pos) then
+	if vector.distance(frontpos2, pos)<2 then
 		t2_is_backpos=false
-	elseif vector.equals(backpos2, pos) then
+	elseif vector.distance(backpos2, pos)<2 then
 		t2_is_backpos=true
 	else
 		print("Err: not a endpos")

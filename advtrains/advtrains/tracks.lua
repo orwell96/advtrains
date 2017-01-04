@@ -375,7 +375,14 @@ function advtrains.get_track_connections(name, param2)
 	if not param2 then noderot=0 end
 	if noderot > 3 then print("[advtrains] get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
 	
-	return (nodedef.connect1 + 4 * noderot)%16, (nodedef.connect2  + 4 * noderot)%16, nodedef.rely1 or 0, nodedef.rely2 or 0, nodedef.railheight or 0
+	local tracktype
+	for k,_ in pairs(nodedef.groups) do
+		local tt=string.match(k, "^advtrains_track_(.+)$")
+		if tt then
+			tracktype=tt
+		end
+	end
+	return (nodedef.connect1 + 4 * noderot)%16, (nodedef.connect2  + 4 * noderot)%16, nodedef.rely1 or 0, nodedef.rely2 or 0, nodedef.railheight or 0, tracktype
 end
 
 --detector code
