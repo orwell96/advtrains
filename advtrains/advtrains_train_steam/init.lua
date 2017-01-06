@@ -57,19 +57,34 @@ advtrains.register_wagon("newlocomotive", {
 	drops={"default:steelblock 4"},
 }, "Steam Engine", "advtrains_newlocomotive_inv.png")
 advtrains.register_wagon("wagon_default", {
-	mesh="advtrains_wagon.b3d",
+	mesh="advtrains_passenger_wagon.b3d",
 	textures = {"advtrains_wagon.png"},
 	drives_on={default=true},
 	max_speed=10,
 	seats = {
 		{
-			name="Default Seat",
-			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
+			name="1",
+			attach_offset={x=-4, y=8, z=8},
+			view_offset={x=0, y=0, z=0},
+		},
+		{
+			name="2",
+			attach_offset={x=4, y=8, z=8},
+			view_offset={x=0, y=0, z=0},
+		},
+		{
+			name="3",
+			attach_offset={x=-4, y=8, z=-8},
+			view_offset={x=0, y=0, z=0},
+		},
+		{
+			name="4",
+			attach_offset={x=4, y=8, z=-8},
+			view_offset={x=0, y=0, z=0},
 		},
 	},
 	visual_size = {x=1, y=1},
-	wagon_span=1.8,
+	wagon_span=3.1,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 }, "Passenger Wagon", "advtrains_wagon_inv.png")
