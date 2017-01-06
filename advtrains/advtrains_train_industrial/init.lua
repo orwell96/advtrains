@@ -7,13 +7,11 @@ advtrains.register_wagon("engine_industrial", {
 		{
 			name="Driver Stand (left)",
 			attach_offset={x=-5, y=10, z=-10},
-			view_offset={x=0, y=10, z=0},
 			driving_ctrl_access=true,
 		},
 		{
 			name="Driver Stand (right)",
 			attach_offset={x=5, y=10, z=-10},
-			view_offset={x=0, y=10, z=0},
 			driving_ctrl_access=true,
 		},
 	},

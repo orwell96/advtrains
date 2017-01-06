@@ -6,10 +6,26 @@ advtrains.register_wagon("subway_wagon", {
 	max_speed=15,
 	seats = {
 		{
-			name="Default Seat (driver stand)",
-			attach_offset={x=0, y=10, z=0},
+			name="Front driver stand",
+			attach_offset={x=0, y=10, z=10},
 			view_offset={x=0, y=6, z=0},
 			driving_ctrl_access=true,
+		},
+		{
+			name="Back driver stand",
+			attach_offset={x=0, y=10, z=10},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+		{
+			name="1",
+			attach_offset={x=-5, y=10, z=0},
+			view_offset={x=0, y=6, z=0},
+		},
+		{
+			name="2",
+			attach_offset={x=5, y=10, z=0},
+			view_offset={x=0, y=6, z=0},
 		},
 	},
 	visual_size = {x=1, y=1},

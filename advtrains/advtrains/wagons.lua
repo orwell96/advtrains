@@ -5,7 +5,7 @@ local wagon={
 	--physical = true,
 	visual = "mesh",
 	mesh = "wagon.b3d",
-	visual_size = {x=3, y=3},
+	visual_size = {x=1, y=1},
 	textures = {"black.png"},
 	is_wagon=true,
 	wagon_span=1,--how many index units of space does this wagon consume
@@ -406,6 +406,10 @@ function advtrains.get_real_path_index(train, pit)
 end
 
 function wagon:get_on(clicker, seatno)
+	if not self.object:getyaw() then
+		atprint("trying to get on but object is not loaded!")
+		return
+	end
 	if not self.seatp then
 		self.seatp={}
 	end
@@ -415,8 +419,13 @@ function wagon:get_on(clicker, seatno)
 	end
 	self.seatp[seatno] = clicker:get_player_name()
 	advtrains.player_to_train_mapping[clicker:get_player_name()]=self.train_id
-	clicker:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
-	clicker:set_eye_offset(self.seats[seatno].view_offset, self.seats[seatno].view_offset)
+	
+	local dummy=minetest.add_entity(self.object:getpos(), "advtrains:attach_dummy")
+	dummy:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
+	
+	clicker:set_attach(dummy, "", {x=0,y=0,z=0}, {x=0,y=0,z=0})
+	local vo=vector.subtract(self.seats[seatno].view_offset or {x=0, y=0, z=0}, {x=0,y=10,z=0})
+	clicker:set_eye_offset(vo, vo)
 end
 function wagon:get_off_plr(pname)
 	local no=self:get_seatno(pname)
@@ -563,9 +572,24 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 	})
 end
 
---[[
-	wagons can define update_animation(self, velocity) if they have a speed-dependent animation
-	this function will be called when the velocity vector changes or every 2 seconds.
-]]
+
+minetest.register_entity("advtrains:attach_dummy", {
+	collisionbox={0, 0, 0, 0, 0, 0},
+	physical=false,
+	visual="mesh",
+	mesh="advtrains_dummy.b3d",
+	texture="advtrains_dtrack_st.png",
+	visual_size = {x=1, y=1},
+	textures = {"black.png"},
+	on_activate = function(self, staticdata)
+		if staticdata=="DUMMY" then
+			self.object:remove()
+		end
+		atprint("dummy spawned")
+	end,
+	get_staticdata = function(self)
+		return "DUMMY"
+	end,
+})
 
 

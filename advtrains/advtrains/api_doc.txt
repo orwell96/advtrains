@@ -26,7 +26,7 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 			attach_offset={x=0, y=10, z=0},
 			^- this value is passed to 'set_attach'
 			view_offset={x=0, y=6, z=0},
-			^- player:set_eye_offset is called with this parameter.
+			^- optional, defaults to {x=0, y=0, z=0} - player:set_eye_offset is called with this parameter.
 			driving_ctrl_access=false,
 			^- If the seat is a driver stand, and players sitting here should get access to the train's driving control.
 
