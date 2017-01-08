@@ -4,8 +4,38 @@ advtrains={}
 
 advtrains.modpath = minetest.get_modpath("advtrains")
 
-atprint=function() end
---atprint=function(t, ...) minetest.log("action", table.concat({t, ...}, " ")) minetest.chat_send_all(table.concat({t, ...}, " ")) end
+local function print_concat_table(a)
+	local str=""
+	local stra=""
+	for i=1,50 do
+		t=a[i]
+		if t==nil then
+			stra=stra.."nil "
+		else
+			str=str..stra
+			stra=""
+			if type(t)=="table" then
+				if t.x and t.y and t.z then
+					str=str..minetest.pos_to_string(t)
+				else
+					str=str..dump(t)
+				end
+			elseif type(t)=="boolean" then
+				if t then
+					str=str.."true"
+				else
+					str=str.."false"
+				end
+			else
+				str=str..t
+			end
+			str=str.." "
+		end
+	end
+	return str
+end
+--atprint=function() end
+atprint=function(t, ...) minetest.log("action", "[advtrains]"..print_concat_table({t, ...})) minetest.chat_send_all("[advtrains]"..print_concat_table({t, ...})) end
 sid=function(id) return string.sub(id, -4) end
 
 dofile(advtrains.modpath.."/helpers.lua");
