@@ -20,7 +20,7 @@ for tt, _ in pairs(advtrains.all_traintypes) do
 	local file, err = io.open(pl_fpath, "r")
 	if not file then
 		local er=err or "Unknown Error"
-		atprint("[advtrains]Failed loading advtrains trackdb save file "..er)
+		atprint("Failed loading advtrains trackdb save file "..er)
 	else
 		--custom format to save memory
 		while true do
@@ -74,7 +74,7 @@ function advtrains.save_trackdb()
 		local file, err = io.open(pl_fpath, "w")
 		if not file then
 			local er=err or "Unknown Error"
-			atprint("[advtrains]Failed saving advtrains trackdb save file "..er)
+			atprint("Failed saving advtrains trackdb save file "..er)
 		else
 			--custom format to save memory
 			for y,tyl in pairs(advtrains.trackdb[tt]) do
@@ -103,7 +103,7 @@ advtrains.fpath_tdb=minetest.get_worldpath().."/advtrains_trackdb2"
 local file, err = io.open(advtrains.fpath_tdb, "r")
 if not file then
 	local er=err or "Unknown Error"
-	atprint("[advtrains]Failed loading advtrains save file "..er)
+	atprint("Failed loading advtrains save file "..er)
 else
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
@@ -114,7 +114,7 @@ end
 function advtrains.save_trackdb()
 	local datastr = minetest.serialize(advtrains.trackdb)
 	if not datastr then
-		minetest.log("error", "[advtrains] Failed to serialize trackdb data!")
+		minetest.log("error", " Failed to serialize trackdb data!")
 		return
 	end
 	local file, err = io.open(advtrains.fpath_tdb, "w")

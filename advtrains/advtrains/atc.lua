@@ -10,7 +10,7 @@ advtrains.fpath_atc=minetest.get_worldpath().."/advtrains_atc"
 local file, err = io.open(advtrains.fpath_atc, "r")
 if not file then
 	local er=err or "Unknown Error"
-	atprint("[advtrains]Failed loading advtrains atc save file "..er)
+	atprint("Failed loading advtrains atc save file "..er)
 else
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
@@ -22,7 +22,7 @@ function atc.save()
 	--leave space for more save data.
 	local datastr = minetest.serialize({controllers = atc.controllers})
 	if not datastr then
-		minetest.log("error", "[advtrains] Failed to serialize trackdb data!")
+		minetest.log("error", " Failed to serialize trackdb data!")
 		return
 	end
 	local file, err = io.open(advtrains.fpath_atc, "w")

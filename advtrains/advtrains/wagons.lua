@@ -47,7 +47,7 @@ end
 	wagon will save only uid in staticdata, no serialized table
 ]]
 function wagon:on_activate(sd_uid, dtime_s)
-	atprint("[advtrains][wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] activated")
+	atprint("[wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] activated")
 	self.object:set_armor_groups({immortal=1})
 	if sd_uid and sd_uid~="" then
 		--legacy
@@ -63,7 +63,7 @@ function wagon:on_activate(sd_uid, dtime_s)
 	--duplicates?
 	for ao_id,wagon in pairs(minetest.luaentities) do
 		if wagon.is_wagon and wagon.initialized and wagon.unique_id==self.unique_id and wagon~=self then--i am a duplicate!
-			atprint("[advtrains][wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] duplicate found(ao_id:"..ao_id.."), removing")
+			atprint("[wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] duplicate found(ao_id:"..ao_id.."), removing")
 			self.object:remove()
 			minetest.after(0.5, function() advtrains.update_trainpart_properties(self.train_id) end)
 			return
@@ -77,7 +77,7 @@ end
 
 function wagon:get_staticdata()
 	if not self:ensure_init() then return end
-	atprint("[advtrains][wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: saving to wagon_save")
+	atprint("[wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: saving to wagon_save")
 	--serialize inventory, if it has one
 	if self.has_inventory then
 		local inv=minetest.get_inventory({type="detached", name="advtrains_wgn_"..self.unique_id})
@@ -209,7 +209,7 @@ function wagon:destroy()
 		self.custom_on_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction)
 	end
 	
-	atprint("[advtrains][wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: destroying")
+	atprint("[wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: destroying")
 	
 	self.object:remove()
 
@@ -236,7 +236,7 @@ function wagon:on_step(dtime)
 	
 	--is my train still here
 	if not self.train_id or not self:train() then
-		atprint("[advtrains][wagon "..self.unique_id.."] missing train_id, destroying")
+		atprint("[wagon "..self.unique_id.."] missing train_id, destroying")
 		self.object:remove()
 		return
 	elseif not self.initialized then
@@ -317,7 +317,7 @@ function wagon:on_step(dtime)
 	local first_pos=gp.path[math.floor(index)]
 	local second_pos=gp.path[math.floor(index)+1]
 	if not first_pos or not second_pos then
-		--atprint("[advtrains] object "..self.unique_id.." path end reached!")
+		--atprint(" object "..self.unique_id.." path end reached!")
 		self.object:setvelocity({x=0,y=0,z=0})
 		return
 	end
@@ -542,10 +542,10 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 			end
 			
 			local node=minetest.env:get_node_or_nil(pointed_thing.under)
-			if not node then atprint("[advtrains]Ignore at placer position") return itemstack end
+			if not node then atprint("Ignore at placer position") return itemstack end
 			local nodename=node.name
 			if(not advtrains.is_track_and_drives_on(nodename, prototype.drives_on)) then
-				atprint("[advtrains]no track here, not placing.")
+				atprint("no track here, not placing.")
 				return itemstack
 			end
 			local conn1=advtrains.get_track_connections(node.name, node.param2)
@@ -553,7 +553,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 			
 			local ob=minetest.env:add_entity(pointed_thing.under, "advtrains:"..sysname)
 			if not ob then
-				atprint("[advtrains]couldn't add_entity, aborting")
+				atprint("couldn't add_entity, aborting")
 			end
 			local le=ob:get_luaentity()
 			

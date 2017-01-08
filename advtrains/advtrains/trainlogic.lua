@@ -47,7 +47,7 @@ advtrains.fpath=minetest.get_worldpath().."/advtrains"
 local file, err = io.open(advtrains.fpath, "r")
 if not file then
 	local er=err or "Unknown Error"
-	atprint("[advtrains]Failed loading advtrains save file "..er)
+	atprint("Failed loading advtrains save file "..er)
 else
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
@@ -59,7 +59,7 @@ advtrains.fpath_ws=minetest.get_worldpath().."/advtrains_wagon_save"
 local file, err = io.open(advtrains.fpath_ws, "r")
 if not file then
 	local er=err or "Unknown Error"
-	atprint("[advtrains]Failed loading advtrains save file "..er)
+	atprint("Failed loading advtrains save file "..er)
 else
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
@@ -70,11 +70,11 @@ end
 
 
 advtrains.save = function()
-	atprint("[advtrains]saving")
+	atprint("saving")
 	advtrains.invalidate_all_paths()
 	local datastr = minetest.serialize(advtrains.trains)
 	if not datastr then
-		minetest.log("error", "[advtrains] Failed to serialize train data!")
+		minetest.log("error", " Failed to serialize train data!")
 		return
 	end
 	local file, err = io.open(advtrains.fpath, "w")
@@ -108,7 +108,7 @@ advtrains.save = function()
 	--atprint(dump(advtrains.wagon_save))
 	datastr = minetest.serialize(advtrains.wagon_save)
 	if not datastr then
-		minetest.log("error", "[advtrains] Failed to serialize train data!")
+		minetest.log("error", " Failed to serialize train data!")
 		return
 	end
 	file, err = io.open(advtrains.fpath_ws, "w")
@@ -236,7 +236,7 @@ function advtrains.train_step(id, train, dtime)
 	
 	--remove?
 	if #train.trainparts==0 then
-		atprint("[advtrains][train "..sid(id).."] has empty trainparts, removing.")
+		atprint("[train "..sid(id).."] has empty trainparts, removing.")
 		advtrains.detector.leave_node(path[train.detector_old_index], id)
 		advtrains.trains[id]=nil
 		return
@@ -284,7 +284,7 @@ function advtrains.train_step(id, train, dtime)
 	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
 	if train.check_trainpartload<=0 then
 		local ori_pos=advtrains.get_real_index_position(path, train.index) --not much to calculate
-		--atprint("[advtrains][train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
+		--atprint("[train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
 		
 		local should_check=false
 		for _,p in ipairs(minetest.get_connected_players()) do
@@ -417,7 +417,7 @@ function advtrains.pathpredict(id, train)
 	if not train.path or #train.path<2 then
 		if not train.last_pos then
 			--no chance to recover
-			atprint("[advtrains]train hasn't saved last-pos, removing train.")
+			atprint("train hasn't saved last-pos, removing train.")
 			advtrains.train[id]=nil
 			return false
 		end
@@ -426,17 +426,17 @@ function advtrains.pathpredict(id, train)
 		
 		if node_ok==nil then
 			--block not loaded, do nothing
-			atprint("[advtrains]last_pos not available")
+			atprint("last_pos not available")
 			return nil
 		elseif node_ok==false then
-			atprint("[advtrains]no track here, (fail) removing train.")
+			atprint("no track here, (fail) removing train.")
 			advtrains.trains[id]=nil
 			return false
 		end
 		
 		if not train.last_pos_prev then
 			--no chance to recover
-			atprint("[advtrains]train hasn't saved last-pos_prev, removing train.")
+			atprint("train hasn't saved last-pos_prev, removing train.")
 			advtrains.trains[id]=nil
 			return false
 		end
@@ -445,10 +445,10 @@ function advtrains.pathpredict(id, train)
 		
 		if prevnode_ok==nil then
 			--block not loaded, do nothing
-			atprint("[advtrains]prev not available")
+			atprint("prev not available")
 			return nil
 		elseif prevnode_ok==false then
-			atprint("[advtrains]no track at prev, (fail) removing train.")
+			atprint("no track at prev, (fail) removing train.")
 			advtrains.trains[id]=nil
 			return false
 		end
@@ -476,7 +476,7 @@ function advtrains.pathpredict(id, train)
 	
 	local maxn=train.max_index_on_track or 0
 	while (maxn-train.index) < pregen_front do--pregenerate
-		--atprint("[advtrains]maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
+		--atprint("maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
 		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
 		if conway then
 			train.path[maxn+1]=conway
@@ -493,7 +493,7 @@ function advtrains.pathpredict(id, train)
 	
 	local minn=train.min_index_on_track or 0
 	while (train.index-minn) < (train.trainlen or 0) + pregen_back do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
-		--atprint("[advtrains]minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
+		--atprint("minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
 		if conway then
 			train.path[minn-1]=conway
@@ -558,10 +558,11 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
 		local wagon=nil
-		for _,iwagon in pairs(minetest.luaentities) do
+		for aoid,iwagon in pairs(minetest.luaentities) do
 			if iwagon.is_wagon and iwagon.initialized and iwagon.unique_id==w_id then
 				if wagon then
 					--duplicate
+					atprint("update_trainpart_properties: Removing duplicate wagon with id="..aoid)
 					iwagon.object:remove()
 				else
 					wagon=iwagon

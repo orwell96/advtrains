@@ -3,7 +3,7 @@
 function advtrains.register_platform(preset)
 	local ndef=minetest.registered_nodes[preset]
 	if not ndef then 
-		minetest.log("warning", "[advtrains] register_platform couldn't find preset node "..preset)
+		minetest.log("warning", " register_platform couldn't find preset node "..preset)
 		return
 	end
 	local btex=ndef.tiles

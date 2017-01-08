@@ -370,10 +370,10 @@ end
 
 function advtrains.get_track_connections(name, param2)
 	local nodedef=minetest.registered_nodes[name]
-	if not nodedef then atprint("[advtrains] get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 8, 0, 0, 0 end
+	if not nodedef then atprint(" get_track_connections couldn't find nodedef for nodename "..(name or "nil")) return 0, 8, 0, 0, 0 end
 	local noderot=param2
 	if not param2 then noderot=0 end
-	if noderot > 3 then atprint("[advtrains] get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
+	if noderot > 3 then atprint(" get_track_connections: rail has invaild param2 of "..noderot) noderot=0 end
 	
 	local tracktype
 	for k,_ in pairs(nodedef.groups) do
