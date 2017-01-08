@@ -576,11 +576,10 @@ end
 minetest.register_entity("advtrains:attach_dummy", {
 	collisionbox={0, 0, 0, 0, 0, 0},
 	physical=false,
-	visual="mesh",
+	visual="sprite",
 	mesh="advtrains_dummy.b3d",
-	texture="advtrains_dtrack_st.png",
 	visual_size = {x=1, y=1},
-	textures = {"black.png"},
+	textures = {"advtrains_dtrack_st.png"},
 	on_activate = function(self, staticdata)
 		if staticdata=="DUMMY" then
 			self.object:remove()
