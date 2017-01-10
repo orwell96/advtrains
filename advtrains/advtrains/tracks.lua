@@ -398,17 +398,17 @@ advtrains.detector.clean_step_before = false
 --The entry already being contained in advtrains.detector.on_node_restore will not trigger an on_train_enter event on the node.  (when path is reset, this is saved).
 function advtrains.detector.enter_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	--atprint("enterNode "..pts.." "..sid(train_id))
+	atprint("enterNode "..pts.." "..sid(train_id))
 	if advtrains.detector.on_node[pts] then
 		if advtrains.trains[advtrains.detector.on_node[pts]] then
-			--atprint(""..pts.." already occupied")
+			atprint(""..pts.." already occupied")
 			return false
 		else
 			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
 		end
 	end
 	advtrains.detector.on_node[pts]=train_id
-	if advtrains.detector.on_node_restore[pts] then
+	if advtrains.detector.on_node_restore[pts]==train_id then
 		advtrains.detector.on_node_restore[pts]=nil
 	else
 		advtrains.detector.call_enter_callback(advtrains.round_vector_floor_y(pos), train_id)
@@ -417,9 +417,9 @@ function advtrains.detector.enter_node(pos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local pts = minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	--atprint("leaveNode "..pts.." "..sid(train_id))
+	atprint("leaveNode "..pts.." "..sid(train_id))
 	if not advtrains.detector.on_node[pts] then
-		--atprint(""..pts.." leave: nothing here")
+		atprint(""..pts.." leave: nothing here")
 		return false
 	end
 	if advtrains.detector.on_node[pts]==train_id then
@@ -427,7 +427,7 @@ function advtrains.detector.leave_node(pos, train_id)
 		advtrains.detector.on_node[pts]=nil
 	else
 		if advtrains.trains[advtrains.detector.on_node[pts]] then
-			--atprint(""..pts.." occupied by another train")
+			atprint(""..pts.." occupied by another train")
 			return false
 		else
 			advtrains.detector.leave_node(pos, advtrains.detector.on_node[pts])
@@ -438,21 +438,30 @@ function advtrains.detector.leave_node(pos, train_id)
 end
 --called immediately before invalidating paths
 function advtrains.detector.setup_restore()
-	--atprint("setup_restore")
-	advtrains.detector.on_node_restore = advtrains.detector.on_node
+	atprint("setup_restore")
+	-- don't execute if it already has been called. For some reason it gets called twice...
+	if advtrains.detector.clean_step_before then
+		return
+	end
+	advtrains.detector.on_node_restore={}
+	for k, v in pairs(advtrains.detector.on_node) do
+		advtrains.detector.on_node_restore[k]=v
+	end
 	advtrains.detector.on_node = {}
+	advtrains.detector.clean_step_before = true
 end
 --called one step after invalidating paths, when all trains have restored their path and called enter_node for their contents.
 function advtrains.detector.finalize_restore()
-	--atprint("finalize_restore")
+	atprint("finalize_restore")
 	for pts, train_id in pairs(advtrains.detector.on_node_restore) do
 		--atprint("called leave callback "..pts.." "..train_id)
 		advtrains.detector.call_leave_callback(minetest.string_to_pos(pts), train_id)
 	end
 	advtrains.detector.on_node_restore = {}
+	advtrains.detector.clean_step_before = false
 end
 function advtrains.detector.call_enter_callback(pos, train_id)
-	--atprint("instructed to call enter calback")
+	atprint("instructed to call enter calback")
 
 	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
@@ -464,7 +473,7 @@ function advtrains.detector.call_enter_callback(pos, train_id)
 	advtrains.atc.trigger_controller_train_enter(pos, train_id)
 end
 function advtrains.detector.call_leave_callback(pos, train_id)
-	--atprint("instructed to call leave calback")
+	atprint("instructed to call leave calback")
 
 	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
