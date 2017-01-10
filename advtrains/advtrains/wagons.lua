@@ -151,8 +151,17 @@ function wagon:init_shared()
 	end
 end
 function wagon:ensure_init()
-	if self.initialized then return true end
-	self.object:setvelocity({x=0,y=0,z=0})
+	if self.initialized then
+		if self.noninitticks then self.noninitticks=nil end
+		return true
+	end
+	if not self.noninitticks then self.noninitticks=0 end
+	self.noninitticks=self.noninitticks+1
+	if self.noninitticks>20 then
+		self.object:remove()
+	else
+		self.object:setvelocity({x=0,y=0,z=0})
+	end
 	return false
 end
 
