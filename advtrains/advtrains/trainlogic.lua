@@ -39,96 +39,11 @@ advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 advtrains.audit_interval=10
 
 
-advtrains.trains={}
-advtrains.wagon_save={}
-
---load initially
-advtrains.fpath=minetest.get_worldpath().."/advtrains"
-local file, err = io.open(advtrains.fpath, "r")
-if not file then
-	local er=err or "Unknown Error"
-	atprint("Failed loading advtrains save file "..er)
-else
-	local tbl = minetest.deserialize(file:read("*a"))
-	if type(tbl) == "table" then
-		advtrains.trains=tbl
-	end
-	file:close()
-end
-advtrains.fpath_ws=minetest.get_worldpath().."/advtrains_wagon_save"
-local file, err = io.open(advtrains.fpath_ws, "r")
-if not file then
-	local er=err or "Unknown Error"
-	atprint("Failed loading advtrains save file "..er)
-else
-	local tbl = minetest.deserialize(file:read("*a"))
-	if type(tbl) == "table" then
-		advtrains.wagon_save=tbl
-	end
-	file:close()
-end
-
-
-advtrains.save = function()
-	atprint("saving")
-	advtrains.invalidate_all_paths()
-	local datastr = minetest.serialize(advtrains.trains)
-	if not datastr then
-		minetest.log("error", " Failed to serialize train data!")
-		return
-	end
-	local file, err = io.open(advtrains.fpath, "w")
-	if err then
-		return err
-	end
-	file:write(datastr)
-	file:close()
-	
-	-- update wagon saves
-	for _,wagon in pairs(minetest.luaentities) do
-		if wagon.is_wagon and wagon.initialized then
-			wagon:get_staticdata()
-		end
-	end
-	--cross out userdata
-	for w_id, data in pairs(advtrains.wagon_save) do
-		data.name=nil
-		data.object=nil
-		if data.driver then
-			data.driver_name=data.driver:get_player_name()
-			data.driver=nil
-		else
-			data.driver_name=nil
-		end
-		if data.discouple then
-			data.discouple.object:remove()
-			data.discouple=nil
-		end
-	end
-	--atprint(dump(advtrains.wagon_save))
-	datastr = minetest.serialize(advtrains.wagon_save)
-	if not datastr then
-		minetest.log("error", " Failed to serialize train data!")
-		return
-	end
-	file, err = io.open(advtrains.fpath_ws, "w")
-	if err then
-		return err
-	end
-	file:write(datastr)
-	file:close()
-	
-	advtrains.save_trackdb()
-	advtrains.atc.save()
-end
-minetest.register_on_shutdown(advtrains.save)
-
 advtrains.save_and_audit_timer=advtrains.audit_interval
 minetest.register_globalstep(function(dtime)
 	advtrains.save_and_audit_timer=advtrains.save_and_audit_timer-dtime
 	if advtrains.save_and_audit_timer<=0 then
 		local t=os.clock()
-		
 		--save
 		advtrains.save()
 		advtrains.save_and_audit_timer=advtrains.audit_interval

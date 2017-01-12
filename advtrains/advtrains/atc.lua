@@ -2,36 +2,9 @@
 --registers and controls the ATC system
 
 local atc={}
--- ATC persistence table
-atc.controllers = {}
+-- ATC persistence table. advtrains.atc is created by init.lua when it loads the save file.
+atc.controllers = advtrains.atc.controllers
 --contents: {command="...", arrowconn=0-15 where arrow points}
-
-advtrains.fpath_atc=minetest.get_worldpath().."/advtrains_atc"
-local file, err = io.open(advtrains.fpath_atc, "r")
-if not file then
-	local er=err or "Unknown Error"
-	atprint("Failed loading advtrains atc save file "..er)
-else
-	local tbl = minetest.deserialize(file:read("*a"))
-	if type(tbl) == "table" then
-		atc.controllers=tbl.controllers
-	end
-	file:close()
-end
-function atc.save()
-	--leave space for more save data.
-	local datastr = minetest.serialize({controllers = atc.controllers})
-	if not datastr then
-		minetest.log("error", " Failed to serialize trackdb data!")
-		return
-	end
-	local file, err = io.open(advtrains.fpath_atc, "w")
-	if err then
-		return err
-	end
-	file:write(datastr)
-	file:close()
-end
 
 --call from advtrains.detector subprogram
 
@@ -289,6 +262,8 @@ function atc.execute_atc_command(id, train)
 	minetest.chat_send_all("ATC command parse error: "..command)
 	atc.train_reset_command(id)
 end
+
+
 
 --move table to desired place
 advtrains.atc=atc

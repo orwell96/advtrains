@@ -98,7 +98,8 @@ function advtrains.save_trackdb()
 	end
 end
 ]]--end temp outcomment
-advtrains.trackdb={}
+
+--trackdb keeps its own save file.
 advtrains.fpath_tdb=minetest.get_worldpath().."/advtrains_trackdb2"
 local file, err = io.open(advtrains.fpath_tdb, "r")
 if not file then
