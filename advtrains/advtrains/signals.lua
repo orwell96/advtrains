@@ -29,14 +29,15 @@ for r,f in pairs({on="off", off="on"}) do
 				choppy=3,
 				not_blocking_trains=1,
 				not_in_creative_inventory=crea,
+				save_in_nodedb=1,
 			},
 			mesecons = {effector = {
 				["action_"..f] = function (pos, node)
-					minetest.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
+					advtrains.np.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
 				end
 			}},
 			on_rightclick=function(pos, node, clicker)
-				minetest.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
+				advtrains.np.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:retrosignal", r, rotation, nil)
@@ -59,6 +60,7 @@ for r,f in pairs({on="off", off="on"}) do
 				choppy=3,
 				not_blocking_trains=1,
 				not_in_creative_inventory=crea,
+				save_in_nodedb=1,
 			},
 			light_source = 1,
 			sunlight_propagates=true,

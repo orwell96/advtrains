@@ -24,13 +24,5 @@ minetest.register_tool("advtrains:tunnelborer",
 			end
 		end
 	end,
---[[
-^  default: nil
-^ Function must return either nil if no item shall be removed from
-inventory, or an itemstack to replace the original itemstack.
-e.g. itemstack:take_item(); return itemstack
-^ Otherwise, the function is free to do what it wants.
-^ The default functions handle regular use cases.
-]]
 }
-) 
+)

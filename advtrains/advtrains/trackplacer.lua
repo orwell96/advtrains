@@ -117,13 +117,13 @@ function tp.bend_rail(originpos, conn, nnpref)
 		return false--dont destroy existing track
 	elseif adj1 and not adj2 then
 		if tr.double_conn[adj1.."_"..newdir] then
-			minetest.set_node(pos, tr.double_conn[adj1.."_"..newdir])
+			advtrains.ndb.swap_node(pos, tr.double_conn[adj1.."_"..newdir])
 			return true--if exists, connect new rail and old end
 		end
 		return false
 	else
 		if tr.single_conn[newdir] then--just rotate old rail to right orientation
-			minetest.set_node(pos, tr.single_conn[newdir])
+			advtrains.ndb.swap_node(pos, tr.single_conn[newdir])
 			return true
 		end
 		return false
@@ -145,7 +145,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
 		end
 	elseif #p_rails==1 then
 		tp.bend_rail(pos, p_rails[1], nnpref)
-		minetest.set_node(pos, tr.single_conn[p_rails[1]])
+		advtrains.ndb.swap_node(pos, tr.single_conn[p_rails[1]])
 		local nname=tr.single_conn[p_rails[1]].name
 		if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
 			minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
@@ -158,7 +158,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
 					if (tr.double_conn[conn1.."_"..conn2]) then
 						tp.bend_rail(pos, conn1, nnpref)
 						tp.bend_rail(pos, conn2, nnpref)
-						minetest.set_node(pos, tr.double_conn[conn1.."_"..conn2])
+						advtrains.ndb.swap_node(pos, tr.double_conn[conn1.."_"..conn2])
 						local nname=tr.double_conn[conn1.."_"..conn2].name
 						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
 							minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
@@ -170,7 +170,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
 		end
 		--not found
 		tp.bend_rail(pos, p_rails[1], nnpref)
-		minetest.set_node(pos, tr.single_conn[p_rails[1]])
+		advtrains.ndb.swap_node(pos, tr.single_conn[p_rails[1]])
 		local nname=tr.single_conn[p_rails[1]].name
 		if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
 			minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
@@ -245,7 +245,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			local modext=tp.tracks[nnprefix].twrotate[suffix]
 
 			if rotation==modext[#modext] then --increase param2
-				minetest.swap_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
+				advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
 				return
 			else
 				local modpos
@@ -254,7 +254,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 						minetest.chat_send_player(placer:get_player_name(), "This node can't be rotated using the trackworker!")
 					return
 				end
-				minetest.swap_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
+				advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
 			end
 			advtrains.invalidate_all_paths()
 		end
@@ -284,7 +284,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			  end
 		    end
 			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
-			minetest.swap_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
+			advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
 			--invalidate trains
 			advtrains.invalidate_all_paths()
 		else

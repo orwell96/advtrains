@@ -1,7 +1,6 @@
 --advtrains
 
---create the base table structure.
-advtrains={atc={controllers={}}, detector={}, trackplacer={}, trains={}, trackdb={}, wagon_save={}}
+advtrains = {trains={}, wagon_save={}}
 
 advtrains.modpath = minetest.get_modpath("advtrains")
 
@@ -57,7 +56,21 @@ advtrains.meseconrules =
  {x=0,  y=-1, z=-1},
  {x=0, y=-2, z=0}}
  
+dofile(advtrains.modpath.."/trainlogic.lua")
+dofile(advtrains.modpath.."/trainhud.lua")
+dofile(advtrains.modpath.."/trackplacer.lua")
+dofile(advtrains.modpath.."/tracks.lua")
+dofile(advtrains.modpath.."/atc.lua")
+dofile(advtrains.modpath.."/wagons.lua")
 
+dofile(advtrains.modpath.."/trackdb_legacy.lua")
+dofile(advtrains.modpath.."/nodedb.lua")
+dofile(advtrains.modpath.."/couple.lua")
+dofile(advtrains.modpath.."/damage.lua")
+
+dofile(advtrains.modpath.."/signals.lua")
+dofile(advtrains.modpath.."/misc_nodes.lua")
+dofile(advtrains.modpath.."/crafting.lua")
 
 --load/save
 
@@ -70,9 +83,11 @@ else
 	if type(tbl) == "table" then
 		if tbl.version then
 			--congrats, we have the new save format.
-			advtrains.atc.controllers = tbl.atc_controllers
 			advtrains.trains = tbl.trains
 			advtrains.wagon_save = tbl.wagon_save
+			advtrains.ndb.load_data(tbl.ndb)
+			advtrains.atc.load_data(tbl.atc)
+			--advtrains.latc.load_data(tbl.latc)
 		else
 			--oh no, its the old one...
 			advtrains.trains=tbl
@@ -110,7 +125,7 @@ else
 end
 
 advtrains.save = function()
-	atprint("saving")
+	--atprint("saving")
 	advtrains.invalidate_all_paths()
 	
 	-- update wagon saves
@@ -134,14 +149,15 @@ advtrains.save = function()
 			data.discouple=nil
 		end
 	end
-	--atprint(dump(advtrains.wagon_save))
 	
 	--versions:
 	-- 1 - Initial new save format.
 	local save_tbl={
 		trains = advtrains.trains,
 		wagon_save = advtrains.wagon_save,
-		atc_controllers = advtrains.atc.controllers,
+		atc = advtrains.atc.save_data(),
+		--latc = advtrains.latc.save_data(),
+		ndb = advtrains.ndb.save_data(),
 		version = 1,
 	}
 	local datastr = minetest.serialize(save_tbl)
@@ -160,18 +176,5 @@ end
 minetest.register_on_shutdown(advtrains.save)
 
 
-dofile(advtrains.modpath.."/trainlogic.lua")
-dofile(advtrains.modpath.."/trainhud.lua")
-dofile(advtrains.modpath.."/trackplacer.lua")
-dofile(advtrains.modpath.."/tracks.lua")
-dofile(advtrains.modpath.."/atc.lua")
-dofile(advtrains.modpath.."/wagons.lua")
 
-dofile(advtrains.modpath.."/pseudoload.lua")
-dofile(advtrains.modpath.."/couple.lua")
-dofile(advtrains.modpath.."/damage.lua")
-
-dofile(advtrains.modpath.."/signals.lua")
-dofile(advtrains.modpath.."/misc_nodes.lua")
-dofile(advtrains.modpath.."/crafting.lua")
 

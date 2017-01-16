@@ -3,7 +3,13 @@
 
 local atc={}
 -- ATC persistence table. advtrains.atc is created by init.lua when it loads the save file.
-atc.controllers = advtrains.atc.controllers
+atc.controllers = {}
+function atc.load_data(data)
+	atc.controllers = data and data.controllers or {}
+end
+function atc.save_data()
+	return atc.controllers
+end
 --contents: {command="...", arrowconn=0-15 where arrow points}
 
 --call from advtrains.detector subprogram
@@ -52,8 +58,8 @@ end
 
 --nodes
 local idxtrans={static=1, mesecon=2, digiline=3}
-local apn_func=function(pos)
-	advtrains.reset_trackdb_position(pos)
+local apn_func=function(pos, node)
+	advtrains.ndb.update(pos, node)
 	local meta=minetest.get_meta(pos)
 	if meta then
 		meta:set_string("infotext", "ATC controller, unconfigured.")
@@ -72,10 +78,9 @@ advtrains.register_tracks("default", {
 	get_additional_definiton = function(def, preset, suffix, rotation)
 		return {
 			after_place_node=apn_func,
-			on_place_rail=apn_func,
 			after_dig_node=function(pos)
 				advtrains.invalidate_all_paths()
-				advtrains.reset_trackdb_position(pos)
+				advtrains.ndb.clear(pos)
 				local pts=minetest.pos_to_string(pos)
 				atc.controllers[pts]=nil
 			end,
