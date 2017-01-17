@@ -21,12 +21,13 @@ advtrains.register_wagon("newlocomotive", {
 	visual_size = {x=1, y=1},
 	wagon_span=1.85,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	--update_animation=function(self, velocity)
-		--if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
-	--		self.object:set_animation({x=1,y=60}, 100)--math.floor(velocity))
-			--self.old_anim_velocity=advtrains.abs_ceil(velocity)
-		--end
-	--end,
+	update_animation=function(self, velocity)
+		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
+			atprint("set_anim",advtrains.abs_ceil(velocity)*15)
+			self.object:set_animation({x=1,y=80}, advtrains.abs_ceil(velocity)*15, 0, true)
+			self.old_anim_velocity=advtrains.abs_ceil(velocity)
+		end
+	end,
 	custom_on_activate = function(self, staticdata_table, dtime_s)
 		minetest.add_particlespawner({
 			amount = 10,
