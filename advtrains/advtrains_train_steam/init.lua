@@ -1,6 +1,6 @@
 advtrains.register_wagon("newlocomotive", {
 	mesh="advtrains_engine_steam.b3d",
-	textures = {"advtrains_newlocomotive.png"},
+	textures = {"advtrains_engine_steam.png"},
 	is_locomotive=true,
 	drives_on={default=true},
 	max_speed=10,
@@ -23,7 +23,6 @@ advtrains.register_wagon("newlocomotive", {
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	update_animation=function(self, velocity)
 		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
-			atprint("set_anim",advtrains.abs_ceil(velocity)*15)
 			self.object:set_animation({x=1,y=80}, advtrains.abs_ceil(velocity)*15, 0, true)
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		end
@@ -56,7 +55,67 @@ advtrains.register_wagon("newlocomotive", {
 		})
 	end,
 	drops={"default:steelblock 4"},
-}, "Steam Engine", "advtrains_newlocomotive_inv.png")
+}, "Steam Engine", "advtrains_engine_steam_inv.png")
+
+advtrains.register_wagon("detailed_steam_engine", {
+	mesh="advtrains_detailed_steam_engine.b3d",
+	textures = {"advtrains_detailed_steam_engine.png"},
+	is_locomotive=true,
+	drives_on={default=true},
+	max_speed=10,
+	seats = {
+		{
+			name="Driver Stand (left)",
+			attach_offset={x=-5, y=10, z=-10},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+		{
+			name="Driver Stand (right)",
+			attach_offset={x=5, y=10, z=-10},
+			view_offset={x=0, y=6, z=0},
+			driving_ctrl_access=true,
+		},
+	},
+	visual_size = {x=1, y=1},
+	wagon_span=2.05,
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
+	update_animation=function(self, velocity)
+		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
+			self.object:set_animation({x=1,y=80}, advtrains.abs_ceil(velocity)*15, 0, true)
+			self.old_anim_velocity=advtrains.abs_ceil(velocity)
+		end
+	end,
+	custom_on_activate = function(self, staticdata_table, dtime_s)
+		minetest.add_particlespawner({
+			amount = 10,
+			time = 0,
+		--  ^ If time is 0 has infinite lifespan and spawns the amount on a per-second base
+			minpos = {x=0, y=2.3, z=1.45},
+			maxpos = {x=0, y=2.3, z=1.4},
+			minvel = {x=-0.2, y=1.8, z=-0.2},
+			maxvel = {x=0.2, y=2, z=0.2},
+			minacc = {x=0, y=-0.1, z=0},
+			maxacc = {x=0, y=-0.3, z=0},
+			minexptime = 2,
+			maxexptime = 4,
+			minsize = 1,
+			maxsize = 5,
+		--  ^ The particle's properties are random values in between the bounds:
+		--  ^ minpos/maxpos, minvel/maxvel (velocity), minacc/maxacc (acceleration),
+		--  ^ minsize/maxsize, minexptime/maxexptime (expirationtime)
+			collisiondetection = true,
+		--  ^ collisiondetection: if true uses collision detection
+			vertical = false,
+		--  ^ vertical: if true faces player using y axis only
+			texture = "smoke_puff.png",
+		--  ^ Uses texture (string)
+			attached = self.object,
+		})
+	end,
+	drops={"default:steelblock 4"},
+}, "Detailed Steam Engine", "advtrains_engine_steam_inv.png")
+
 advtrains.register_wagon("wagon_default", {
 	mesh="advtrains_passenger_wagon.b3d",
 	textures = {"advtrains_wagon.png"},
