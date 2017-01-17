@@ -474,7 +474,7 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	for i, w_id in ipairs(train.trainparts) do
 		local wagon=nil
 		for aoid,iwagon in pairs(minetest.luaentities) do
-			if iwagon.is_wagon and iwagon.initialized and iwagon.unique_id==w_id then
+			if iwagon.is_wagon and iwagon.unique_id==w_id then
 				if wagon then
 					--duplicate
 					atprint("update_trainpart_properties: Removing duplicate wagon with id="..aoid)
@@ -488,7 +488,11 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 			if advtrains.wagon_save[w_id] then
 				--spawn a new and initialize it with the properties from wagon_save
 				wagon=minetest.env:add_entity(train.last_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
-				wagon:init_from_wagon_save(w_id)
+				if not wagon then
+					minetest.chat_send_all("[advtrains] Warning: Wagon "..advtrains.wagon_save[w_id].entity_name.." does not exist. Make sure all required modules are loaded!")
+				else
+					wagon:init_from_wagon_save(w_id)
+				end
 			end
 		end
 		if wagon then

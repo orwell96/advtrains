@@ -23,11 +23,11 @@ end
 function atc.send_command(pos)
 	local pts=minetest.pos_to_string(pos)
 	if atc.controllers[pts] then
-		atprint("Called send_command at "..pts)
+		--atprint("Called send_command at "..pts)
 		local train_id = advtrains.detector.on_node[pts]
 		if train_id then
 			if advtrains.trains[train_id] then
-				atprint("send_command inside if: "..sid(train_id))
+				--atprint("send_command inside if: "..sid(train_id))
 				atc.train_reset_command(train_id)
 				local arrowconn=atc.controllers[pts].arrowconn
 				local train=advtrains.trains[train_id]
