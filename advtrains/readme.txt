@@ -17,7 +17,9 @@ Gravel Texture              : from Minetest Game
 Initial rail model/texture  : DS-minetest
 Models for signals/bumpers  : mbb
 Steam engine / wagon texture: mbb
+Detailed Steam engine       : mbb / Krokoschlange(animation)
 Industrial engine/wagons    : mbb
 Inventory images            : mbb
 Small code contributions    : NaruTrey / gpcf
 Mod Description             : hajo
+If I forgot someone please punish me for that.
