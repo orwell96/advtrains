@@ -34,8 +34,10 @@ local function print_concat_table(a)
 	end
 	return str
 end
---atprint=function() end
-atprint=function(t, ...) minetest.log("action", "[advtrains]"..print_concat_table({t, ...})) minetest.chat_send_all("[advtrains]"..print_concat_table({t, ...})) end
+atprint=function() end
+if minetest.setting_getbool("advtrains_debug") then
+	atprint=function(t, ...) minetest.log("action", "[advtrains]"..print_concat_table({t, ...})) minetest.chat_send_all("[advtrains]"..print_concat_table({t, ...})) end
+end
 sid=function(id) return string.sub(id, -4) end
 
 dofile(advtrains.modpath.."/helpers.lua");

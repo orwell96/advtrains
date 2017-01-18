@@ -1,0 +1,2 @@
+#    Whether to print debug information on advtrains to chat and debug.txt
+advtrains_debug (Print advtrains debug messages) bool false
