@@ -33,6 +33,19 @@ Examples:
 B0 W R D10 SM
 Subway train stopping in dead end station and returning in opposite direction
 
+OL
+Open left doors
+OR
+Open right doors
+OC
+Close Doors
+All door commands are relative to the arrow direction, so if a train drives to opposite arrow direction, L will open its right doors from driver perspective.
+Execution continues immediately, there is no way to wait for all doors to be opened/closed.
+
+Example:
+B0 W OL D10 OC D1 SM
+Subway train: stop in station and open doors, depart after 10 seconds.
+
 # conditional statements:
 
 I<condition><code>;
@@ -56,8 +69,10 @@ If the train is slower than 8, accelerate to 8.
 
 # ATC controller operation modes
 static: Only give 1 static command.
+
 mesecon: Give 2 different commands depending on if the controller is mesecon-powered or not
 digiline: Don't give any commands by itself. When a train passes, a digiline message in the form of "[+/-][speed]" is sent on the set channel (where +/- means the same as with conditions). Any digiline message sent to the controller will be interpreted as ATC command and sent to the train.
+** the latter two are not yet implemented.
 
 # Persistence
 ATC controllers that are configured as 'static' or 'mesecon' are persistent over mapblock unloads and will even command the train when the mapblock is unloaded. This is not possible with digilines since these do not work in unloaded mapchunks.
