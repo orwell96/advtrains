@@ -1,8 +1,0 @@
-Advanced Trains v1.3.0, by orwell and contributors. Also see readme.
-Good-looking, realistic trains for minetest.
-
-For crafting recipes, see manual.pdf
-
-Website: http://advtrains.bleipb.de/
-Manual:  https://github.com/orwell96/advtrains/blob/master/manual.pdf
-Forum :  https://forum.minetest.net/viewtopic.php?f=11&t=14726

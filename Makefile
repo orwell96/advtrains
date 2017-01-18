@@ -1,5 +1,4 @@
 tarball: clean
-#	tar czf advtrains.tar.gz textures/*.png models/*.b3d *.lua *.txt 
-	which zip && zip advtrains.zip textures/*.png models/*.b3d *.lua *.txt 
+	which zip && zip -r advtrains.zip advtrains
 clean:
-	rm -f advtrains.zip advtrains.tar.gz
+	rm -f advtrains.zip
