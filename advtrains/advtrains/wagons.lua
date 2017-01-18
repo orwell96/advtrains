@@ -377,9 +377,20 @@ function wagon:on_step(dtime)
 			end
 		end
 		if collides then
-			gp.recently_collided_with_env=true
-			gp.velocity=-0.5*gp.velocity
-			gp.tarvelocity=0
+			if self.collision_count and self.collision_count>10 then
+				--enable collision mercy to get trains stuck in walls out of walls
+				--actually do nothing except limiting the velocity to 1
+				gp.velocity=math.min(gp.velocity, 1)
+				gp.tarvelocity=math.min(gp.tarvelocity, 1)
+			else
+				gp.recently_collided_with_env=true
+				gp.velocity=2*gp.velocity
+				gp.movedir=-gp.movedir
+				gp.tarvelocity=0
+				self.collision_count=(self.collision_count or 0)+1
+			end
+		else
+			self.collision_count=nil
 		end
 	end
 	
