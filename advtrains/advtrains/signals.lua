@@ -33,11 +33,11 @@ for r,f in pairs({on="off", off="on"}) do
 			},
 			mesecons = {effector = {
 				["action_"..f] = function (pos, node)
-					advtrains.np.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
 				end
 			}},
 			on_rightclick=function(pos, node, clicker)
-				advtrains.np.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
+				advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:retrosignal", r, rotation, nil)
@@ -66,11 +66,11 @@ for r,f in pairs({on="off", off="on"}) do
 			sunlight_propagates=true,
 			mesecons = {effector = {
 				["action_"..f] = function (pos, node)
-					minetest.swap_node(pos, {name = "advtrains:signal_"..f..rotation, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f..rotation, param2 = node.param2})
 				end
 			}},
 			on_rightclick=function(pos, node, clicker)
-				minetest.swap_node(pos, {name = "advtrains:signal_"..f..rotation, param2 = node.param2})
+				advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f..rotation, param2 = node.param2})
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:signal", r, rotation, nil)
