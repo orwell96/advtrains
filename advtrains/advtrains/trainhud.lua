@@ -7,6 +7,7 @@ advtrains.hud[player:get_player_name()] = nil
 end)
 
 local mletter={[1]="F", [-1]="R", [0]="N"}
+local doorstr={[-1]="|<>| >|<", [0]=">|< >|<", [1]=">|< |<>|"}
 
 function advtrains.on_control_change(pc, train, flip)
 	if pc.sneak then
@@ -46,6 +47,20 @@ function advtrains.on_control_change(pc, train, flip)
 				train.tarvelocity = math.max(train.tarvelocity - 1, 0)
 			else
 				train.movedir = -train.movedir
+			end
+		end
+		if pc.left then
+			if train.door_open ~= 0 then
+				train.door_open = 0
+			else
+				train.door_open = -train.movedir
+			end
+		end
+		if pc.right then
+			if train.door_open ~= 0 then
+				train.door_open = 0
+			else
+				train.door_open = train.movedir
 			end
 		end
 		if train.brake_hold_state~=2 then
@@ -101,7 +116,7 @@ function advtrains.hud_train_format(train, flip)
 	local tvel=advtrains.abs_ceil(train.tarvelocity)
 	local topLine, firstLine, secondLine
 	
-	topLine="Train".."  ["..mletter[fct*train.movedir].."]  "..(train.brake and "="..( train.brake_hold_state==2 and "^" or "" ).."B=" or "")
+	topLine="  ["..mletter[fct*train.movedir].."]  "..doorstr[(train.door_open or 0) * train.movedir].."  "..(train.brake and "="..( train.brake_hold_state==2 and "^" or "" ).."B=" or "")
 	firstLine="Speed: |"..string.rep("+", vel)..string.rep("_", max-vel)..">"
 	secondLine="Target: |"..string.rep("+", tvel)..string.rep("_", max-tvel)..">"
 	

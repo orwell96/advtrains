@@ -23,7 +23,7 @@ function wagon:on_rightclick(clicker)
 		--advtrains.dumppath(self:train().path)
 		--minetest.chat_send_all("at index "..(self:train().index or "nil"))
 		--advtrains.invert_train(self.train_id)
-		minetest.chat_send_all(dump(self:train()))
+		atprint(dump(self))
 		return
 	end	
 	local no=self:get_seatno(clicker:get_player_name())
@@ -68,10 +68,6 @@ function wagon:on_activate(sd_uid, dtime_s)
 			minetest.after(0.5, function() advtrains.update_trainpart_properties(self.train_id) end)
 			return
 		end
-	end
-	
-	if self.custom_on_activate then
-		self:custom_on_activate(dtime_s)
 	end
 end
 
@@ -148,6 +144,13 @@ function wagon:init_shared()
 				inv:set_size(lst, siz)
 			end
 		end
+	end
+	if self.doors then
+		self.door_anim_timer=0
+		self.door_state=0
+	end
+	if self.custom_on_activate then
+		self:custom_on_activate(dtime_s)
 	end
 end
 function wagon:ensure_init()
@@ -286,7 +289,36 @@ function wagon:on_step(dtime)
 	end
 
 	local gp=self:train()
-
+	
+	--door animation
+	if self.doors then
+		if (self.door_anim_timer or 0)<=0 then
+			local fct=self.wagon_flipped and -1 or 1
+			local dstate = (gp.door_open or 0) * fct
+			if dstate ~= self.door_state then
+				local at
+				--meaning of the train.door_open field:
+				-- -1: left doors (rel. to train orientation)
+				--  0: closed
+				--  1: right doors
+				--this code produces the following behavior:
+				-- if changed from 0 to +-1, play open anim. if changed from +-1 to 0, play close.
+				-- if changed from +-1 to -+1, first close and set 0, then it will detect state change again and run open.
+				if self.door_state == 0 then
+					at=self.doors.open[dstate]
+					self.object:set_animation(at.frames, at.speed or 15, at.blend or 0, false)
+					self.door_state = dstate
+				else
+					at=self.doors.close[self.door_state or 1]--in case it has not been set yet
+					self.object:set_animation(at.frames, at.speed or 15, at.blend or 0, false)
+					self.door_state = 0
+				end
+				self.door_anim_timer = at.time
+			end
+		else
+			self.door_anim_timer = (self.door_anim_timer or 0) - dtime
+		end
+	end
 	--DisCouple
 	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
 		if gp.velocity==0 then

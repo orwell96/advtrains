@@ -8,7 +8,7 @@ function atc.load_data(data)
 	atc.controllers = data and data.controllers or {}
 end
 function atc.save_data()
-	return atc.controllers
+	return {controllers = atc.controllers}
 end
 --contents: {command="...", arrowconn=0-15 where arrow points}
 
@@ -171,6 +171,12 @@ local matchptn={
 			minetest.chat_send_all("ATC Reverse command warning: didn't reverse train!")
 		end
 		return 1
+	end,
+	["O([LRC])"]=function(id, train, match)
+		local tt={L=-1, R=1, C=0}
+		local arr=train.atc_arrow and 1 or -1
+		train.door_open = tt[match]*arr*train.movedir
+		return 2
 	end,
 }
 
