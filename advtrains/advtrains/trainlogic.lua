@@ -487,7 +487,7 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 		if not wagon then
 			if advtrains.wagon_save[w_id] then
 				--spawn a new and initialize it with the properties from wagon_save
-				wagon=minetest.env:add_entity(train.last_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
+				wagon=minetest.add_entity(train.last_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
 				if not wagon then
 					minetest.chat_send_all("[advtrains] Warning: Wagon "..advtrains.wagon_save[w_id].entity_name.." does not exist. Make sure all required modules are loaded!")
 				else

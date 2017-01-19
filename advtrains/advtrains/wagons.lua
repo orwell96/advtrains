@@ -1,5 +1,14 @@
 --atan2 counts angles clockwise, minetest does counterclockwise
 
+minetest.register_privilege("train_place", {
+	description = "Player can place trains on tracks not owned by player",
+	give_to_singleplayer= false,
+});
+minetest.register_privilege("train_remove", {
+	description = "Player can remove trains not owned by player",
+	give_to_singleplayer= false,
+});
+
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
 	--physical = true,
@@ -174,9 +183,9 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 	if not puncher or not puncher:is_player() then
 		return
 	end
-	if self.owner and puncher:get_player_name()~=self.owner then
-		minetest.chat_send_player(puncher:get_player_name(), "This wagon is owned by "..self.owner..", you can't destroy it.")
-		return
+	if self.owner and puncher:get_player_name()~=self.owner and (not minetest.check_player_privs(puncher, {train_remove = true })) then
+	   minetest.chat_send_player(puncher:get_player_name(), "This wagon is owned by "..self.owner..", you can't destroy it.");
+	   return
 	end
 	
 	if minetest.setting_getbool("creative_mode") then
@@ -584,8 +593,9 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 				return
 			end
 			
-			local node=minetest.env:get_node_or_nil(pointed_thing.under)
-			if not node then atprint("Ignore at placer position") return itemstack end
+
+			local node=minetest.get_node_or_nil(pointed_thing.under)
+			if not node then atprint("[advtrains]Ignore at placer position") return itemstack end
 			local nodename=node.name
 			if(not advtrains.is_track_and_drives_on(nodename, prototype.drives_on)) then
 				atprint("no track here, not placing.")
@@ -594,7 +604,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 			local conn1=advtrains.get_track_connections(node.name, node.param2)
 			local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 			
-			local ob=minetest.env:add_entity(pointed_thing.under, "advtrains:"..sysname)
+			local ob=minetest.add_entity(pointed_thing.under, "advtrains:"..sysname)
 			if not ob then
 				atprint("couldn't add_entity, aborting")
 			end
