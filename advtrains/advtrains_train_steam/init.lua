@@ -1,3 +1,10 @@
+local S
+if minetest.get_modpath("intllib") then
+    S = intllib.Getter()
+else
+    S = function(s,a,...)a={a,...}return s:gsub("@(%d+)",function(n)return a[tonumber(n)]end)end
+end
+
 advtrains.register_wagon("newlocomotive", {
 	mesh="advtrains_engine_steam.b3d",
 	textures = {"advtrains_engine_steam.png"},
@@ -6,13 +13,13 @@ advtrains.register_wagon("newlocomotive", {
 	max_speed=10,
 	seats = {
 		{
-			name="Driver Stand (left)",
+			name=S("Driver Stand (left)"),
 			attach_offset={x=-5, y=10, z=-10},
 			view_offset={x=0, y=6, z=0},
 			driving_ctrl_access=true,
 		},
 		{
-			name="Driver Stand (right)",
+			name=S("Driver Stand (right)"),
 			attach_offset={x=5, y=10, z=-10},
 			view_offset={x=0, y=6, z=0},
 			driving_ctrl_access=true,
@@ -55,7 +62,7 @@ advtrains.register_wagon("newlocomotive", {
 		})
 	end,
 	drops={"default:steelblock 4"},
-}, "Steam Engine", "advtrains_engine_steam_inv.png")
+}, S("Steam Engine"), "advtrains_engine_steam_inv.png")
 
 advtrains.register_wagon("detailed_steam_engine", {
 	mesh="advtrains_detailed_steam_engine.b3d",
@@ -65,13 +72,13 @@ advtrains.register_wagon("detailed_steam_engine", {
 	max_speed=10,
 	seats = {
 		{
-			name="Driver Stand (left)",
+			name=S("Driver Stand (left)"),
 			attach_offset={x=-5, y=10, z=-10},
 			view_offset={x=0, y=6, z=0},
 			driving_ctrl_access=true,
 		},
 		{
-			name="Driver Stand (right)",
+			name=S("Driver Stand (right)"),
 			attach_offset={x=5, y=10, z=-10},
 			view_offset={x=0, y=6, z=0},
 			driving_ctrl_access=true,
@@ -114,7 +121,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 		})
 	end,
 	drops={"default:steelblock 4"},
-}, "Detailed Steam Engine", "advtrains_engine_steam_inv.png")
+}, S("Detailed Steam Engine"), "advtrains_engine_steam_inv.png")
 
 advtrains.register_wagon("wagon_default", {
 	mesh="advtrains_passenger_wagon.b3d",
@@ -147,7 +154,7 @@ advtrains.register_wagon("wagon_default", {
 	wagon_span=3.1,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
-}, "Passenger Wagon", "advtrains_wagon_inv.png")
+}, S("Passenger Wagon"), "advtrains_wagon_inv.png")
 advtrains.register_wagon("wagon_box", {
 	mesh="advtrains_wagon.b3d",
 	textures = {"advtrains_wagon_box.png"},
@@ -168,7 +175,7 @@ advtrains.register_wagon("wagon_box", {
 	inventory_list_sizes = {
 		box=8*6,
 	},
-}, "Box Wagon", "advtrains_wagon_box_inv.png")
+}, S("Box Wagon"), "advtrains_wagon_box_inv.png")
 
 minetest.register_craft({
 	output = 'advtrains:newlocomotive',

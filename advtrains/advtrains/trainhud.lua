@@ -117,8 +117,8 @@ function advtrains.hud_train_format(train, flip)
 	local topLine, firstLine, secondLine
 	
 	topLine="  ["..mletter[fct*train.movedir].."]  "..doorstr[(train.door_open or 0) * train.movedir].."  "..(train.brake and "="..( train.brake_hold_state==2 and "^" or "" ).."B=" or "")
-	firstLine="Speed: |"..string.rep("+", vel)..string.rep("_", max-vel)..">"
-	secondLine="Target: |"..string.rep("+", tvel)..string.rep("_", max-tvel)..">"
+	firstLine=attrans("Speed:").." |"..string.rep("+", vel)..string.rep("_", max-vel)..">"
+	secondLine=attrans("Target:").." |"..string.rep("+", tvel)..string.rep("_", max-tvel)..">"
 	
 	return topLine.."\n"..firstLine.."\n"..secondLine
 end

@@ -1,0 +1,2 @@
+Default Seat (driver stand) = Standardsitzplatz (Führerstand)
+Subway Passenger Wagon = U-Bahn-Waggon

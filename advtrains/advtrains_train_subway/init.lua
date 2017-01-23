@@ -1,3 +1,9 @@
+local S
+if minetest.get_modpath("intllib") then
+    S = intllib.Getter()
+else
+    S = function(s,a,...)a={a,...}return s:gsub("@(%d+)",function(n)return a[tonumber(n)]end)end
+end
 
 advtrains.register_wagon("subway_wagon", {
 	mesh="advtrains_subway_wagon.b3d",
@@ -31,7 +37,7 @@ advtrains.register_wagon("subway_wagon", {
 	--	atprint("subway custom_on_activate")
 	--	self.object:set_animation({x=1,y=80}, 15, 0, true)
 	--end,
-}, "Subway Passenger Wagon", "advtrains_subway_wagon_inv.png")
+}, S("Subway Passenger Wagon"), "advtrains_subway_wagon_inv.png")
 
 --wagons
 minetest.register_craft({

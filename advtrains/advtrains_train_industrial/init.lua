@@ -1,3 +1,11 @@
+-- Boilerplate to support localized strings if intllib mod is installed.
+local S
+if minetest.get_modpath("intllib") then
+    S = intllib.Getter()
+else
+    S = function(s,a,...)a={a,...}return s:gsub("@(%d+)",function(n)return a[tonumber(n)]end)end
+end
+
 advtrains.register_wagon("engine_industrial", {
 	mesh="advtrains_engine_industrial.b3d",
 	textures = {"advtrains_engine_industrial.png"},
@@ -5,13 +13,13 @@ advtrains.register_wagon("engine_industrial", {
 	max_speed=20,
 	seats = {
 		{
-			name="Driver Stand (left)",
+			name=S("Driver Stand (left)"),
 			attach_offset={x=-5, y=10, z=-10},
 			view_offset={x=0, y=10, z=0},
 			driving_ctrl_access=true,
 		},
 		{
-			name="Driver Stand (right)",
+			name=S("Driver Stand (right)"),
 			attach_offset={x=5, y=10, z=-10},
 			view_offset={x=0, y=10, z=0},
 			driving_ctrl_access=true,
@@ -22,7 +30,7 @@ advtrains.register_wagon("engine_industrial", {
 	is_locomotive=true,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
-}, "Industrial Train Engine", "advtrains_engine_industrial_inv.png")
+}, S("Industrial Train Engine"), "advtrains_engine_industrial_inv.png")
 advtrains.register_wagon("wagon_tank", {
 	mesh="advtrains_wagon_tank.b3d",
 	textures = {"advtrains_wagon_tank.png"},
@@ -43,7 +51,7 @@ advtrains.register_wagon("wagon_tank", {
 	inventory_list_sizes = {
 		box=8*6,
 	},
-}, "Industrial tank wagon", "advtrains_wagon_tank_inv.png")
+}, S("Industrial tank wagon"), "advtrains_wagon_tank_inv.png")
 advtrains.register_wagon("wagon_wood", {
 	mesh="advtrains_wagon_wood.b3d",
 	textures = {"advtrains_wagon_wood.png"},
@@ -64,4 +72,4 @@ advtrains.register_wagon("wagon_wood", {
 	inventory_list_sizes = {
 		box=8*6,
 	},
-}, "Industrial wood wagon", "advtrains_wagon_wood_inv.png")
+}, S("Industrial wood wagon"), "advtrains_wagon_wood_inv.png")

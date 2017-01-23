@@ -184,7 +184,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		return
 	end
 	if self.owner and puncher:get_player_name()~=self.owner and (not minetest.check_player_privs(puncher, {train_remove = true })) then
-	   minetest.chat_send_player(puncher:get_player_name(), "This wagon is owned by "..self.owner..", you can't destroy it.");
+	   minetest.chat_send_player(puncher:get_player_name(), attrans("This wagon is owned by @1, you can't destroy it.", self.owner));
 	   return
 	end
 	
@@ -198,7 +198,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 	else
 		local pc=puncher:get_player_control()
 		if not pc.sneak then
-			minetest.chat_send_player(puncher:get_player_name(), "Warning: If you destroy this wagon, you only get some steel back! If you are sure, shift-leftclick the wagon.")
+			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, shift-leftclick the wagon."))
 			return
 		end
 
@@ -523,7 +523,7 @@ function wagon:show_get_on_form(pname)
 		end
 		return
 	end
-	local form, comma="size[5,8]label[0.5,0.5;Select seat:]textlist[0.5,1;4,6;seat;", ""
+	local form, comma="size[5,8]label[0.5,0.5;"..attrans("Select seat:").."]textlist[0.5,1;4,6;seat;", ""
 	for seatno, seattbl in ipairs(self.seats) do
 		local addtext, colorcode="", ""
 		if self.seatp and self.seatp[seatno] then
@@ -535,7 +535,7 @@ function wagon:show_get_on_form(pname)
 	end
 	form=form..";0,false]"
 	if self.has_inventory and self.get_inventory_formspec then
-		form=form.."button_exit[1,7;3,1;inv;Show Inventory]"
+		form=form.."button_exit[1,7;3,1;inv;"..attrans("Show Inventory").."]"
 	end
 	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form)
 end

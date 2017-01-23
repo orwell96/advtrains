@@ -483,7 +483,7 @@ end
 local sl={}
 function sl.register_placer(def, preset)
 	minetest.register_craftitem(def.nodename_prefix.."_slopeplacer",{
-		description = def.description.." Slope",
+		description = attrans("@1 Slope", def.description),
 		inventory_image = def.texture_prefix.."_slopeplacer.png",
 		wield_image = def.texture_prefix.."_slopeplacer.png",
 		groups={},
@@ -494,21 +494,21 @@ end
 function sl.create_slopeplacer_on_place(def, preset)
 	return function(istack, player, pt)
 		if not pt.type=="node" then 
-			minetest.chat_send_player(player:get_player_name(), "Can't place: not pointing at node")
+			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: not pointing at node"))
 			return istack 
 		end
 		local pos=pt.above
 		if not pos then 
-			minetest.chat_send_player(player:get_player_name(), "Can't place: not pointing at node")
+			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: not pointing at node"))
 			return istack
 		end
 		local node=minetest.get_node(pos)
 		if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to then
-			minetest.chat_send_player(player:get_player_name(), "Can't place: space occupied!")
+			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: space occupied!"))
 			return istack
 		end
 		if minetest.is_protected(pos, player:get_player_name()) then 
-			minetest.chat_send_player(player:get_player_name(), "Can't place: protected position!")
+			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: protected position!"))
 			return istack
 		end
 		--determine player orientation (only horizontal component)
@@ -557,17 +557,17 @@ function sl.create_slopeplacer_on_place(def, preset)
 							pos=vector.subtract(pos, dirvec)
 						end
 					else
-						minetest.chat_send_player(player:get_player_name(), "Can't place: Not enough slope items left ("..step.." required)")
+						minetest.chat_send_player(player:get_player_name(), attrans("Can't place: Not enough slope items left (@1 required)", step))
 					end
 				else
-					minetest.chat_send_player(player:get_player_name(), "Can't place: There's no slope of length "..step)
+					minetest.chat_send_player(player:get_player_name(), attrans("Can't place: There's no slope of length @1",step))
 				end
 				return istack
 			end
 			step=step+1
 			pos=vector.add(pos, dirvec)
 		end
-		minetest.chat_send_player(player:get_player_name(), "Can't place: no supporting node at upper end.")
+		minetest.chat_send_player(player:get_player_name(), attrans("Can't place: no supporting node at upper end."))
 		return itemstack
 	end
 end
@@ -594,7 +594,7 @@ advtrains.register_tracks("regular", {
 	nodename_prefix="advtrains:track",
 	texture_prefix="advtrains_track",
 	shared_model="trackplane.b3d",
-	description="Deprecated Track",
+	description=attrans("Deprecated Track"),
 	formats={vst1={}, vst2={}},
 }, ap.t_45deg)
 
@@ -605,7 +605,7 @@ advtrains.register_tracks("default", {
 	models_prefix="advtrains_dtrack",
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
-	description="Track",
+	description=attrans("Track"),
 	formats={vst1={true, false, true}, vst2={true, false, true}, vst31={true}, vst32={true}, vst33={true}},
 }, ap.t_30deg)
 
@@ -616,7 +616,7 @@ advtrains.register_tracks("default", {
 	models_prefix="advtrains_dtrack_bumper",
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
-	description="Bumper",
+	description=attrans("Bumper"),
 	formats={},
 }, ap.t_30deg_straightonly)
 --legacy bumpers
@@ -631,7 +631,7 @@ if mesecon then
 		models_prefix="advtrains_dtrack_detector",
 		models_suffix=".b3d",
 		shared_texture="advtrains_dtrack_rail.png",
-		description="Detector Rail",
+		description=attrans("Detector Rail"),
 		formats={},
 		get_additional_definiton = function(def, preset, suffix, rotation)
 			return {

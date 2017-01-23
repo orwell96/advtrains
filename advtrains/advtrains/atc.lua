@@ -62,7 +62,7 @@ local apn_func=function(pos, node)
 	advtrains.ndb.update(pos, node)
 	local meta=minetest.get_meta(pos)
 	if meta then
-		meta:set_string("infotext", "ATC controller, unconfigured.")
+		meta:set_string("infotext", attrans("ATC controller, unconfigured."))
 		meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
 	end
 end
@@ -73,7 +73,7 @@ advtrains.register_tracks("default", {
 	models_prefix="advtrains_dtrack_detector",
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail_atc.png",
-	description="ATC controller",
+	description=attrans("ATC controller"),
 	formats={},
 	get_additional_definiton = function(def, preset, suffix, rotation)
 		return {
@@ -86,7 +86,7 @@ advtrains.register_tracks("default", {
 			end,
 			on_receive_fields = function(pos, formname, fields, player)
 				if minetest.is_protected(pos, player:get_player_name()) then
-					minetest.chat_send_player(player:get_player_name(), "This position is protected!")
+					minetest.chat_send_player(player:get_player_name(), attrans("This position is protected!"))
 					return
 				end
 				local meta=minetest.get_meta(pos)
@@ -95,7 +95,11 @@ advtrains.register_tracks("default", {
 						--maybe only the dropdown changed
 						if fields.mode then
 							meta:set_string("mode", idxtrans[fields.mode])
-							meta:set_string("infotext", "ATC controller, mode "..fields.mode.."\n"..( fields.mode=="digiline" and "Channel: "..meta:get_string("channel") or "Command: "..meta:get_string("command") ) )
+							if fields.mode=="digiline" then
+								meta:set_string("infotext", attrans("ATC controller, mode @1\nChannel: @2", fields.mode, meta:get_string("command")) )
+							else
+								meta:set_string("infotext", attrans("ATC controller, mode @1\nCommand: @2", fields.mode, meta:get_string("command")) )
+							end
 							meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
 						end
 						return
@@ -104,7 +108,11 @@ advtrains.register_tracks("default", {
 					meta:set_string("command", fields.command)
 					meta:set_string("command_on", fields.command_on)
 					meta:set_string("channel", fields.channel)
-					meta:set_string("infotext", "ATC controller, mode "..fields.mode.."\n"..( fields.mode=="digiline" and "Channel: "..meta:get_string("channel") or "Command: "..meta:get_string("command") ) )
+					if fields.mode=="digiline" then
+						meta:set_string("infotext", attrans("ATC controller, mode @1\nChannel: @2", fields.mode, meta:get_string("command")) )
+					else
+						meta:set_string("infotext", attrans("ATC controller, mode @1\nCommand: @2", fields.mode, meta:get_string("command")) )
+					end
 					meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
 					
 					local pts=minetest.pos_to_string(pos)
@@ -126,14 +134,14 @@ function atc.get_atc_controller_formspec(pos, meta)
 	local formspec="size[8,6]"..
 		"dropdown[0,0;3;mode;static,mesecon,digiline;"..mode.."]"
 	if mode<3 then
-		formspec=formspec.."field[0.5,1.5;7,1;command;Command;"..minetest.formspec_escape(command).."]"
+		formspec=formspec.."field[0.5,1.5;7,1;command;"..attrans("Command")..";"..minetest.formspec_escape(command).."]"
 		if tonumber(mode)==2 then
-			formspec=formspec.."field[0.5,3;7,1;command_on;Command (on);"..minetest.formspec_escape(command_on).."]"
+			formspec=formspec.."field[0.5,3;7,1;command_on;"..attrans("Command (on)")..";"..minetest.formspec_escape(command_on).."]"
 		end
 	else
-		formspec=formspec.."field[0.5,1.5;7,1;channel;Digiline channel;"..minetest.formspec_escape(channel).."]"
+		formspec=formspec.."field[0.5,1.5;7,1;channel;"..attrans("Digiline channel")..";"..minetest.formspec_escape(channel).."]"
 	end
-	return formspec.."button_exit[0.5,4.5;7,1;save;Save]"
+	return formspec.."button_exit[0.5,4.5;7,1;save;"..attrans("Save").."]"
 end
 
 --from trainlogic.lua train step
@@ -142,7 +150,7 @@ local matchptn={
 		train.tarvelocity=train.max_speed
 		return 2
 	end,
-	["S([0-9]+)"]=function(id, train, match)
+	["attrans([0-9]+)"]=function(id, train, match)
 		train.tarvelocity=tonumber(match)
 		return #match+1
 	end,
@@ -168,7 +176,7 @@ local matchptn={
 			train.movedir=train.movedir*-1
 			train.atc_arrow = not train.atc_arrow
 		else
-			minetest.chat_send_all("ATC Reverse command warning: didn't reverse train!")
+			minetest.chat_send_all(attrans("ATC Reverse command warning: didn't reverse train, train moving!"))
 		end
 		return 1
 	end,
@@ -227,7 +235,7 @@ function atc.execute_atc_command(id, train)
 		local nest, pos, elsepos=0, 1
 		while nest>=0 do
 			if pos>#rest then
-				minetest.chat_send_all("ATC command syntax error: I statement not closed: "..command)
+				minetest.chat_send_all(attrans("ATC command syntax error: I statement not closed: @1",command))
 				atc.train_reset_command(id)
 				return
 			end
@@ -270,7 +278,7 @@ function atc.execute_atc_command(id, train)
 			end
 		end
 	end
-	minetest.chat_send_all("ATC command parse error: "..command)
+	minetest.chat_send_all(attrans("ATC command parse error: Unknown command: @1", command))
 	atc.train_reset_command(id)
 end
 

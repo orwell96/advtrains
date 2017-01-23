@@ -38,7 +38,7 @@ minetest.register_entity("advtrains:discouple", {
 				if le and le.is_wagon then
 					if le.unique_id==nextwgn_id then
 						if le.owner and le.owner~=own then
-							minetest.chat_send_player(own, "You need to own at least one neighboring wagon to destroy this couple.")
+							minetest.chat_send_player(own, attrans("You need to own at least one neighboring wagon to destroy this couple."))
 							return
 						end
 					end
@@ -47,7 +47,7 @@ minetest.register_entity("advtrains:discouple", {
 			advtrains.split_train_at_wagon(self.wagon)--found in trainlogic.lua
 			self.object:remove()
 		else
-			minetest.chat_send_player(own, "You need to own at least one neighboring wagon to destroy this couple.")
+			minetest.chat_send_player(own, attrans("You need to own at least one neighboring wagon to destroy this couple."))
 		end
 	end,
 	on_step=function(self, dtime)

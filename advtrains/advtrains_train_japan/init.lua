@@ -1,3 +1,10 @@
+local S
+if minetest.get_modpath("intllib") then
+    S = intllib.Getter()
+else
+    S = function(s,a,...)a={a,...}return s:gsub("@(%d+)",function(n)return a[tonumber(n)]end)end
+end
+
 advtrains.register_wagon("engine_japan", {
 	mesh="advtrains_engine_japan.b3d",
 	textures = {"advtrains_engine_japan.png"},
@@ -5,7 +12,7 @@ advtrains.register_wagon("engine_japan", {
 	max_speed=20,
 	seats = {
 		{
-			name="Default Seat (driver stand)",
+			name=S("Driver stand"),
 			attach_offset={x=0, y=10, z=0},
 			view_offset={x=0, y=6, z=0},
 			driving_ctrl_access=true,
@@ -16,7 +23,7 @@ advtrains.register_wagon("engine_japan", {
 	is_locomotive=true,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
-}, "Japanese Train Engine", "advtrains_engine_japan_inv.png")
+}, S("Japanese Train Engine"), "advtrains_engine_japan_inv.png")
 
 advtrains.register_wagon("wagon_japan", {
 	mesh="advtrains_wagon_japan.b3d",
@@ -25,7 +32,7 @@ advtrains.register_wagon("wagon_japan", {
 	max_speed=20,
 	seats = {
 		{
-			name="Default Seat",
+			name=S("Default Seat"),
 			attach_offset={x=0, y=10, z=0},
 			view_offset={x=0, y=6, z=0},
 		},
@@ -34,5 +41,5 @@ advtrains.register_wagon("wagon_japan", {
 	wagon_span=2.3,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
-}, "Japanese Train Wagon", "advtrains_wagon_japan_inv.png")
+}, S("Japanese Train Wagon"), "advtrains_wagon_japan_inv.png")
 

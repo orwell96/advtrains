@@ -22,7 +22,7 @@ for r,f in pairs({on="off", off="on"}) do
 			tiles = {"advtrains_retrosignal.png"},
 			inventory_image="advtrains_retrosignal_inv.png",
 			drop="advtrains:retrosignal_off",
-			description="Lampless Signal ("..r..rotation..")",
+			description=attrans("Lampless Signal (@1)", attrans(r..rotation)),
 			on_rightclick=switchfunc,
 			sunlight_propagates=true,
 			groups = {
@@ -54,7 +54,7 @@ for r,f in pairs({on="off", off="on"}) do
 			tiles = {"advtrains_signal_"..r..".png"},
 			inventory_image="advtrains_signal_inv.png",
 			drop="advtrains:signal_off",
-			description="Signal ("..r..rotation..")",
+			description=attrans("Signal (@1)", attrans(r..rotation)),
 			on_rightclick=switchfunc,
 			groups = {
 				choppy=3,

@@ -13,7 +13,7 @@ function advtrains.register_platform(preset)
 	local desc=ndef.description or ""
 	local nodename=string.match(preset, ":(.+)$")
 	minetest.register_node("advtrains:platform_low_"..nodename, {
-		description = desc.." Platform (low)",
+		description = attrans("@1 Platform (low)", desc),
 		tiles = {btex.."^advtrains_platform.png", btex, btex, btex, btex, btex},
 		groups = {cracky = 1, not_blocking_trains = 1, platform=1},
 		sounds = default.node_sound_stone_defaults(),
@@ -30,7 +30,7 @@ function advtrains.register_platform(preset)
 		sunlight_propagates = true,
 	})
 	minetest.register_node("advtrains:platform_high_"..nodename, {
-		description = desc.." Platform (high)",
+		description = attrans("@1 Platform (high)", desc),
 		tiles = {btex.."^advtrains_platform.png", btex, btex, btex, btex, btex},
 		groups = {cracky = 1, not_blocking_trains = 1, platform=2},
 		sounds = default.node_sound_stone_defaults(),

@@ -1,3 +1,10 @@
+-- Boilerplate to support localized strings if intllib mod is installed.
+if minetest.get_modpath("intllib") then
+    attrans = intllib.Getter()
+else
+    attrans = function(s,a,...)a={a,...}return s:gsub("@(%d+)",function(n)return a[tonumber(n)]end)end
+end
+
 --advtrains
 
 advtrains = {trains={}, wagon_save={}}
@@ -176,7 +183,3 @@ advtrains.save = function()
 	file:close()
 end
 minetest.register_on_shutdown(advtrains.save)
-
-
-
-

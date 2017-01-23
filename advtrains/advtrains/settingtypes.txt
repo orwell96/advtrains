@@ -1,2 +1,3 @@
 #    Whether to print debug information on advtrains to chat and debug.txt
+#    Ob Debuginformationen in die Chatkonsole und debug.txt ausgegeben werden sollen
 advtrains_debug (Print advtrains debug messages) bool false

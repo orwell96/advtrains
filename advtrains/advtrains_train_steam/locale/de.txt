@@ -1,0 +1,6 @@
+Driver Stand (left) = Führerstand Links
+Driver Stand (right) = Führerstand Rechts
+Steam Engine = Dampflokomotive
+Detailed Steam Engine = detaillierte Dampflokomotive
+Passenger Wagon = Passagierwaggon
+Box wagon = Güterwaggon
