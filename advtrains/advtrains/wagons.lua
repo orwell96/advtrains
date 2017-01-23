@@ -56,28 +56,13 @@ end
 	wagon will save only uid in staticdata, no serialized table
 ]]
 function wagon:on_activate(sd_uid, dtime_s)
-	atprint("[wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] activated")
+	if sd_uid~="" then
+		--destroy when loaded from static block.
+		self.object:remove()
+		return
+	end
 	self.object:set_armor_groups({immortal=1})
-	if sd_uid and sd_uid~="" then
-		--legacy
-		--expect this to be a serialized table and handle
-		if minetest.deserialize(sd_uid) then
-			self:init_from_wagon_save(minetest.deserialize(sd_uid).unique_id)
-		else
-			self:init_from_wagon_save(sd_uid)
-		end
-	end
 	self.entity_name=self.name
-	
-	--duplicates?
-	for ao_id,wagon in pairs(minetest.luaentities) do
-		if wagon.is_wagon and wagon.initialized and wagon.unique_id==self.unique_id and wagon~=self then--i am a duplicate!
-			atprint("[wagon "..((sd_uid and sd_uid~="" and sd_uid) or "no-id").."] duplicate found(ao_id:"..ao_id.."), removing")
-			self.object:remove()
-			minetest.after(0.5, function() advtrains.update_trainpart_properties(self.train_id) end)
-			return
-		end
-	end
 end
 
 function wagon:get_staticdata()
