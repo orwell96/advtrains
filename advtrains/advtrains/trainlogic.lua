@@ -406,7 +406,7 @@ function advtrains.pathpredict(id, train)
 		maxn=advtrains.maxN(train.path)
 	end
 	
-	local minn=train.min_index_on_track or 0
+	local minn=train.min_index_on_track or -1
 	while (train.index-minn) < (train.trainlen or 0) + pregen_back do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
 		--atprint("minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
