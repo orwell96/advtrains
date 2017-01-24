@@ -14,9 +14,19 @@ advtrains.register_wagon("engine_japan", {
 		{
 			name=S("Driver stand"),
 			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
+			view_offset={x=0, y=0, z=0},
 			driving_ctrl_access=true,
 		},
+	},
+	doors={
+		open={
+			[-1]={frames={x=0, y=20}, time=1},
+			[1]={frames={x=40, y=60}, time=1}
+		},
+		close={
+			[-1]={frames={x=20, y=40}, time=1},
+			[1]={frames={x=60, y=80}, time=1}
+		}
 	},
 	visual_size = {x=1, y=1},
 	wagon_span=2.5,
@@ -34,8 +44,18 @@ advtrains.register_wagon("wagon_japan", {
 		{
 			name=S("Default Seat"),
 			attach_offset={x=0, y=10, z=0},
-			view_offset={x=0, y=6, z=0},
+			view_offset={x=0, y=0, z=0},
 		},
+	},
+	doors={
+		open={
+			[-1]={frames={x=0, y=20}, time=1},
+			[1]={frames={x=40, y=60}, time=1}
+		},
+		close={
+			[-1]={frames={x=20, y=40}, time=1},
+			[1]={frames={x=60, y=80}, time=1}
+		}
 	},
 	visual_size = {x=1, y=1},
 	wagon_span=2.3,

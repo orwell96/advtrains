@@ -20,12 +20,12 @@ advtrains.register_wagon("subway_wagon", {
 	},
 	doors={
 		open={
-			[-1]={frames={x=0, y=19}, time=1},
-			[1]={frames={x=40, y=59}, time=1}
+			[-1]={frames={x=0, y=20}, time=1},
+			[1]={frames={x=40, y=60}, time=1}
 		},
 		close={
-			[-1]={frames={x=20, y=39}, time=1},
-			[1]={frames={x=60, y=81}, time=1}
+			[-1]={frames={x=20, y=40}, time=1},
+			[1]={frames={x=60, y=80}, time=1}
 		}
 	},
 	visual_size = {x=1, y=1},
