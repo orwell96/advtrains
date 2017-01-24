@@ -150,7 +150,7 @@ local matchptn={
 		train.tarvelocity=train.max_speed
 		return 2
 	end,
-	["attrans([0-9]+)"]=function(id, train, match)
+	["S([0-9]+)"]=function(id, train, match)
 		train.tarvelocity=tonumber(match)
 		return #match+1
 	end,
