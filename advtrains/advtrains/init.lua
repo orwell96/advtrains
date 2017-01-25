@@ -48,7 +48,7 @@ end
 sid=function(id) return string.sub(id, -4) end
 
 dofile(advtrains.modpath.."/helpers.lua");
-dofile(advtrains.modpath.."/debugitems.lua");
+--dofile(advtrains.modpath.."/debugitems.lua");
 
 advtrains.meseconrules = 
 {{x=0,  y=0,  z=-1},
