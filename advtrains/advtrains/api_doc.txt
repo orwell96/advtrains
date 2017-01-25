@@ -97,8 +97,7 @@ On a train, right-clicking the wagon will make you get off the train unless:
 In case there's no possibility, does nothing.
 In case there are multiple possibilities, will show a form.
 
-If you can't enter a train because the doors are closed, any of the train's wagon owners or people authorized by them can open the doors(on the side they are standing) with shift-click.
-
+If you can't enter or get off a train because the doors are closed, use shift-rightclick
 ### Tracks
 Most modders will be satisfied with the built-in tracks. If cog railways, maglev trains and mine trains are added, it is necessary to understand the definition of tracks. Although the tracks API is there, explaining it would require more effort than me creating the wanted definitions myself. Contact me if you need to register your own rails using my registration functions.
 

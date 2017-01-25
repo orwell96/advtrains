@@ -461,6 +461,12 @@ function wagon:on_rightclick(clicker)
 			end
 			if not self.seat_groups[sgr].require_doors_open or self:train().door_open~=0 then
 				poss[#poss+1]={name="Get off", key="off"}
+			else
+				if clicker:get_player_control().sneak then
+					poss[#poss+1]={name="Get off (forced)", key="off"}
+				else
+					poss[#poss+1]={name="(Doors closed)", key="dcwarn"}
+				end
 			end
 			if #poss==0 then
 				--can't do anything.
@@ -485,11 +491,10 @@ function wagon:on_rightclick(clicker)
 				return
 			end
 			
-			local doors_open = self:train().door_open~=0
+			local doors_open = self:train().door_open~=0 or clicker:get_player_control().sneak
 			for _,sgr in ipairs(self.assign_to_seat_group) do
 				if self:check_seat_group_access(pname, sgr) then
 					for seatid, seatdef in ipairs(self.seats) do
-						atprint(sgr, seatid, seatdef, self.seat_groups[sgr], doors_open)
 						if seatdef.group==sgr and not self.seatp[seatid] and (not self.seat_groups[sgr].require_doors_open or doors_open) then
 							self:get_on(clicker, seatid)
 							return
@@ -498,6 +503,7 @@ function wagon:on_rightclick(clicker)
 				end
 			end
 			minetest.chat_send_player(pname, "Can't get on: wagon full or doors closed!")
+			minetest.chat_send_player(pname, "Use shift+click to open doors forcefully!")
 		else
 			self:show_get_on_form(pname)
 		end
@@ -641,7 +647,10 @@ function wagon:seating_from_key_helper(pname, fields, no)
 	if fields.prop and self.owner==pname then
 		self:show_wagon_properties(pname)
 	end
-	if fields.off and (not self.seat_groups[sgr].require_doors_open or self:train().door_open~=0) then
+	if fields.dcwarn then
+		minetest.chat_send_player(pname, "Use shift-rightclick to open doors with force and get off!")
+	end
+	if fields.off then
 		self:get_off(no)
 	end
 end
