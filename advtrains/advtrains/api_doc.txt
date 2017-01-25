@@ -20,6 +20,7 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	max_speed = 10,
 	^- optional, default 10: defines the maximum speed this wagon can drive. The maximum speed of a train is determined by the wagon with the lowest max_speed value.
 	seats = {
+	^- contains zero or more seat definitions. A seat is a place where a player can be attached when getting on a wagon.
 		{
 			name="Left front window",
 			^- display name of this seat
@@ -29,10 +30,24 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 			^- player:set_eye_offset is called with this parameter.
 			driving_ctrl_access=false,
 			^- If the seat is a driver stand, and players sitting here should get access to the train's driving control.
-
+			group="default"
+			^- optional. Defines the seat group. See 'seat_groups' below
 		},
 	},
-	^- contains zero or more seat definitions. A seat is a place where a player can be attached when getting on a wagon.
+	seat_groups = {
+	^- optional. If defined, activates advanced seating behavior. See "seating behavior".
+		default = {
+			name = "Seats"
+			^- name of this seat group, to be shown in get-on menu.
+			access_to = {"foo", "bar"}
+			^- List of seat groups you can access from this seat using the menu when sitting inside the train.
+			require_doors_open = true
+			^- Only allow getting on and off if doors are open.
+		}
+	}
+	assign_to_seat_group = {"default"}
+	^- optional, like seat_groups. When player right_clicks the wagon, player will be assigned to the first free seat group in the list.
+	
 	wagon_span=2,
 	^- How far this wagon extends from its base position. Is the half of the wagon length.
 	^- Used to determine in which distance the other wagons have to be positioned. Will require tweaking.
@@ -71,6 +86,18 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	- their origin lies 0.5 units above the bottom of the model
 	- the overall extent in X and Y direction is <=3 units
 - wagon_span is then the distance between the model origin and the Z axis extent.
+
+# Seating behavior
+If the advanced seating behavior is active, clicking on a wagon will immediately get you on that wagon depending on the entries in assign_to_seat_group.
+If all seat groups are full, if the doors are closed or if you are not authorized to enter this seat group(e.g. driver stands), will show a warning.
+On a train, right-clicking the wagon will make you get off the train unless:
+- the doors are closed and it requires open doors.
+- you have access to a seat group specified in access_to (you may enter it and it's not full)
+- you are the owner and can access the wagon preferences
+In case there's no possibility, does nothing.
+In case there are multiple possibilities, will show a form.
+
+If you can't enter a train because the doors are closed, any of the train's wagon owners or people authorized by them can open the doors(on the side they are standing) with shift-click.
 
 ### Tracks
 Most modders will be satisfied with the built-in tracks. If cog railways, maglev trains and mine trains are added, it is necessary to understand the definition of tracks. Although the tracks API is there, explaining it would require more effort than me creating the wanted definitions myself. Contact me if you need to register your own rails using my registration functions.

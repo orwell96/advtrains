@@ -22,27 +22,6 @@ local wagon={
 }
 
 
-
-function wagon:on_rightclick(clicker)
-	if not self:ensure_init() then return end
-	if not clicker or not clicker:is_player() then
-		return
-	end
-	if clicker:get_player_control().aux1 then
-		--advtrains.dumppath(self:train().path)
-		--minetest.chat_send_all("at index "..(self:train().index or "nil"))
-		--advtrains.invert_train(self.train_id)
-		atprint(dump(self))
-		return
-	end	
-	local no=self:get_seatno(clicker:get_player_name())
-	if no then
-		self:get_off(no)
-	else
-		self:show_get_on_form(clicker:get_player_name())
-	end
-end
-
 function wagon:train()
 	return advtrains.trains[self.train_id]
 end
@@ -451,14 +430,97 @@ function advtrains.get_real_path_index(train, pit)
 	return index
 end
 
+function wagon:on_rightclick(clicker)
+	if not self:ensure_init() then return end
+	if not clicker or not clicker:is_player() then
+		return
+	end
+	if clicker:get_player_control().aux1 then
+		--advtrains.dumppath(self:train().path)
+		--minetest.chat_send_all("at index "..(self:train().index or "nil"))
+		--advtrains.invert_train(self.train_id)
+		atprint(dump(self))
+		return
+	end	
+	local pname=clicker:get_player_name()
+	local no=self:get_seatno(pname)
+	if no then
+		if self.seat_groups then
+			local poss={}
+			local sgr=self.seats[no].group
+			for _,access in ipairs(self.seat_groups[sgr].access_to) do
+				if self:check_seat_group_access(pname, access) then
+					poss[#poss+1]={name=self.seat_groups[access].name, key="sgr_"..access}
+				end
+			end
+			if self.has_inventory and self.get_inventory_formspec then
+				poss[#poss+1]={name="Show inventory", key="inv"}
+			end
+			if self.owner==pname then
+				poss[#poss+1]={name="Wagon properties", key="prop"}
+			end
+			if not self.seat_groups[sgr].require_doors_open or self:train().door_open~=0 then
+				poss[#poss+1]={name="Get off", key="off"}
+			end
+			if #poss==0 then
+				--can't do anything.
+			elseif #poss==1 then
+				self:seating_from_key_helper(pname, {[poss[1].key]=true}, no)
+			else
+				local form = "size[5,"..1+(#poss).."]"
+				for pos,ent in ipairs(poss) do
+					form = form .. "button_exit[0.5,"..(pos-0.5)..";4,1;"..ent.key..";"..ent.name.."]"
+				end
+				minetest.show_formspec(pname, "advtrains_seating_"..self.unique_id, form)
+			end
+		else
+			self:get_off(no)
+		end
+	else
+		if self.seat_groups then
+			if #self.seats==0 then
+				if self.has_inventory and self.get_inventory_formspec then
+					minetest.show_formspec(pname, "advtrains_inv_"..self.unique_id, self:get_inventory_formspec(pname))
+				end
+				return
+			end
+			
+			local doors_open = self:train().door_open~=0
+			for _,sgr in ipairs(self.assign_to_seat_group) do
+				if self:check_seat_group_access(pname, sgr) then
+					for seatid, seatdef in ipairs(self.seats) do
+						atprint(sgr, seatid, seatdef, self.seat_groups[sgr], doors_open)
+						if seatdef.group==sgr and not self.seatp[seatid] and (not self.seat_groups[sgr].require_doors_open or doors_open) then
+							self:get_on(clicker, seatid)
+							return
+						end
+					end
+				end
+			end
+			minetest.chat_send_player(pname, "Can't get on: wagon full or doors closed!")
+		else
+			self:show_get_on_form(pname)
+		end
+	end
+end
+
 function wagon:get_on(clicker, seatno)
 	if not self.seatp then
 		self.seatp={}
 	end
 	if not self.seats[seatno] then return end
+	local oldno=self:get_seatno(clicker:get_player_name())
+	if oldno then
+		atprint("get_on: clearing oldno",seatno)
+		advtrains.player_to_train_mapping[clicker:get_player_name()]=nil
+		advtrains.clear_driver_hud(clicker:get_player_name())
+		self.seatp[oldno]=nil
+	end
 	if self.seatp[seatno] and self.seatp[seatno]~=clicker:get_player_name() then
+		atprint("get_on: throwing off",self.seatp[seatno],"from seat",seatno)
 		self:get_off(seatno)
 	end
+	atprint("get_on: attaching",clicker:get_player_name())
 	self.seatp[seatno] = clicker:get_player_name()
 	advtrains.player_to_train_mapping[clicker:get_player_name()]=self.train_id
 	clicker:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
@@ -485,6 +547,7 @@ function wagon:get_off(seatno)
 	advtrains.player_to_train_mapping[pname]=nil
 	advtrains.clear_driver_hud(pname)
 	if clicker then
+		atprint("get_off: detaching",clicker:get_player_name())
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 		local objpos=advtrains.round_vector_floor_y(self.object:getpos())
@@ -545,7 +608,47 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			end
 		end
 	end
+	uid=string.match(formname, "^advtrains_seating_(.+)$")
+	if uid then
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+				local pname=player:get_player_name()
+				local no=wagon:get_seatno(pname)
+				if no then
+					if wagon.seat_groups then
+						wagon:seating_from_key_helper(pname, fields, no)
+					end
+				end
+			end
+		end
+	end
 end)
+function wagon:seating_from_key_helper(pname, fields, no)
+	local sgr=self.seats[no].group
+	for _,access in ipairs(self.seat_groups[sgr].access_to) do
+		if fields["sgr_"..access] and self:check_seat_group_access(pname, access) then
+			for seatid, seatdef in ipairs(self.seats) do
+				if seatdef.group==access and not self.seatp[seatid] then
+					self:get_on(minetest.get_player_by_name(pname), seatid)
+					return
+				end
+			end
+		end
+	end
+	if fields.inv and self.has_inventory and self.get_inventory_formspec then
+		minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..self.unique_id, wagon:get_inventory_formspec(player:get_player_name()))
+	end
+	if fields.prop and self.owner==pname then
+		self:show_wagon_properties(pname)
+	end
+	if fields.off and (not self.seat_groups[sgr].require_doors_open or self:train().door_open~=0) then
+		self:get_off(no)
+	end
+end
+function wagon:check_seat_group_access(pname, sgr)
+	--TODO implement
+	return sgr~="driverstand" or pname=="orwell"
+end
 function wagon:reattach_all()
 	if not self.seatp then self.seatp={} end
 	for seatno, pname in pairs(self.seatp) do

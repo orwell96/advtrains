@@ -17,14 +17,23 @@ advtrains.register_wagon("engine_industrial", {
 			attach_offset={x=-5, y=10, z=-10},
 			view_offset={x=0, y=10, z=0},
 			driving_ctrl_access=true,
+			group = "dstand",
 		},
 		{
 			name=S("Driver Stand (right)"),
 			attach_offset={x=5, y=10, z=-10},
 			view_offset={x=0, y=10, z=0},
 			driving_ctrl_access=true,
+			group = "dstand",
 		},
 	},
+	seat_groups = {
+		dstand={
+			name = "Driver Stand",
+			access_to = {},
+		},
+	},
+	assign_to_seat_group = {"dstand"},
 	visual_size = {x=1, y=1},
 	wagon_span=2.6,
 	is_locomotive=true,

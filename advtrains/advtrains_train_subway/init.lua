@@ -12,12 +12,50 @@ advtrains.register_wagon("subway_wagon", {
 	max_speed=15,
 	seats = {
 		{
-			name="Default Seat (driver stand)",
+			name="Driver stand",
 			attach_offset={x=0, y=10, z=0},
 			view_offset={x=0, y=0, z=0},
 			driving_ctrl_access=true,
+			group="dstand",
+		},
+		{
+			name="1",
+			attach_offset={x=-4, y=8, z=8},
+			view_offset={x=0, y=0, z=0},
+			group="pass",
+		},
+		{
+			name="2",
+			attach_offset={x=4, y=8, z=8},
+			view_offset={x=0, y=0, z=0},
+			group="pass",
+		},
+		{
+			name="3",
+			attach_offset={x=-4, y=8, z=-8},
+			view_offset={x=0, y=0, z=0},
+			group="pass",
+		},
+		{
+			name="4",
+			attach_offset={x=4, y=8, z=-8},
+			view_offset={x=0, y=0, z=0},
+			group="pass",
 		},
 	},
+	seat_groups = {
+		dstand={
+			name = "Driver Stand",
+			access_to = {"pass"},
+			require_doors_open=true,
+		},
+		pass={
+			name = "Passenger area",
+			access_to = {"dstand"},
+			require_doors_open=true,
+		},
+	},
+	assign_to_seat_group = {"dstand", "pass"},
 	doors={
 		open={
 			[-1]={frames={x=0, y=20}, time=1},
