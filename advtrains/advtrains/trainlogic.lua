@@ -333,7 +333,7 @@ function advtrains.pathpredict(id, train)
 		if not train.last_pos then
 			--no chance to recover
 			atprint("train hasn't saved last-pos, removing train.")
-			advtrains.train[id]=nil
+			advtrains.trains[id]=nil
 			return false
 		end
 		
