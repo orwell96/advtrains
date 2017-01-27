@@ -50,22 +50,47 @@ minetest.register_globalstep(function(dtime)
 		atprintbm("saving", t)
 	end
 	--regular train step
+	-- do in two steps: 
+	--  a: predict path and add all nodes to the advtrains.detector.on_node table
+	--  b: check for collisions based on these data
+	--  (and more)
 	local t=os.clock()
+	advtrains.detector.on_node={}
 	for k,v in pairs(advtrains.trains) do
-		advtrains.train_step(k, v, dtime)
+		advtrains.train_step_a(k, v, dtime)
 	end
-	
-	--see tracks.lua
-	if advtrains.detector.clean_step_before then
-		advtrains.detector.finalize_restore()
+	for k,v in pairs(advtrains.trains) do
+		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	atprintbm("trainsteps", t)
 	endstep()
 end)
 
-function advtrains.train_step(id, train, dtime)
-	--Legacy: set drives_on and max_speed
+--[[
+train step structure:
+
+
+- legacy stuff
+- preparing the initial path and creating index
+- setting node coverage old indices
+- handle velocity influences:
+	- off-track
+	- atc
+	- player controls
+	- environment collision
+- update index = move
+- create path
+- update node coverage
+- do less important stuff such as checking trainpartload or removing
+
+-- break --
+- handle train collisions
+
+]]
+
+function advtrains.train_step_a(id, train, dtime)
+	--- 1. LEGACY STUFF ---
 	if not train.drives_on or not train.max_speed then
 		advtrains.update_trainpart_properties(id)
 	end
@@ -76,258 +101,7 @@ function advtrains.train_step(id, train, dtime)
 	if not train.movedir or (train.movedir~=1 and train.movedir~=-1) then
 		train.movedir=1
 	end
-	--very unimportant thing: check if couple is here
-	if train.couple_eid_front and (not minetest.luaentities[train.couple_eid_front] or not minetest.luaentities[train.couple_eid_front].is_couple) then train.couple_eid_front=nil end
-	if train.couple_eid_back and (not minetest.luaentities[train.couple_eid_back] or not minetest.luaentities[train.couple_eid_back].is_couple) then train.couple_eid_back=nil end
-	
-	--skip certain things (esp. collision) when not moving
-	local train_moves=(train.velocity~=0)
-	
-	--if not train.last_pos then advtrains.trains[id]=nil return end
-	
-	if not advtrains.pathpredict(id, train) then 
-		atprint("pathpredict failed(returned false)")
-		train.velocity=0
-		train.tarvelocity=0
-		return
-	end
-	
-	local path=advtrains.get_or_create_path(id, train)
-	if not path then
-		train.velocity=0
-		train.tarvelocity=0
-		atprint("train has no path for whatever reason")
-		return 
-	end
-	
-	local train_end_index=advtrains.get_train_end_index(train)
-	--apply off-track handling:
-	local front_off_track=train.max_index_on_track and train.index>train.max_index_on_track
-	local back_off_track=train.min_index_on_track and train_end_index<train.min_index_on_track
-	if front_off_track and back_off_track then--allow movement in both directions
-		if train.tarvelocity>1 then train.tarvelocity=1 end
-	elseif front_off_track then--allow movement only backward
-		if train.movedir==1 and train.tarvelocity>0 then train.tarvelocity=0 end
-		if train.movedir==-1 and train.tarvelocity>1 then train.tarvelocity=1 end
-	elseif back_off_track then--allow movement only forward
-		if train.movedir==-1 and train.tarvelocity>0 then train.tarvelocity=0 end
-		if train.movedir==1 and train.tarvelocity>1 then train.tarvelocity=1 end
-	end
-	
-	--update advtrains.detector
-	if not train.detector_old_index then
-		train.detector_old_index = math.floor(train_end_index)
-		train.detector_old_end_index = math.floor(train_end_index)
-	end
-	local ifo, ifn, ibo, ibn = train.detector_old_index, math.floor(train.index), train.detector_old_end_index, math.floor(train_end_index)
-	if ifn>ifo then
-		for i=ifo, ifn do
-			if path[i] then
-				advtrains.detector.enter_node(path[i], id)
-			end
-		end
-	elseif ifn<ifo then
-		for i=ifn, ifo do
-			if path[i] then
-				advtrains.detector.leave_node(path[i], id)
-			end
-		end
-	end
-	if ibn<ibo then
-		for i=ibn, ibn do
-			if path[i] then
-				advtrains.detector.enter_node(path[i], id)
-			end
-		end
-	elseif ibn>ibo then
-		for i=ibo, ibn do
-			if path[i] then
-				advtrains.detector.leave_node(path[i], id)
-			end
-		end
-	end
-	train.detector_old_index = math.floor(train.index)
-	train.detector_old_end_index = math.floor(train_end_index)
-	
-	--remove?
-	if #train.trainparts==0 then
-		atprint("[train "..sid(id).."] has empty trainparts, removing.")
-		advtrains.detector.leave_node(path[train.detector_old_index], id)
-		advtrains.trains[id]=nil
-		return
-	end
-	
-	if train_moves then
-		--check for collisions by finding objects
-		
-		--heh, new collision again.
-		--this time, based on NODES and the advtrains.detector.on_node table.
-		local collpos
-		local coll_grace=1
-		if train.movedir==1 then
-			collpos=advtrains.get_real_index_position(path, train.index-coll_grace)
-		else
-			collpos=advtrains.get_real_index_position(path, train_end_index+coll_grace)
-		end
-		if collpos then
-			local rcollpos=advtrains.round_vector_floor_y(collpos)
-			for x=-1,1 do
-				for z=-1,1 do
-					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
-					local testpts=minetest.pos_to_string(testpos)
-					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
-						if advtrains.trains[advtrains.detector.on_node[testpts]] then
-							--collides
-							advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
-							
-							train.recently_collided_with_env=true
-							train.velocity=0.5*train.velocity
-							train.movedir=train.movedir*-1
-							train.tarvelocity=0
-						else
-							--unexistant train left in this place
-							advtrains.detector.on_node[testpts]=nil
-						end
-					end
-				end
-			end
-		end
-	end
-	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
-	--todo function will be taken by update_trainpart_properties
-	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
-	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
-	if train.check_trainpartload<=0 then
-		local ori_pos=advtrains.get_real_index_position(path, train.index) --not much to calculate
-		--atprint("[train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
-		
-		local should_check=false
-		for _,p in ipairs(minetest.get_connected_players()) do
-			should_check=should_check or ((vector.distance(ori_pos, p:getpos())<node_range))
-		end
-		if should_check then
-			advtrains.update_trainpart_properties(id)
-		end
-		train.check_trainpartload=2
-	end
-	
-	
-	--handle collided_with_env
-	if train.recently_collided_with_env then
-		train.tarvelocity=0
-		if not train_moves then
-			train.recently_collided_with_env=false--reset status when stopped
-		end
-	end
-	if train.locomotives_in_train==0 then
-		train.tarvelocity=0
-	end
-	
-	--interpret ATC command
-	if train.atc_brake_target and train.atc_brake_target>=train.velocity then
-		train.atc_brake_target=nil
-	end
-	if train.atc_wait_finish then
-		if not train.atc_brake_target and train.velocity==train.tarvelocity then
-			train.atc_wait_finish=nil
-		end
-	end
-	if train.atc_command then
-		if train.atc_delay<=0 and not train.atc_wait_finish then
-			advtrains.atc.execute_atc_command(id, train)
-		else
-			train.atc_delay=train.atc_delay-dtime
-		end
-	end
-	
-	--make brake adjust the tarvelocity if necessary
-	if train.brake and (math.ceil(train.velocity)-1)<train.tarvelocity then
-		train.tarvelocity=math.max((math.ceil(train.velocity)-1), 0)
-	end
-	--apply tarvel(but with physics in mind!)
-	if train.velocity~=train.tarvelocity then
-		local applydiff=0
-		local mass=#train.trainparts
-		local diff=train.tarvelocity-train.velocity
-		if diff>0 then--accelerating, force will be brought on only by locomotives.
-			--atprint("accelerating with default force")
-			applydiff=(math.min((advtrains.train_accel_force*train.locomotives_in_train*dtime)/mass, math.abs(diff)))
-		else--decelerating
-			if front_off_track or back_off_track or train.recently_collided_with_env then --every wagon has a brake, so not divided by mass.
-				--atprint("braking with emergency force")
-				applydiff= -(math.min((advtrains.train_emerg_force*dtime), math.abs(diff)))
-			elseif train.brake or (train.atc_brake_target and train.atc_brake_target<train.velocity) then
-				--atprint("braking with default force")
-				--no math.min, because it can grow beyond tarvelocity, see up there
-				--dont worry, it will never fall below zero.
-				applydiff= -((advtrains.train_brake_force*dtime))
-			else
-				--atprint("roll")
-				applydiff= -(math.min((advtrains.train_roll_force*dtime), math.abs(diff)))
-			end
-		end
-		train.last_accel=(applydiff*train.movedir)
-		train.velocity=math.min(math.max( train.velocity+applydiff , 0), train.max_speed or 10)
-	else
-		train.last_accel=0
-	end
-	
-	--move
-	--TODO 3,5 + 0.7
-	train.index=train.index and train.index+(((train.velocity*train.movedir)/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
-	
-end
-
-
---structure of train table:
---[[
-trains={
-	[train_id]={
-		trainparts={
-			[n]=wagon_id
-		}
-		path={path}
-		velocity
-		tarvelocity
-		index
-		trainlen
-		path_inv_level
-		last_pos       |
-		last_dir       | for pathpredicting.
-	}
-}
---a wagon itself has the following properties:
-wagon={
-	unique_id
-	train_id
-	pos_in_train (is index difference, including train_span stuff)
-	pos_in_trainparts (is index in trainparts tabel of trains)
-}
-inherited by metatable:
-wagon_proto={
-	wagon_span
-}
-]]
-
---returns new id
-function advtrains.create_new_train_at(pos, pos_prev)
-	local newtrain_id=os.time()..os.clock()
-	while advtrains.trains[newtrain_id] do newtrain_id=os.time()..os.clock() end--ensure uniqueness(will be unneccessary)
-	
-	advtrains.trains[newtrain_id]={}
-	advtrains.trains[newtrain_id].last_pos=pos
-	advtrains.trains[newtrain_id].last_pos_prev=pos_prev
-	advtrains.trains[newtrain_id].tarvelocity=0
-	advtrains.trains[newtrain_id].velocity=0
-	advtrains.trains[newtrain_id].trainparts={}
-	return newtrain_id
-end
-
---returns false on failure. handle this case!
-function advtrains.pathpredict(id, train)
-	
-	--atprint("pos ",x,y,z)
-	--::rerun::
+	--- 2. prepare initial path and index if needed ---
 	if not train.index then train.index=0 end
 	if not train.path or #train.path<2 then
 		if not train.last_pos then
@@ -376,21 +150,112 @@ function advtrains.pathpredict(id, train)
 		train.path[0]=train.last_pos
 		train.path[-1]=train.last_pos_prev
 		train.path_dist[-1]=vector.distance(train.last_pos, train.last_pos_prev)
+		train.path_extent_min=-1
+		train.path_extent_max=0
 	end
 	
-	local pregen_front=2
-	local pregen_back=2
-	if train.velocity>0 then
-		if train.movedir>0 then
-			pregen_front=2+math.ceil(train.velocity*0.15) --assumes server step of 0.1 seconds, +50% tolerance
+	--- 2a. set train.end_index which is required in different places, IF IT IS NOT SET YET by STMT afterwards. ---
+	---   table entry to avoid triple recalculation ---
+	if not train.end_index then
+		train.end_index=advtrains.get_train_end_index(train)
+	end
+	
+	--- 2b. set node coverage old indices ---
+	
+	train.detector_old_index = math.floor(train.index)
+	train.detector_old_end_index = math.floor(train.end_index)
+	
+	--- 3. handle velocity influences ---
+	local train_moves=(train.velocity~=0)
+	
+	if train.recently_collided_with_env then
+		train.tarvelocity=0
+		if not train_moves then
+			train.recently_collided_with_env=false--reset status when stopped
+		end
+	end
+	if train.locomotives_in_train==0 then
+		train.tarvelocity=0
+	end
+	
+	--apply off-track handling:
+	--won't take any effect immediately after path reset because index_on_track not set, but that's not severe.
+	local front_off_track=train.max_index_on_track and train.index>train.max_index_on_track
+	local back_off_track=train.min_index_on_track and train.end_index<train.min_index_on_track
+	if front_off_track and back_off_track then--allow movement in both directions
+		if train.tarvelocity>1 then train.tarvelocity=1 end
+	elseif front_off_track then--allow movement only backward
+		if train.movedir==1 and train.tarvelocity>0 then train.tarvelocity=0 end
+		if train.movedir==-1 and train.tarvelocity>1 then train.tarvelocity=1 end
+	elseif back_off_track then--allow movement only forward
+		if train.movedir==-1 and train.tarvelocity>0 then train.tarvelocity=0 end
+		if train.movedir==1 and train.tarvelocity>1 then train.tarvelocity=1 end
+	end
+	
+	--interpret ATC command
+	if train.atc_brake_target and train.atc_brake_target>=train.velocity then
+		train.atc_brake_target=nil
+	end
+	if train.atc_wait_finish then
+		if not train.atc_brake_target and train.velocity==train.tarvelocity then
+			train.atc_wait_finish=nil
+		end
+	end
+	if train.atc_command then
+		if train.atc_delay<=0 and not train.atc_wait_finish then
+			advtrains.atc.execute_atc_command(id, train)
 		else
-			pregen_back=2+math.ceil(train.velocity*0.15)
+			train.atc_delay=train.atc_delay-dtime
 		end
 	end
 	
+	--make brake adjust the tarvelocity if necessary
+	if train.brake and (math.ceil(train.velocity)-1)<train.tarvelocity then
+		train.tarvelocity=math.max((math.ceil(train.velocity)-1), 0)
+	end
 	
-	local maxn=train.max_index_on_track or 0
-	while (maxn-train.index) < pregen_front do--pregenerate
+	--- 3a. actually calculate new velocity ---
+	if train.velocity~=train.tarvelocity then
+		local applydiff=0
+		local mass=#train.trainparts
+		local diff=train.tarvelocity-train.velocity
+		if diff>0 then--accelerating, force will be brought on only by locomotives.
+			--atprint("accelerating with default force")
+			applydiff=(math.min((advtrains.train_accel_force*train.locomotives_in_train*dtime)/mass, math.abs(diff)))
+		else--decelerating
+			if front_off_track or back_off_track or train.recently_collided_with_env then --every wagon has a brake, so not divided by mass.
+				--atprint("braking with emergency force")
+				applydiff= -(math.min((advtrains.train_emerg_force*dtime), math.abs(diff)))
+			elseif train.brake or (train.atc_brake_target and train.atc_brake_target<train.velocity) then
+				--atprint("braking with default force")
+				--no math.min, because it can grow beyond tarvelocity, see up there
+				--dont worry, it will never fall below zero.
+				applydiff= -((advtrains.train_brake_force*dtime))
+			else
+				--atprint("roll")
+				applydiff= -(math.min((advtrains.train_roll_force*dtime), math.abs(diff)))
+			end
+		end
+		train.last_accel=(applydiff*train.movedir)
+		train.velocity=math.min(math.max( train.velocity+applydiff , 0), train.max_speed or 10)
+	else
+		train.last_accel=0
+	end
+	
+	--- 4. move train ---
+	
+	train.index=train.index and train.index+(((train.velocity*train.movedir)/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
+	
+	--- 4a. update train.end_index to the new position ---
+	train.end_index=advtrains.get_train_end_index(train)
+	
+	--- 5. extend path as necessary ---
+	
+	local gen_front=math.max(train.index, train.detector_old_index) + 2
+	local gen_back=math.min(train.end_index, train.detector_old_end_index) - 2
+	
+	local maxn=train.path_extent_max or 0
+	while maxn < gen_front do--pregenerate
 		--atprint("maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
 		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
 		if conway then
@@ -405,9 +270,10 @@ function advtrains.pathpredict(id, train)
 		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
 		maxn=advtrains.maxN(train.path)
 	end
+	train.path_extent_max=maxn
 	
-	local minn=train.min_index_on_track or -1
-	while (train.index-minn) < (train.trainlen or 0) + pregen_back do --post_generate. has to be at least trainlen. (we let go of the exact calculation here since this would be unuseful here)
+	local minn=train.path_extent_min or -1
+	while minn > gen_back do
 		--atprint("minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
 		if conway then
@@ -422,7 +288,8 @@ function advtrains.pathpredict(id, train)
 		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
 		minn=advtrains.minN(train.path)
 	end
-	if not train.min_index_on_track then train.min_index_on_track=0 end
+	train.path_extent_min=minn
+	if not train.min_index_on_track then train.min_index_on_track=-1 end
 	if not train.max_index_on_track then train.max_index_on_track=0 end
 	
 	--make pos/yaw available for possible recover calls
@@ -441,15 +308,160 @@ function advtrains.pathpredict(id, train)
 		train.last_pos=train.path[math.floor(train.index+0.5)]
 		train.last_pos_prev=train.path[math.floor(train.index-0.5)]
 	end
-	return train.path
-end
-function advtrains.get_train_end_index(train)
-	return advtrains.get_real_path_index(train, train.trainlen or 2)--this function can be found inside wagons.lua since it's more related to wagons. we just set trainlen as pos_in_train
+	
+	--- 6. update node coverage ---
+	
+	-- when paths get cleared, the old indices set above will be up-to-date and represent the state in which the last run of this code was made
+	local ifo, ifn, ibo, ibn = train.detector_old_index, math.floor(train.index), train.detector_old_end_index, math.floor(train.end_index)
+	local path=train.path
+	
+	for i=ibn, ifn do
+		if path[i] then
+			advtrains.detector.stay_node(path[i], id)
+		end
+	end
+	
+	if ifn>ifo then
+		for i=ifo+1, ifn do
+			if path[i] then
+				advtrains.detector.enter_node(path[i], id)
+			end
+		end
+	elseif ifn<ifo then
+		for i=ifn, ifo-1 do
+			if path[i] then
+				advtrains.detector.leave_node(path[i], id)
+			end
+		end
+	end
+	if ibn<ibo then
+		for i=ibn, ibo-1 do
+			if path[i] then
+				advtrains.detector.enter_node(path[i], id)
+			end
+		end
+	elseif ibn>ibo then
+		for i=ibo+1, ibn do
+			if path[i] then
+				advtrains.detector.leave_node(path[i], id)
+			end
+		end
+	end
+	
+	--- 7. do less important stuff ---
+	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
+	
+	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
+	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
+	if train.check_trainpartload<=0 then
+		local ori_pos=advtrains.get_real_index_position(path, train.index) --not much to calculate
+		--atprint("[train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
+		
+		local should_check=false
+		for _,p in ipairs(minetest.get_connected_players()) do
+			should_check=should_check or ((vector.distance(ori_pos, p:getpos())<node_range))
+		end
+		if should_check then
+			advtrains.update_trainpart_properties(id)
+		end
+		train.check_trainpartload=2
+	end
+	--remove?
+	if #train.trainparts==0 then
+		atprint("[train "..sid(id).."] has empty trainparts, removing.")
+		advtrains.detector.leave_node(path[train.detector_old_index], id)
+		advtrains.trains[id]=nil
+		return
+	end
 end
 
-function advtrains.get_or_create_path(id, train)
-	if not train.path then return advtrains.pathpredict(id, train) end
-	return train.path
+function advtrains.train_step_b(id, train, dtime)
+
+	--- 8. check for collisions with other trains ---
+	
+	local train_moves=(train.velocity~=0)
+	
+	if train_moves then
+		
+		--heh, new collision again.
+		--this time, based on NODES and the advtrains.detector.on_node table.
+		local collpos
+		local coll_grace=1
+		if train.movedir==1 then
+			collpos=advtrains.get_real_index_position(train.path, train.index-coll_grace)
+		else
+			collpos=advtrains.get_real_index_position(train.path, train.end_index+coll_grace)
+		end
+		if collpos then
+			local rcollpos=advtrains.round_vector_floor_y(collpos)
+			for x=-1,1 do
+				for z=-1,1 do
+					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
+					local testpts=minetest.pos_to_string(testpos)
+					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
+						--collides
+						advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
+						
+						train.recently_collided_with_env=true
+						train.velocity=0.5*train.velocity
+						train.movedir=train.movedir*-1
+						train.tarvelocity=0
+					end
+				end
+			end
+		end
+	end
+	
+end
+
+
+--structure of train table:
+--[[
+trains={
+	[train_id]={
+		trainparts={
+			[n]=wagon_id
+		}
+		path={path}
+		velocity
+		tarvelocity
+		index
+		trainlen
+		path_inv_level
+		last_pos       |
+		last_dir       | for pathpredicting.
+	}
+}
+--a wagon itself has the following properties:
+wagon={
+	unique_id
+	train_id
+	pos_in_train (is index difference, including train_span stuff)
+	pos_in_trainparts (is index in trainparts tabel of trains)
+}
+inherited by metatable:
+wagon_proto={
+	wagon_span
+}
+]]
+
+--returns new id
+function advtrains.create_new_train_at(pos, pos_prev)
+	local newtrain_id=os.time()..os.clock()
+	while advtrains.trains[newtrain_id] do newtrain_id=os.time()..os.clock() end--ensure uniqueness(will be unneccessary)
+	
+	advtrains.trains[newtrain_id]={}
+	advtrains.trains[newtrain_id].last_pos=pos
+	advtrains.trains[newtrain_id].last_pos_prev=pos_prev
+	advtrains.trains[newtrain_id].tarvelocity=0
+	advtrains.trains[newtrain_id].velocity=0
+	advtrains.trains[newtrain_id].trainparts={}
+	return newtrain_id
+end
+
+
+function advtrains.get_train_end_index(train)
+	return advtrains.get_real_path_index(train, train.trainlen or 2)--this function can be found inside wagons.lua since it's more related to wagons. we just set trainlen as pos_in_train
 end
 
 function advtrains.add_wagon_to_train(wagon, train_id, index)
@@ -508,7 +520,6 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 				wagon.wagon_flipped = not wagon.wagon_flipped
 			end
 			rel_pos=rel_pos+wagon.wagon_span
-			any_loaded=true
 			
 			if wagon.drives_on then
 				for k,_ in pairs(train.drives_on) do
@@ -518,6 +529,13 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 				end
 			end
 			train.max_speed=math.min(train.max_speed, wagon.max_speed)
+			if i==1 then
+				train.couple_lock_front=wagon.lock_couples
+			end
+			if i==#train.trainparts then
+				train.couple_lock_back=wagon.lock_couples
+			end
+			
 		else
 			atprint(w_id.." not loaded and no save available")
 			--what the hell...
@@ -531,9 +549,11 @@ end
 function advtrains.split_train_at_wagon(wagon)
 	--get train
 	local train=advtrains.trains[wagon.train_id]
+	if not train.path then return end
+	
 	local real_pos_in_train=advtrains.get_real_path_index(train, wagon.pos_in_train)
-	local pos_for_new_train=advtrains.get_or_create_path(wagon.train_id, train)[math.floor(real_pos_in_train+wagon.wagon_span)]
-	local pos_for_new_train_prev=advtrains.get_or_create_path(wagon.train_id, train)[math.floor(real_pos_in_train-1+wagon.wagon_span)]
+	local pos_for_new_train=train.path[math.floor(real_pos_in_train+wagon.wagon_span)]
+	local pos_for_new_train_prev=train.path[math.floor(real_pos_in_train-1+wagon.wagon_span)]
 	
 	--before doing anything, check if both are rails. else do not allow
 	if not pos_for_new_train then
@@ -683,15 +703,25 @@ end
 --pos1 and pos2 are just needed to form a median.
 
 
-function advtrains.do_connect_trains(first_id, second_id)
-	local first_wagoncnt=#advtrains.trains[first_id].trainparts
-	local second_wagoncnt=#advtrains.trains[second_id].trainparts
+function advtrains.do_connect_trains(first_id, second_id, player)
+	local first, second=advtrains.trains[first_id], advtrains.trains[second_id]
 	
-	for _,v in ipairs(advtrains.trains[second_id].trainparts) do
-		table.insert(advtrains.trains[first_id].trainparts, v)
+	if first.couple_lock_back or second.couple_lock_front then
+		-- trains are ordered correctly!
+		if player then
+			minetest.chat_send_player(player:get_player_name(), "Can't couple: couples locked!")
+		end
+		return
+	end
+	
+	local first_wagoncnt=#first.trainparts
+	local second_wagoncnt=#second.trainparts
+	
+	for _,v in ipairs(second.trainparts) do
+		table.insert(first.trainparts, v)
 	end
 	--kick it like physics (with mass being #wagons)
-	local new_velocity=((advtrains.trains[first_id].velocity*first_wagoncnt)+(advtrains.trains[second_id].velocity*second_wagoncnt))/(first_wagoncnt+second_wagoncnt)
+	local new_velocity=((first.velocity*first_wagoncnt)+(second.velocity*second_wagoncnt))/(first_wagoncnt+second_wagoncnt)
 	advtrains.trains[second_id]=nil
 	advtrains.update_trainpart_properties(first_id)
 	advtrains.trains[first_id].velocity=new_velocity
@@ -751,10 +781,12 @@ function advtrains.invalidate_all_paths()
 		v.path=nil
 		v.path_dist=nil
 		v.index=nil
+		v.end_index=nil
 		v.min_index_on_track=nil
 		v.max_index_on_track=nil
+		v.path_extent_min=nil
+		v.path_extent_max=nil
 		
-		advtrains.detector.setup_restore()
 		v.detector_old_index=nil
 		v.detector_old_end_index=nil
 	end

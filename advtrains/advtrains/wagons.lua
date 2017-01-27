@@ -92,7 +92,6 @@ function wagon:init_from_wagon_save(uid)
 	self.initialized=true
 	minetest.after(1, function() self:reattach_all() end)
 	atprint("init_from_wagon_save "..self.unique_id.." ("..self.train_id..")")
-	advtrains.update_trainpart_properties(self.train_id)
 end
 function wagon:init_shared()
 	if self.has_inventory then
@@ -294,7 +293,7 @@ function wagon:on_step(dtime)
 	end
 	--DisCouple
 	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
-		if gp.velocity==0 then
+		if gp.velocity==0 and not self.lock_couples then
 			if not self.discouple or not self.discouple.object:getyaw() then
 				local object=minetest.add_entity(pos, "advtrains:discouple")
 				if object then
@@ -314,7 +313,7 @@ function wagon:on_step(dtime)
 		end
 	end
 	--for path to be available. if not, skip step
-	if not advtrains.get_or_create_path(self.train_id, gp) then
+	if not gp.path then
 		self.object:setvelocity({x=0, y=0, z=0})
 		return
 	end
@@ -593,6 +592,28 @@ function wagon:show_get_on_form(pname)
 	end
 	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form)
 end
+function wagon:show_wagon_properties(pname)
+	if not self.seat_groups then
+		return
+	end
+	if not self.seat_access then
+		self.seat_access={}
+	end
+	--[[
+	fields: seat access: empty: everyone
+	checkbox: lock couples
+	button: save
+	]]
+	local form="size[5,"..(#self.seat_groups*1.5+5).."]"
+	local at=0
+	for sgr,sgrdef in pairs(self.seat_groups) do
+		form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..sgrdef.name..";"..(self.seat_access[sgr] or "").."]"
+		at=at+1
+	end
+	form=form.."checkbox[0,"..(at*1.5)..";lock_couples;Lock couples;"..(self.lock_couples and "true" or "false").."]"
+	form=form.."button_exit[0.5,"..(1+at*1.5)..";4,1;save;Save wagon properties]"
+	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
+end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local uid=string.match(formname, "^advtrains_geton_(.+)$")
 	if uid then
@@ -628,6 +649,27 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			end
 		end
 	end
+	uid=string.match(formname, "^advtrains_prop_(.+)$")
+	if uid then
+		atprint(fields)
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+				local pname=player:get_player_name()
+				if pname~=wagon.owner then
+					return true
+				end
+				if not fields.quit then
+					for sgr,sgrdef in pairs(wagon.seat_groups) do
+						if fields["sgr_"..sgr] then
+							local fcont = fields["sgr_"..sgr]
+							wagon.seat_access[sgr] = fcont~="" and fcont or nil
+						end
+					end
+					wagon.lock_couples = fields.lock_couples == "true"
+				end
+			end
+		end
+	end
 end)
 function wagon:seating_from_key_helper(pname, fields, no)
 	local sgr=self.seats[no].group
@@ -648,15 +690,26 @@ function wagon:seating_from_key_helper(pname, fields, no)
 		self:show_wagon_properties(pname)
 	end
 	if fields.dcwarn then
-		minetest.chat_send_player(pname, "Use shift-rightclick to open doors with force and get off!")
+		minetest.chat_send_player(pname, "Doors are closed! Use shift-rightclick to open doors with force and get off!")
 	end
 	if fields.off then
 		self:get_off(no)
 	end
 end
 function wagon:check_seat_group_access(pname, sgr)
-	--TODO implement
-	return sgr~="driverstand" or pname=="orwell"
+	if not self.seat_access then
+		return true
+	end
+	local sae=self.seat_access[sgr]
+	if not sae or sae=="" then
+		return true
+	end
+	for name in string.gmatch(sae, "%S+") do
+		if name==pname then
+			return true
+		end
+	end
+	return false
 end
 function wagon:reattach_all()
 	if not self.seatp then self.seatp={} end

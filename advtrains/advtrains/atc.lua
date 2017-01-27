@@ -198,7 +198,7 @@ function atc.execute_atc_command(id, train)
 		return
 	end
 	--conditional statement?
-	local is_cond, cond_applies
+	local is_cond, cond_applies, compare
 	local cond, rest=string.match(command, "^I([%+%-])(.+)$")
 	if cond then
 		is_cond=true
