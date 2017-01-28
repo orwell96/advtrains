@@ -37,5 +37,14 @@ Detector Rail = Detektorschiene
 Speed: = Geschw.:
 Target: = Zielges.:
 @1 Slope = @1 Steigung
-
+Can't get on: wagon full or doors closed! = Kann nicht einsteigen: Waggon voll oder Türen geschlossen.
+Use shift+click to open doors forcefully! = Nutze Sneak+Rechtsklick, um die Türnotöffnung zu aktivieren und trotzdem einzusteigen.
+Lock couples = Kupplungen sperren
+Save wagon properties = Waggon-Einstellungen speichern
+Doors are closed! Use shift-rightclick to open doors with force and get off! = Türen sind geschlossen! Sneak+Rechtsklick, um die Türnotöffnung zu aktivieren und trotzdem auszusteigen.
+Wagon properties = Waggon-Einstellungen
+Get off = Aussteigen
+Get off (forced) = Aussteigen (erzwingen)
+(Doors closed) = (Türen geschlossen)
+Access to @1 = Zugang zu @1
 

@@ -731,7 +731,7 @@ end
 function advtrains.invert_train(train_id)
 	local train=advtrains.trains[train_id]
 	
-	local old_path=advtrains.get_or_create_path(train_id, train)
+	local old_path=train.path
 	train.path={}
 	train.index= - advtrains.get_train_end_index(train)
 	train.velocity=-train.velocity
@@ -756,7 +756,7 @@ function advtrains.is_train_at_pos(pos)
 		if le and le.is_wagon and le.initialized and le.train_id and not checked_trains[le.train_id] then
 			--atprint("istrainat: checking "..le.train_id)
 			checked_trains[le.train_id]=true
-			local path=advtrains.get_or_create_path(le.train_id, le:train())
+			local path=le:train().path
 			if path then
 				--atprint("has path")
 				for i=math.floor(advtrains.get_train_end_index(le:train())+0.5),math.floor(le:train().index+0.5) do

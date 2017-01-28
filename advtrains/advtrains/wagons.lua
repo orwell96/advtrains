@@ -90,7 +90,7 @@ function wagon:init_from_wagon_save(uid)
 	end
 	self:init_shared()
 	self.initialized=true
-	minetest.after(1, function() self:reattach_all() end)
+	minetest.after(0.2, function() self:reattach_all() end)
 	atprint("init_from_wagon_save "..self.unique_id.." ("..self.train_id..")")
 end
 function wagon:init_shared()
@@ -453,18 +453,18 @@ function wagon:on_rightclick(clicker)
 				end
 			end
 			if self.has_inventory and self.get_inventory_formspec then
-				poss[#poss+1]={name="Show inventory", key="inv"}
+				poss[#poss+1]={name=attrans("Show Inventory"), key="inv"}
 			end
 			if self.owner==pname then
-				poss[#poss+1]={name="Wagon properties", key="prop"}
+				poss[#poss+1]={name=attrans("Wagon properties"), key="prop"}
 			end
 			if not self.seat_groups[sgr].require_doors_open or self:train().door_open~=0 then
-				poss[#poss+1]={name="Get off", key="off"}
+				poss[#poss+1]={name=attrans("Get off"), key="off"}
 			else
 				if clicker:get_player_control().sneak then
-					poss[#poss+1]={name="Get off (forced)", key="off"}
+					poss[#poss+1]={name=attrans("Get off (forced)"), key="off"}
 				else
-					poss[#poss+1]={name="(Doors closed)", key="dcwarn"}
+					poss[#poss+1]={name=attrans("(Doors closed)"), key="dcwarn"}
 				end
 			end
 			if #poss==0 then
@@ -501,8 +501,8 @@ function wagon:on_rightclick(clicker)
 					end
 				end
 			end
-			minetest.chat_send_player(pname, "Can't get on: wagon full or doors closed!")
-			minetest.chat_send_player(pname, "Use shift+click to open doors forcefully!")
+			minetest.chat_send_player(pname, attrans("Can't get on: wagon full or doors closed!"))
+			minetest.chat_send_player(pname, attrans("Use shift+click to open doors forcefully!"))
 		else
 			self:show_get_on_form(pname)
 		end
@@ -607,11 +607,12 @@ function wagon:show_wagon_properties(pname)
 	local form="size[5,"..(#self.seat_groups*1.5+5).."]"
 	local at=0
 	for sgr,sgrdef in pairs(self.seat_groups) do
-		form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..sgrdef.name..";"..(self.seat_access[sgr] or "").."]"
+		local text = attrans("Access to @1",sgrdef.name)
+		form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..text..";"..(self.seat_access[sgr] or "").."]"
 		at=at+1
 	end
-	form=form.."checkbox[0,"..(at*1.5)..";lock_couples;Lock couples;"..(self.lock_couples and "true" or "false").."]"
-	form=form.."button_exit[0.5,"..(1+at*1.5)..";4,1;save;Save wagon properties]"
+	form=form.."checkbox[0,"..(at*1.5)..";lock_couples;"..attrans("Lock couples")..";"..(self.lock_couples and "true" or "false").."]"
+	form=form.."button_exit[0.5,"..(1+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
@@ -690,7 +691,7 @@ function wagon:seating_from_key_helper(pname, fields, no)
 		self:show_wagon_properties(pname)
 	end
 	if fields.dcwarn then
-		minetest.chat_send_player(pname, "Doors are closed! Use shift-rightclick to open doors with force and get off!")
+		minetest.chat_send_player(pname, attrans("Doors are closed! Use shift-rightclick to open doors with force and get off!"))
 	end
 	if fields.off then
 		self:get_off(no)
