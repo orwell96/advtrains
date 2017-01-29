@@ -68,7 +68,8 @@ advtrains.register_wagon("subway_wagon", {
 	},
 	visual_size = {x=1, y=1},
 	wagon_span=2,
-	collisionbox = {-1.0,-0.5,-1.8, 1.0,2.5,1.8},
+	--collisionbox = {-1.0,-0.5,-1.8, 1.0,2.5,1.8},
+	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	is_locomotive=true,
 	drops={"default:steelblock 4"},
 	--custom_on_activate = function(self, dtime_s)
