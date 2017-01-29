@@ -224,9 +224,13 @@ minetest.register_on_dignode(function(pos, oldnode, digger)
 	ndb.clear(pos)
 end)
 
-function ndb.t()
-	return ndb_nodes[141061759008906]
+function ndb.get_nodes()
+	return ndb_nodes
 end
+function ndb.get_nodeids()
+	return ndb_nodeids
+end
+
 
 advtrains.ndb=ndb
 
