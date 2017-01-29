@@ -659,7 +659,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				if pname~=wagon.owner then
 					return true
 				end
-				if not fields.quit then
+				if fields.save or not fields.quit then
 					for sgr,sgrdef in pairs(wagon.seat_groups) do
 						if fields["sgr_"..sgr] then
 							local fcont = fields["sgr_"..sgr]
