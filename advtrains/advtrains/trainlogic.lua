@@ -40,7 +40,14 @@ advtrains.audit_interval=10
 
 
 advtrains.save_and_audit_timer=advtrains.audit_interval
-minetest.register_globalstep(function(dtime)
+minetest.register_globalstep(function(dtime_mt)
+	--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
+	local dtime=dtime_mt
+	if dtime>0.2 then
+		atprint("Limiting dtime to 0.2!")
+		dtime=0.2
+	end
+
 	advtrains.save_and_audit_timer=advtrains.save_and_audit_timer-dtime
 	if advtrains.save_and_audit_timer<=0 then
 		local t=os.clock()
