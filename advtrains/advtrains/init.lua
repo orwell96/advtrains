@@ -96,7 +96,6 @@ else
 			advtrains.wagon_save = tbl.wagon_save
 			advtrains.ndb.load_data(tbl.ndb)
 			advtrains.atc.load_data(tbl.atc)
-			--advtrains.latc.load_data(tbl.latc)
 		else
 			--oh no, its the old one...
 			advtrains.trains=tbl
@@ -165,7 +164,6 @@ advtrains.save = function()
 		trains = advtrains.trains,
 		wagon_save = advtrains.wagon_save,
 		atc = advtrains.atc.save_data(),
-		--latc = advtrains.latc.save_data(),
 		ndb = advtrains.ndb.save_data(),
 		version = 1,
 	}
