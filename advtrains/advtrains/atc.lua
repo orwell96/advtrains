@@ -8,8 +8,8 @@ function atc.load_data(data)
 	local temp = data and data.controllers or {}
 	--transcode atc controller data to node hashes: table access times for numbers are far less than for strings
 	for pts, data in pairs(temp) do
-		if type(pts)="string" then
-			pts=minetest.hash_node_position(minetest.pos_to_string(pts))
+		if type(pts)=="string" then
+			pts=minetest.hash_node_position(minetest.string_to_pos(pts))
 		end
 		atc.controllers[pts] = data
 	end
@@ -28,7 +28,7 @@ end
 --general
 
 function atc.send_command(pos)
-	local pts=minetest.hash_node_position(ppos)
+	local pts=minetest.hash_node_position(pos)
 	if atc.controllers[pts] then
 		--atprint("Called send_command at "..pts)
 		local train_id = advtrains.detector.on_node[pts]
@@ -88,7 +88,7 @@ advtrains.register_tracks("default", {
 			after_dig_node=function(pos)
 				advtrains.invalidate_all_paths()
 				advtrains.ndb.clear(pos)
-				local pts=minetest.hash_node_position(ppos)
+				local pts=minetest.hash_node_position(pos)
 				atc.controllers[pts]=nil
 			end,
 			on_receive_fields = function(pos, formname, fields, player)

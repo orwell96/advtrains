@@ -1,6 +1,6 @@
 --advtrains by orwell96
 --signals.lua
-for r,f in pairs({on="off", off="on"}) do
+for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", als="green"}}) do
 
 	advtrains.trackplacer.register_tracktype("advtrains:retrosignal", "")
 	advtrains.trackplacer.register_tracktype("advtrains:signal", "")
@@ -32,12 +32,12 @@ for r,f in pairs({on="off", off="on"}) do
 				save_in_nodedb=1,
 			},
 			mesecons = {effector = {
-				["action_"..f] = function (pos, node)
-					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
+				["action_"..f.as] = function (pos, node)
+					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
 				end
 			}},
 			on_rightclick=function(pos, node, clicker)
-				advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f..rotation, param2 = node.param2})
+				advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:retrosignal", r, rotation, nil)
@@ -65,12 +65,20 @@ for r,f in pairs({on="off", off="on"}) do
 			light_source = 1,
 			sunlight_propagates=true,
 			mesecons = {effector = {
-				["action_"..f] = function (pos, node)
-					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f..rotation, param2 = node.param2})
+				["action_"..f.as] = function (pos, node)
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
 				end
 			}},
+			luaautomation = {
+				getstate = f.ls,
+				setstate = function(pos, node, newstate)
+					if newstate == f.als then
+						advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
+					end
+				end,
+			},
 			on_rightclick=function(pos, node, clicker)
-				advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f..rotation, param2 = node.param2})
+				advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:signal", r, rotation, nil)

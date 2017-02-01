@@ -77,6 +77,12 @@ ap.t_30deg={
 		swrst="on",
 		swrcr="off",
 	},
+	switchst={
+		swlst="st",
+		swlcr="cr",
+		swrst="st",
+		swrcr="cr",
+	},
 	regtp=true,
 	trackplacer={
 		st=true,
@@ -195,6 +201,12 @@ ap.t_45deg={
 		swrst="on",
 		swrcr="off",
 	},
+	switchst={
+		swlst="st",
+		swlcr="cr",
+		swrst="st",
+		swrcr="cr",
+	},
 	regtp=true,
 	trackplacer={
 		st=true,
@@ -233,16 +245,26 @@ advtrains.trackpresets = ap
 	common={} change something on common rail appearance
 }]]
 function advtrains.register_tracks(tracktype, def, preset)
-	local function make_switchfunc(suffix_target, mesecon_state)
-		local switchfunc=function(pos, node)
-			advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+	local function make_switchfunc(suffix_target, mesecon_state, is_state)
+		local switchfunc=function(pos, node, newstate)
+			if newstate~=is_state then
+				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+			end
 		end
-		return switchfunc, {effector = {
-			["action_"..mesecon_state] = switchfunc,
-			rules=advtrains.meseconrules
-		}}
+		local mesec
+		if mesecon_state then -- if mesecons is not wanted, do not.
+			mesec = {effector = {
+				["action_"..mesecon_state] = switchfunc,
+				rules=advtrains.meseconrules
+			}}
+		end
+		return switchfunc, mesec,
+		{ 
+			getstate = is_state,
+			setstate = switchfunc,
+		}
 	end
-	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, in_creative_inv, drop_slope)
+	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, luaautomation, in_creative_inv, drop_slope)
 		local img_suffix=suffix..rotation
 		return {
 			mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
@@ -266,6 +288,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				not_blocking_trains=1,
 			},
 			mesecons=mesecontbl,
+			luaautomation=luaautomation,
 			drop = increativeinv and def.nodename_prefix.."_"..suffix..rotation or (drop_slope and def.nodename_prefix.."_slopeplacer" or def.nodename_prefix.."_placer"),
 			}
 	end
@@ -294,7 +317,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 		railheight=0,
 		drop=def.nodename_prefix.."_placer",
 		can_dig=function(pos)
-			return not advtrains.is_train_at_pos(pos)
+			return not advtrains.get_train_at_pos(pos)
 		end,
 		after_dig_node=function(pos)
 			advtrains.invalidate_all_paths()
@@ -315,9 +338,9 @@ function advtrains.register_tracks(tracktype, def, preset)
 	for suffix, conns in pairs(preset.variant) do
 		for rotid, rotation in ipairs(preset.rotation) do
 			if not def.formats[suffix] or def.formats[suffix][rotid] then
-				local switchfunc, mesecontbl
+				local switchfunc, mesecontbl, luaautomation
 				if preset.switch[suffix] then
-					switchfunc, mesecontbl=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix])
+					switchfunc, mesecontbl, luaautomation=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix], preset.switchst[suffix])
 				end
 				local adef={}
 				if def.get_additional_definiton then
@@ -329,7 +352,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 					make_overdef(
 						suffix, rotation,
 						cycle_conns(conns, rotid),
-						switchfunc, mesecontbl, preset.increativeinv[suffix], preset.slopenodes[suffix]
+						switchfunc, mesecontbl, luaautomation, preset.increativeinv[suffix], preset.slopenodes[suffix]
 						),
 					adef
 					)

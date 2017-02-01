@@ -25,7 +25,7 @@ local function create_map_form_with_bg(d)
 	local lbl={}
 	
 	for pts, tid in pairs(advtrains.detector.on_node) do
-		local pos=minetest.string_to_pos(pts)
+		local pos=minetest.get_pos_from_hash(pts)
 		form=form.."box["..(edge_x*(pos.x-minx))..","..(form_z-(edge_z*(pos.z-minz)))..";"..len_x..","..len_z..";red]"
 		lbl[sid(tid)]=pos
 	end
@@ -52,7 +52,7 @@ local function create_map_form(d)
 		if x>=minx and x<=maxx then
 			for z,y in pairs(itx) do
 				if z>=minz and z<=maxz then
-					local adn=advtrains.detector.on_node[minetest.pos_to_string({x=x, y=y, z=z})]
+					local adn=advtrains.detector.on_node[minetest.hash_node_position({x=x, y=y, z=z})]
 					local color="gray"
 					if adn then
 						color="red"
