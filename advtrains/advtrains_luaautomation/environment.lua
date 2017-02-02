@@ -97,11 +97,12 @@ end
 
 -- string.find with a pattern can be used to DoS the server.
 -- Therefore, limit string.find to patternless matching.
+-- Note: Disabled security since there are enough security leaks and this would be unneccessary anyway to DoS the server
 local function safe_string_find(...)
-	if (select(4, ...)) ~= true then
-		debug.sethook() -- Clear hook
-		error("string.find: 'plain' (fourth parameter) must always be true for security reasons.")
-	end
+	--if (select(4, ...)) ~= true then
+	--	debug.sethook() -- Clear hook
+	--	error("string.find: 'plain' (fourth parameter) must always be true for security reasons.")
+	--end
 
 	return string.find(...)
 end
