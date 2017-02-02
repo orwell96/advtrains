@@ -11,7 +11,7 @@ advtrains = {trains={}, wagon_save={}}
 
 advtrains.modpath = minetest.get_modpath("advtrains")
 
-local function print_concat_table(a)
+function advtrains.print_concat_table(a)
 	local str=""
 	local stra=""
 	for i=1,50 do
@@ -43,7 +43,11 @@ local function print_concat_table(a)
 end
 atprint=function() end
 if minetest.setting_getbool("advtrains_debug") then
-	atprint=function(t, ...) minetest.log("action", "[advtrains]"..print_concat_table({t, ...})) minetest.chat_send_all("[advtrains]"..print_concat_table({t, ...})) end
+	atprint=function(t, ...)
+		local text=advtrains.print_concat_table({t, ...})
+		minetest.log("action", "[advtrains]"..text)
+		minetest.chat_send_all("[advtrains]"..text)
+	end
 end
 sid=function(id) return string.sub(id, -4) end
 

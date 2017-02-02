@@ -250,6 +250,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			if newstate~=is_state then
 				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
 			end
+			advtrains.invalidate_all_paths()
 		end
 		local mesec
 		if mesecon_state then -- if mesecons is not wanted, do not.
