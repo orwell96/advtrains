@@ -25,6 +25,28 @@ function atlatc.remove_invalid_data(o, nested)
 	nested[o] = nil
 	return o
 end
+function atlatc.replace_function_envs(o, fenv, nested)
+	if o==nil then return nil end
+	local valid_dt={["nil"]=true, boolean=true, number=true, string=true}
+	if type(o) ~= "table" then
+		--check valid data type
+		if type(o)=="function" then
+			setfenv(o, fenv)
+		end
+		return o
+	end
+	-- Contains table -> true/nil of currently nested tables
+	nested = nested or {}
+	if nested[o] then
+		return nil
+	end
+	nested[o] = true
+	for k, v in pairs(o) do
+		v = atlatc.replace_function_envs(v, fenv, nested)
+	end
+	nested[o] = nil
+	return o
+end
 
 
 local env_proto={
@@ -149,7 +171,15 @@ local static_env = {
 	POS = function(x,y,z) return {x=x, y=y, z=z} end,
 	getstate = p_api_getstate,
 	setstate = p_api_setstate,
-	
+	--interrupts are handled per node, position unknown.
+	--however external interrupts can be set here.
+	interrupt_pos = function(pos, imesg)
+		if not type(pos)=="table" or not pos.x or not pos.y or not pos.z then
+			debug.sethook()
+			error("Invalid position supplied to interrupt_pos")
+		end
+		atlatc.interrupt.add(0, pos, {type="ext_int", ext_int=true, message=imesg})
+	end,
 }
 
 for _, name in pairs(safe_globals) do
@@ -168,7 +198,6 @@ end
 function env_proto:execute_code(fenv, code, evtdata, customfct)
 	local metatbl ={
 		__index = function(t, i)
-			print("index metamethod:",i)
 			if i=="S" then
 				return self.sdata
 			elseif i=="F" then
@@ -193,6 +222,9 @@ function env_proto:execute_code(fenv, code, evtdata, customfct)
 	if not fun then
 		return false, err
 	end
+	--set function environment for all functions residing in F, so they get the right variables. Else it's a huge mess...
+	atlatc.replace_function_envs(self.fdata, fenv)
+	
 	setfenv(fun, fenv)
 	local succ, data = pcall(fun)
 	if succ then
@@ -203,9 +235,11 @@ end
 
 function env_proto:run_initcode()
 	if self.init_code and self.init_code~="" then
-		local succ, err = self:execute_code(self.init_code, nil, {}, "Global init code")
+		self.fdata = {}
+		atprint("[atlatc]Running initialization code for environment '"..self.name.."'")
+		local succ, err = self:execute_code({}, self.init_code, {type="init", init=true})
 		if not succ then
-			--TODO
+			self.init_err=err
 		end
 	end
 end

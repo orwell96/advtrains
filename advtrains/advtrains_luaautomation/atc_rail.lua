@@ -78,7 +78,7 @@ advtrains.register_tracks("default", {
 			advtrains = {
 				on_train_enter = function(pos, train_id)
 					--do async. Event is fired in train steps
-					atlatc.interrupt.add(0, pos, {type="train", id=train_id})
+					atlatc.interrupt.add(0, pos, {type="train", train=true, id=train_id})
 				end,
 			},
 			luaautomation = {

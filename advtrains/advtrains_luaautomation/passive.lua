@@ -2,6 +2,10 @@
 -- API to passive components, as described in passive_api.txt
 
 local function getstate(pos)
+	if not type(pos)=="table" or not pos.x or not pos.y or not pos.z then
+		debug.sethook()
+		error("Invalid position supplied to getstate")
+	end
 	local node=advtrains.ndb.get_node(pos)
 	local ndef=minetest.registered_nodes[node.name]
 	if ndef and ndef.luaautomation and ndef.luaautomation.getstate then
@@ -16,6 +20,10 @@ local function getstate(pos)
 end
 
 local function setstate(pos, newstate)
+	if not type(pos)=="table" or not pos.x or not pos.y or not pos.z then
+		debug.sethook()
+		error("Invalid position supplied to setstate")
+	end
 	local node=advtrains.ndb.get_node(pos)
 	local ndef=minetest.registered_nodes[node.name]
 	if ndef and ndef.luaautomation and ndef.luaautomation.setstate then

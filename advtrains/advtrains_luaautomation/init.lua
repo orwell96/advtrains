@@ -26,6 +26,8 @@ dofile(mp.."/active_common.lua")
 dofile(mp.."/atc_rail.lua")
 dofile(mp.."/operation_panel.lua")
 dofile(mp.."/p_mesecon_iface.lua")
+dofile(mp.."/chatcmds.lua")
+
 
 local filename=minetest.get_worldpath().."/advtrains_luaautomation"
 local file, err = io.open(filename, "r")

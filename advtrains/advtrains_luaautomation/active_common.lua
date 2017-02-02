@@ -84,7 +84,7 @@ function ac.on_receive_fields(pos, formname, fields, player)
 	end
 end
 
-function ac.run_in_env(pos, evtdata, customfct)
+function ac.run_in_env(pos, evtdata, customfct_p)
 	local ph=minetest.hash_node_position(pos)
 	local nodetbl = ac.nodes[ph] or {}
 	
@@ -98,6 +98,11 @@ function ac.run_in_env(pos, evtdata, customfct)
 	end
 	if not nodetbl.code or nodetbl.code=="" then
 		return false, "No code to run!"
+	end
+	
+	local customfct=customfct_p or {}
+	customfct.interrupt=function(t, imesg)
+		atlatc.interrupt.add(t, pos, {type="int", int=true, message=imesg})
 	end
 	
 	local datain=nodetbl.data or {}
