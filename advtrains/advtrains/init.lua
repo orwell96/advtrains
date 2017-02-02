@@ -84,6 +84,8 @@ dofile(advtrains.modpath.."/damage.lua")
 dofile(advtrains.modpath.."/signals.lua")
 dofile(advtrains.modpath.."/misc_nodes.lua")
 dofile(advtrains.modpath.."/crafting.lua")
+dofile(advtrains.modpath.."/craft_items.lua")
+
 
 --load/save
 

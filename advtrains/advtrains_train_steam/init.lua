@@ -139,7 +139,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 		})
 	end,
 	drops={"default:steelblock 4"},
-}, S("Detailed Steam Engine"), "advtrains_engine_steam_inv.png")
+}, S("Detailed Steam Engine"), "advtrains_detailed_engine_steam_inv.png")
 
 advtrains.register_wagon("wagon_default", {
 	mesh="advtrains_passenger_wagon.b3d",
@@ -209,24 +209,34 @@ advtrains.register_wagon("wagon_box", {
 minetest.register_craft({
 	output = 'advtrains:newlocomotive',
 	recipe = {
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'dye:black', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
+		{'', '', 'advtrains:chimney'},
+		{'advtrains:driver_cab', 'dye:black', 'advtrains:boiler'},
+		{'advtrains:wheel', 'advtrains:wheel', 'advtrains:wheel'},
 	},
 })
+
+minetest.register_craft({
+	output = 'advtrains:detailed_steam_engine',
+	recipe = {
+		{'', '', 'advtrains:chimney'},
+		{'advtrains:driver_cab', 'dye:green', 'advtrains:boiler'},
+		{'advtrains:wheel', 'advtrains:wheel', 'advtrains:wheel'},
+	},
+})
+
 minetest.register_craft({
 	output = 'advtrains:wagon_default',
 	recipe = {
 		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'dye:dark_green', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
+		{'default:glass', 'dye:dark_green', 'default:glass'},
+		{'advtrains:wheel', 'advtrains:wheel', 'advtrains:wheel'},
 	},
 })
 minetest.register_craft({
 	output = 'advtrains:wagon_box',
 	recipe = {
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
-		{'default:steelblock', 'default:chest', 'default:steelblock'},
-		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
+		{'group:wood', 'group:wood', 'group:wood'},
+		{'group:wood', 'default:chest', 'group:wood'},
+		{'advtrains:wheel', '', 'advtrains:wheel'},
 	},
 })
