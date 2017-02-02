@@ -404,7 +404,7 @@ function advtrains.train_step_b(id, train, dtime)
 			for x=-1,1 do
 				for z=-1,1 do
 					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
-					local testpts=minetest.pos_to_string(testpos)
+					local testpts=minetest.hash_node_position(testpos)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
 						--collides
 						advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
