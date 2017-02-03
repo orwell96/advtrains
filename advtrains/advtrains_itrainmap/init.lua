@@ -25,7 +25,7 @@ local function create_map_form_with_bg(d)
 	local lbl={}
 	
 	for pts, tid in pairs(advtrains.detector.on_node) do
-		local pos=minetest.get_position_from_hash(pts)
+		local pos=minetest.string_to_pos(pts)
 		form=form.."box["..(edge_x*(pos.x-minx))..","..(form_z-(edge_z*(pos.z-minz)))..";"..len_x..","..len_z..";red]"
 		lbl[sid(tid)]=pos
 	end
@@ -52,7 +52,7 @@ local function create_map_form(d)
 		if x>=minx and x<=maxx then
 			for z,y in pairs(itx) do
 				if z>=minz and z<=maxz then
-					local adn=advtrains.detector.on_node[minetest.hash_node_position({x=x, y=y, z=z})]
+					local adn=advtrains.detector.on_node[minetest.pos_to_string({x=x, y=y, z=z})]
 					local color="gray"
 					if adn then
 						color="red"
@@ -128,21 +128,14 @@ local timer=0
 minetest.register_globalstep(function(dtime)
 	timer=timer-math.min(dtime, 0.1)
 	if timer<=0 then
-		local t1=os.clock()
-		local any=false
 		for pname,d in pairs(itm_pdata) do
 			minetest.show_formspec(pname, "itrainmap", create_map_form(d))
-			any=true
-		end
-		if any then
-			minetest.log("action", "itm "..math.floor((os.clock()-t1)*1000).."ms")
 		end
 		timer=2
 	end
 end)
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if formname=="itrainmap" and fields.quit then
-		minetest.log("action", "itm form quit")
 		itm_pdata[player:get_player_name()]=nil
 	end
 end)
