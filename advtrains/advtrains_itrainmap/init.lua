@@ -25,7 +25,7 @@ local function create_map_form_with_bg(d)
 	local lbl={}
 	
 	for pts, tid in pairs(advtrains.detector.on_node) do
-		local pos=minetest.get_pos_from_hash(pts)
+		local pos=minetest.get_position_from_hash(pts)
 		form=form.."box["..(edge_x*(pos.x-minx))..","..(form_z-(edge_z*(pos.z-minz)))..";"..len_x..","..len_z..";red]"
 		lbl[sid(tid)]=pos
 	end
