@@ -1,12 +1,26 @@
 --chatcmds.lua
 --Registers commands to modify the init and step code for LuaAutomation
 
-local function get_init_form(env)
+--position helper.
+--punching a node will result in that position being saved and inserted into a text field on the top of init form.
+local punchpos={}
+
+minetest.register_on_punchnode(function(pos, node, player, pointed_thing)
+	local pname=player:get_player_name()
+	punchpos[pname]=pos
+end)
+
+local function get_init_form(env, pname)
 	local err = env.init_err or ""
 	local code = env.init_code or ""
-	atprint(err)
+	local ppos=punchpos[pname]
+	local pp=""
+	if ppos then
+		pp="POS"..minetest.pos_to_string(ppos)
+	end
 	local form = "size[10,10]button[0,0;2,1;run;Run InitCode]button[2,0;2,1;cls;Clear S]"
-		.."button[4,0;2,1;save;Save] button[6,0;2,1;del;Delete Env.] textarea[0.2,1;10,10;code;Environment initialization code;"..minetest.formspec_escape(code).."]"
+		.."button[4,0;2,1;save;Save] button[6,0;2,1;del;Delete Env.] field[8.1,0.5;2,1;punchpos;Last punched position;"..pp.."]"
+		.."textarea[0.2,1;10,10;code;Environment initialization code;"..minetest.formspec_escape(code).."]"
 		.."label[0,9.8;"..err.."]"
 	return form
 end
@@ -18,7 +32,7 @@ core.register_chatcommand("env_setup", {
 	func = function(name, param)
 		local env=atlatc.envs[param]
 		if not env then return false,"Invalid environment name!" end
-		minetest.show_formspec(name, "atlatc_envsetup_"..param, get_init_form(env))
+		minetest.show_formspec(name, "atlatc_envsetup_"..param, get_init_form(env, name))
 		return true
 	end,
 })
@@ -65,6 +79,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if fields.run then
 		env:run_initcode()
-		minetest.show_formspec(pname, formname, get_init_form(env))
+		minetest.show_formspec(pname, formname, get_init_form(env, pname))
 	end
 end)
