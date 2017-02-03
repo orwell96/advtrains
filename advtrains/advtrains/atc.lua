@@ -8,8 +8,8 @@ function atc.load_data(data)
 	local temp = data and data.controllers or {}
 	--transcode atc controller data to node hashes: table access times for numbers are far less than for strings
 	for pts, data in pairs(temp) do
-		if type(pts)=="string" then
-			pts=minetest.hash_node_position(minetest.string_to_pos(pts))
+		if type(pts)=="number" then
+			pts=minetest.pos_to_string(minetest.get_position_from_hash(pts))
 		end
 		atc.controllers[pts] = data
 	end
@@ -19,16 +19,10 @@ function atc.save_data()
 end
 --contents: {command="...", arrowconn=0-15 where arrow points}
 
---call from advtrains.detector subprogram
-
-function atc.trigger_controller_train_enter(pos, train_id)
-	atc.send_command(pos)
-end
-
 --general
 
 function atc.send_command(pos)
-	local pts=minetest.hash_node_position(pos)
+	local pts=minetest.pos_to_string(pos)
 	if atc.controllers[pts] then
 		--atprint("Called send_command at "..pts)
 		local train_id = advtrains.detector.on_node[pts]
@@ -88,7 +82,7 @@ advtrains.register_tracks("default", {
 			after_dig_node=function(pos)
 				advtrains.invalidate_all_paths()
 				advtrains.ndb.clear(pos)
-				local pts=minetest.hash_node_position(pos)
+				local pts=minetest.pos_to_string(pos)
 				atc.controllers[pts]=nil
 			end,
 			on_receive_fields = function(pos, formname, fields, player)
@@ -122,12 +116,17 @@ advtrains.register_tracks("default", {
 					end
 					meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
 					
-					local pts=minetest.hash_node_position(pos)
+					local pts=minetest.pos_to_string(pos)
 					local _, conn1=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
 					atc.controllers[pts]={command=fields.command, arrowconn=conn1}
 					atc.send_command(pos)
 				end
 			end,
+			advtrains = {
+				on_train_enter = function(pos, train_id)
+					atc.send_command(pos)
+				end,
+			},
 		}
 	end
 }, advtrains.trackpresets.t_30deg_straightonly)

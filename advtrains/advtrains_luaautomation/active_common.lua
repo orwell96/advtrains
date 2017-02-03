@@ -3,7 +3,9 @@
 local ac = {nodes={}}
 
 function ac.load(data)
-	ac.nodes=data and data.nodes or {}
+	if data then
+		ac.nodes=data.nodes
+	end
 end
 function ac.save()
 	return {nodes = ac.nodes}
@@ -14,7 +16,7 @@ function ac.after_place_node(pos, player)
 	local meta=minetest.get_meta(pos)
 	meta:set_string("formspec", ac.getform(pos, meta))
 	meta:set_string("infotext", "LuaAutomation component, unconfigured.")
-	local ph=minetest.hash_node_position(pos)
+	local ph=minetest.pos_to_string(pos)
 	--just get first available key!
 	for en,_ in pairs(atlatc.envs) do
 		ac.nodes[ph]={env=en}
@@ -25,7 +27,7 @@ function ac.getform(pos, meta_p)
 	local meta = meta_p or minetest.get_meta(pos)
 	local envs_asvalues={}
 	
-	local ph=minetest.hash_node_position(pos)
+	local ph=minetest.pos_to_string(pos)
 	local nodetbl = ac.nodes[ph]
 	local env, code, err = nil, "", ""
 	if nodetbl then
@@ -49,7 +51,7 @@ end
 function ac.after_dig_node(pos, node, player)
 	advtrains.invalidate_all_paths()
 	advtrains.ndb.clear(pos)
-	local ph=minetest.hash_node_position(pos)
+	local ph=minetest.pos_to_string(pos)
 	ac.nodes[ph]=nil
 end
 
@@ -59,7 +61,7 @@ function ac.on_receive_fields(pos, formname, fields, player)
 	end
 	
 	local meta=minetest.get_meta(pos)
-	local ph=minetest.hash_node_position(pos)
+	local ph=minetest.pos_to_string(pos)
 	local nodetbl = ac.nodes[ph] or {}
 	--if fields.quit then return end
 	if fields.env then
@@ -85,7 +87,7 @@ function ac.on_receive_fields(pos, formname, fields, player)
 end
 
 function ac.run_in_env(pos, evtdata, customfct_p)
-	local ph=minetest.hash_node_position(pos)
+	local ph=minetest.pos_to_string(pos)
 	local nodetbl = ac.nodes[ph] or {}
 	
 	local meta

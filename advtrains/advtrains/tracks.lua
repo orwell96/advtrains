@@ -413,19 +413,19 @@ advtrains.detector.on_node = {}
 
 function advtrains.detector.enter_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
-	local pts=minetest.hash_node_position(ppos)
+	local pts=minetest.pos_to_string(ppos)
 	advtrains.detector.on_node[pts]=train_id
 	advtrains.detector.call_enter_callback(ppos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
-	local pts=minetest.hash_node_position(ppos)
+	local pts=minetest.pos_to_string(ppos)
 	advtrains.detector.on_node[pts]=nil
 	advtrains.detector.call_leave_callback(ppos, train_id)
 end
 function advtrains.detector.stay_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
-	local pts=minetest.hash_node_position(ppos)
+	local pts=minetest.pos_to_string(ppos)
 	advtrains.detector.on_node[pts]=train_id
 end
 
@@ -434,19 +434,16 @@ end
 function advtrains.detector.call_enter_callback(pos, train_id)
 	--atprint("instructed to call enter calback")
 
-	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
+	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
 	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_enter then
 		mregnode.advtrains.on_train_enter(pos, train_id)
 	end
-	
-	--atc code wants to be notified too
-	advtrains.atc.trigger_controller_train_enter(pos, train_id)
 end
 function advtrains.detector.call_leave_callback(pos, train_id)
 	--atprint("instructed to call leave calback")
 
-	local node = minetest.get_node(pos) --this spares the check if node is nil, it has a name in any case
+	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
 	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_leave then
 		mregnode.advtrains.on_train_leave(pos, train_id)

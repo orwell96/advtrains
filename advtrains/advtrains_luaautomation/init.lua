@@ -25,7 +25,9 @@ dofile(mp.."/interrupt.lua")
 dofile(mp.."/active_common.lua")
 dofile(mp.."/atc_rail.lua")
 dofile(mp.."/operation_panel.lua")
-dofile(mp.."/p_mesecon_iface.lua")
+if mesecon then
+	dofile(mp.."/p_mesecon_iface.lua")
+end
 dofile(mp.."/chatcmds.lua")
 
 
@@ -34,8 +36,10 @@ local file, err = io.open(filename, "r")
 if not file then
 	minetest.log("error", " Failed to read advtrains_luaautomation save data from file "..filename..": "..(err or "Unknown Error"))
 else
+	atprint("luaautomation reading file:",filename)
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
+		atprint(tbl)
 		if tbl.version==1 then
 			for envname, data in pairs(tbl.envs) do
 				atlatc.envs[envname]=atlatc.env_load(envname, data)
@@ -97,4 +101,3 @@ minetest.register_globalstep(function(dtime)
 		atlatc.save()
 	end
 end)
-minetest.register_on_shutdown(atlatc.save)

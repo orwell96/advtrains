@@ -258,8 +258,8 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 5. extend path as necessary ---
 	
-	local gen_front=math.max(train.index, train.detector_old_index) + 2
-	local gen_back=math.min(train.end_index, train.detector_old_end_index) - 2
+	local gen_front=math.max(train.index, train.detector_old_index) + 10
+	local gen_back=math.min(train.end_index, train.detector_old_end_index) - 10
 	
 	local maxn=train.path_extent_max or 0
 	while maxn < gen_front do--pregenerate
@@ -404,7 +404,7 @@ function advtrains.train_step_b(id, train, dtime)
 			for x=-1,1 do
 				for z=-1,1 do
 					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
-					local testpts=minetest.hash_node_position(testpos)
+					local testpts=minetest.pos_to_string(testpos)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
 						--collides
 						advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
@@ -755,7 +755,7 @@ function advtrains.invert_train(train_id)
 end
 
 function advtrains.get_train_at_pos(pos)
-	local ph=minetest.hash_node_position(advtrains.round_vector_floor_y(pos))
+	local ph=minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
 	return advtrains.detector.on_node[ph]
 end
 
