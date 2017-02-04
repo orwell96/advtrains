@@ -275,7 +275,7 @@ function advtrains.train_step_a(id, train, dtime)
 			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
 		end
 		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
-		maxn=advtrains.maxN(train.path)
+		maxn=maxn+1
 	end
 	train.path_extent_max=maxn
 	
@@ -293,7 +293,7 @@ function advtrains.train_step_a(id, train, dtime)
 			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
 		end
 		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
-		minn=advtrains.minN(train.path)
+		minn=minn-1
 	end
 	train.path_extent_min=minn
 	if not train.min_index_on_track then train.min_index_on_track=-1 end
@@ -321,36 +321,46 @@ function advtrains.train_step_a(id, train, dtime)
 	-- when paths get cleared, the old indices set above will be up-to-date and represent the state in which the last run of this code was made
 	local ifo, ifn, ibo, ibn = train.detector_old_index, math.floor(train.index), train.detector_old_end_index, math.floor(train.end_index)
 	local path=train.path
-	
-	for i=ibn, ifn do
-		if path[i] then
-			advtrains.detector.stay_node(path[i], id)
-		end
-	end
-	
-	if ifn>ifo then
-		for i=ifo+1, ifn do
+	if train.enter_node_all then
+		--field set by create_new_train_at.
+		--ensures that new train calls enter_node on all nodes
+		for i=ibn, ifn do
 			if path[i] then
 				advtrains.detector.enter_node(path[i], id)
 			end
 		end
-	elseif ifn<ifo then
-		for i=ifn, ifo-1 do
+		train.enter_node_all=nil
+	else
+		for i=ibn, ifn do
 			if path[i] then
-				advtrains.detector.leave_node(path[i], id)
+				advtrains.detector.stay_node(path[i], id)
 			end
 		end
-	end
-	if ibn<ibo then
-		for i=ibn, ibo-1 do
-			if path[i] then
-				advtrains.detector.enter_node(path[i], id)
+		
+		if ifn>ifo then
+			for i=ifo+1, ifn do
+				if path[i] then
+					advtrains.detector.enter_node(path[i], id)
+				end
+			end
+		elseif ifn<ifo then
+			for i=ifn+1, ifo do
+				if path[i] then
+					advtrains.detector.leave_node(path[i], id)
+				end
 			end
 		end
-	elseif ibn>ibo then
-		for i=ibo+1, ibn do
-			if path[i] then
-				advtrains.detector.leave_node(path[i], id)
+		if ibn<ibo then
+			for i=ibn, ibo-1 do
+				if path[i] then
+					advtrains.detector.enter_node(path[i], id)
+				end
+			end
+		elseif ibn>ibo then
+			for i=ibo, ibn-1 do
+				if path[i] then
+					advtrains.detector.leave_node(path[i], id)
+				end
 			end
 		end
 	end
@@ -463,6 +473,9 @@ function advtrains.create_new_train_at(pos, pos_prev)
 	advtrains.trains[newtrain_id].tarvelocity=0
 	advtrains.trains[newtrain_id].velocity=0
 	advtrains.trains[newtrain_id].trainparts={}
+	
+	advtrains.trains[newtrain_id].enter_node_all=true
+	
 	return newtrain_id
 end
 
@@ -600,6 +613,7 @@ function advtrains.split_train_at_wagon(wagon)
 	train.tarvelocity=0
 	newtrain.velocity=train.velocity
 	newtrain.tarvelocity=0
+	newtrain.enter_node_all=true
 end
 
 --there are 4 cases:
@@ -739,12 +753,19 @@ function advtrains.invert_train(train_id)
 	local train=advtrains.trains[train_id]
 	
 	local old_path=train.path
+	local old_path_dist=train.path_dist
 	train.path={}
-	train.index= - advtrains.get_train_end_index(train)
+	train.path_dist={}
+	train.index, train.end_index= -train.end_index, -train.index
+	train.path_extent_min, train.path_extent_max = -train.path_extent_max, -train.path_extent_min
+	train.min_index_on_track, train.max_index_on_track = -train.max_index_on_track, -train.min_index_on_track
+	train.detector_old_index, train.detector_old_end_index = -train.detector_old_end_index, -train.detector_old_index
+	
 	train.velocity=-train.velocity
 	train.tarvelocity=-train.tarvelocity
 	for k,v in pairs(old_path) do
 		train.path[-k]=v
+		train.path_dist[-k-1]=old_path_dist[k]
 	end
 	local old_trainparts=train.trainparts
 	train.trainparts={}

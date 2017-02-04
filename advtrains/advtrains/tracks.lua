@@ -419,8 +419,6 @@ function advtrains.detector.enter_node(pos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
-	local pts=minetest.pos_to_string(ppos)
-	advtrains.detector.on_node[pts]=nil
 	advtrains.detector.call_leave_callback(ppos, train_id)
 end
 function advtrains.detector.stay_node(pos, train_id)

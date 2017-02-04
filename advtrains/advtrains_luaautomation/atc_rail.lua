@@ -42,8 +42,8 @@ function r.fire_event(pos, evtdata)
 		if atc_arrow==nil then
 			atwarn("LuaAutomation ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
 			atc_arrow=true
-			tvel=train.velocity
 		end
+		tvel=train.velocity
 	end
 	local customfct={
 		atc_send = function(cmd)
