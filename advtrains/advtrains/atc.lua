@@ -41,10 +41,22 @@ function atc.send_command(pos)
 								)
 						advtrains.trains[train_id].atc_command=atc.controllers[pts].command
 						atprint("Sending ATC Command: "..atc.controllers[pts].command)
+						return true
 					end
 				end
+				atwarn("ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
+				advtrains.trains[train_id].atc_arrow=true
+				advtrains.trains[train_id].atc_command=atc.controllers[pts].command
+				atprint("Sending ATC Command: "..atc.controllers[pts].command)
+			else
+				atwarn("ATC rail at", pos, ": Sending command failed: The train",train_id,"does not exist. This seems to be a bug.")
 			end
+		else
+			atwarn("ATC rail at", pos, ": Sending command failed: There's no train at this position. This seems to be a bug.")
 		end
+	else
+		atwarn("ATC rail at", pos, ": Sending command failed: Entry for controller not found.")
+		atwarn("ATC rail at", pos, ": Please visit controller and click 'Save'")
 	end
 	return false
 end
@@ -182,7 +194,7 @@ local matchptn={
 			train.movedir=train.movedir*-1
 			train.atc_arrow = not train.atc_arrow
 		else
-			minetest.chat_send_all(attrans("ATC Reverse command warning: didn't reverse train, train moving!"))
+			atwarn(sid(id), attrans("ATC Reverse command warning: didn't reverse train, train moving!"))
 		end
 		return 1
 	end,
@@ -241,7 +253,7 @@ function atc.execute_atc_command(id, train)
 		local nest, pos, elsepos=0, 1
 		while nest>=0 do
 			if pos>#rest then
-				minetest.chat_send_all(attrans("ATC command syntax error: I statement not closed: @1",command))
+				atwarn(sid(id), attrans("ATC command syntax error: I statement not closed: @1",command))
 				atc.train_reset_command(id)
 				return
 			end
@@ -284,7 +296,7 @@ function atc.execute_atc_command(id, train)
 			end
 		end
 	end
-	minetest.chat_send_all(attrans("ATC command parse error: Unknown command: @1", command))
+	atwarn(sid(id), attrans("ATC command parse error: Unknown command: @1", command))
 	atc.train_reset_command(id)
 end
 

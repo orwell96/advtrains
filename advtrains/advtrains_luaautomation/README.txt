@@ -117,13 +117,15 @@ Fired when another node called 'interrupt_pos' on this position. 'message' is th
 In addition to the default environment functions, the following functions are available:
 
 atc_send(<atc_command>)
-Sends the specified ATC command to the train and returns true. If there is no train, returns false and does nothing.
-
+	Sends the specified ATC command to the train and returns true. If there is no train, returns false and does nothing.
 atc_reset()
-Resets the train's current ATC command
-
+	Resets the train's current ATC command. If there is no train, returns false and does nothing.
 atc_arrow
-Boolean, true when the train is driving in the direction of the arrows of the ATC rail
+	Boolean, true when the train is driving in the direction of the arrows of the ATC rail. Nil if there is no train.
+atc_id
+	Train ID of the train currently passing the controller. Nil if there's no train.
+atc_speed
+	Speed of the train, or nil if there is no train.
 
 # Operator panel
 This simple node executes its actions when punched. It can be used to change a switch and update the corresponding signals or similar applications.

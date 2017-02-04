@@ -49,6 +49,11 @@ if minetest.setting_getbool("advtrains_debug") then
 		minetest.chat_send_all("[advtrains]"..text)
 	end
 end
+atwarn=function(t, ...)
+	local text=advtrains.print_concat_table({t, ...})
+	minetest.log("warning", "[advtrains]"..text)
+	minetest.chat_send_all("[advtrains] -!- "..text)
+end
 sid=function(id) return string.sub(id, -4) end
 
 dofile(advtrains.modpath.."/helpers.lua");

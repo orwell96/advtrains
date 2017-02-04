@@ -85,6 +85,8 @@ atlatc.save = function()
 	file:close()
 end
 
+minetest.register_on_shutdown(atlatc.save)
+
 -- globalstep for step code
 local timer, step_int=0, 2
 local stimer, sstep_int=0, 10

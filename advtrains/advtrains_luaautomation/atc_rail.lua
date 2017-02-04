@@ -11,7 +11,7 @@ function r.fire_event(pos, evtdata)
 	local railtbl = atlatc.active.nodes[ph]
 	
 	if not railtbl then
-		atprint("missing rail table entry!")
+		atwarn("LuaAutomation ATC interface rail at",ph,": Data not in memory! Please visit position and click 'Save'!")
 		return
 	end
 	
@@ -19,40 +19,48 @@ function r.fire_event(pos, evtdata)
 	local arrowconn = railtbl.arrowconn
 	
 	--prepare ingame API for ATC. Regenerate each time since pos needs to be known
-	local atc_valid, atc_arrow
+	--If no train, then return false.
 	local train_id=advtrains.detector.on_node[ph]
-	local train=advtrains.trains[train_id]
-	if not train then return false end
-	if not train.path then
-		--we happened to get in between an invalidation step
-		--delay
-		atlatc.interrupt.add(0,pos,evtdata)
-		return
-	end
-	for index, ppos in pairs(train.path) do
-		if vector.equals(advtrains.round_vector_floor_y(ppos), pos) then
-			atc_arrow =
-					vector.equals(
-							advtrains.dirCoordSet(pos, arrowconn),
-							advtrains.round_vector_floor_y(train.path[index+train.movedir])
-					)
-			atc_valid = true
+	local train, atc_arrow, tvel
+	if train_id then train=advtrains.trains[train_id] end
+	if train then 
+		if not train.path then
+			--we happened to get in between an invalidation step
+			--delay
+			atlatc.interrupt.add(0,pos,evtdata)
+			return
+		end
+		for index, ppos in pairs(train.path) do
+			if vector.equals(advtrains.round_vector_floor_y(ppos), pos) then
+				atc_arrow =
+						vector.equals(
+								advtrains.dirCoordSet(pos, arrowconn),
+								advtrains.round_vector_floor_y(train.path[index+train.movedir])
+						)
+			end
+		end
+		if atc_arrow==nil then
+			atwarn("LuaAutomation ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
+			atc_arrow=true
+			tvel=train.velocity
 		end
 	end
 	local customfct={
 		atc_send = function(cmd)
+			if not train_id then return false end
 			advtrains.atc.train_reset_command(train_id)
-			if atc_valid then
-				train.atc_command=cmd
-				train.atc_arrow=atc_arrow
-				return atc_valid
-			end
+			train.atc_command=cmd
+			train.atc_arrow=atc_arrow
+			return true
 		end,
 		atc_reset = function(cmd)
+			if not train_id then return false end
 			advtrains.atc.train_reset_command(train_id)
 			return true
 		end,
-		atc_arrow = atc_arrow
+		atc_arrow = atc_arrow,
+		atc_id = train_id,
+		atc_speed = tvel,
 	}
 	
 	atlatc.active.run_in_env(pos, evtdata, customfct)

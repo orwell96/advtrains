@@ -76,9 +76,10 @@ function ac.on_receive_fields(pos, formname, fields, player)
 	if fields.cle then
 		nodetbl.data={}
 	end
-	meta:set_string("formspec", ac.getform(pos, meta))
 	
 	ac.nodes[ph]=nodetbl
+	
+	meta:set_string("formspec", ac.getform(pos, meta))
 	if nodetbl.env then
 		meta:set_string("infotext", "LuaAutomation component, assigned to environment '"..nodetbl.env.."'")
 	else
@@ -88,7 +89,11 @@ end
 
 function ac.run_in_env(pos, evtdata, customfct_p)
 	local ph=minetest.pos_to_string(pos)
-	local nodetbl = ac.nodes[ph] or {}
+	local nodetbl = ac.nodes[ph]
+	if not nodetbl then
+		atwarn("LuaAutomation component at",ph,": Data not in memory! Please visit component and click 'Save'!")
+		return
+	end
 	
 	local meta
 	if minetest.get_node(pos) then
@@ -96,10 +101,12 @@ function ac.run_in_env(pos, evtdata, customfct_p)
 	end
 	
 	if not nodetbl.env or not atlatc.envs[nodetbl.env] then
-		return false, "Not an existing environment: "..(nodetbl.env or "<nil>")
+		atwarn("LuaAutomation component at",ph,": Not an existing environment: "..(nodetbl.env or "<nil>"))
+		return false
 	end
 	if not nodetbl.code or nodetbl.code=="" then
-		return false, "No code to run!"
+		atwarn("LuaAutomation component at",ph,": No code to run! (insert -- to suppress warning)")
+		return false
 	end
 	
 	local customfct=customfct_p or {}
@@ -113,6 +120,7 @@ function ac.run_in_env(pos, evtdata, customfct_p)
 		atlatc.active.nodes[ph].data=atlatc.remove_invalid_data(dataout)
 	else
 		atlatc.active.nodes[ph].err=dataout
+		atwarn("LuaAutomation ATC interface rail at",ph,": LUA Error:",dataout)
 		if meta then
 			meta:set_string("infotext", "LuaAutomation ATC interface rail, ERROR:"..dataout)
 		end

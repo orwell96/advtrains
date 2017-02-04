@@ -615,7 +615,7 @@ if mesecon then
 				},
 				advtrains = {
 					on_train_enter=function(pos, train_id)
-						minetest.swap_node(pos, {name="advtrains:dtrack_detector_on".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
+						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_on".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
 						mesecon.receptor_on(pos, advtrains.meseconrules)
 					end
 				}
@@ -640,7 +640,7 @@ if mesecon then
 				},
 				advtrains = {
 					on_train_leave=function(pos, train_id)
-						minetest.swap_node(pos, {name="advtrains:dtrack_detector_off".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
+						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_off".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
 						mesecon.receptor_off(pos, advtrains.meseconrules)
 					end
 				}
