@@ -11,7 +11,7 @@ advtrains = {trains={}, wagon_save={}}
 
 advtrains.modpath = minetest.get_modpath("advtrains")
 
-local function print_concat_table(a)
+function advtrains.print_concat_table(a)
 	local str=""
 	local stra=""
 	for i=1,50 do
@@ -43,7 +43,16 @@ local function print_concat_table(a)
 end
 atprint=function() end
 if minetest.setting_getbool("advtrains_debug") then
-	atprint=function(t, ...) minetest.log("action", "[advtrains]"..print_concat_table({t, ...})) minetest.chat_send_all("[advtrains]"..print_concat_table({t, ...})) end
+	atprint=function(t, ...)
+		local text=advtrains.print_concat_table({t, ...})
+		minetest.log("action", "[advtrains]"..text)
+		minetest.chat_send_all("[advtrains]"..text)
+	end
+end
+atwarn=function(t, ...)
+	local text=advtrains.print_concat_table({t, ...})
+	minetest.log("warning", "[advtrains]"..text)
+	minetest.chat_send_all("[advtrains] -!- "..text)
 end
 sid=function(id) return string.sub(id, -4) end
 
@@ -80,6 +89,8 @@ dofile(advtrains.modpath.."/damage.lua")
 dofile(advtrains.modpath.."/signals.lua")
 dofile(advtrains.modpath.."/misc_nodes.lua")
 dofile(advtrains.modpath.."/crafting.lua")
+dofile(advtrains.modpath.."/craft_items.lua")
+
 
 --load/save
 
@@ -96,7 +107,6 @@ else
 			advtrains.wagon_save = tbl.wagon_save
 			advtrains.ndb.load_data(tbl.ndb)
 			advtrains.atc.load_data(tbl.atc)
-			--advtrains.latc.load_data(tbl.latc)
 		else
 			--oh no, its the old one...
 			advtrains.trains=tbl
@@ -165,7 +175,6 @@ advtrains.save = function()
 		trains = advtrains.trains,
 		wagon_save = advtrains.wagon_save,
 		atc = advtrains.atc.save_data(),
-		--latc = advtrains.latc.save_data(),
 		ndb = advtrains.ndb.save_data(),
 		version = 1,
 	}

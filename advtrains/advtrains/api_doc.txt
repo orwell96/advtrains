@@ -134,7 +134,7 @@ minetest.register_node(nodename, {
 	^- the height value of this rail that is saved in the path. usually the median of rely1 and rely2.
 
 	can_dig=function(pos)
-		return not advtrains.is_train_at_pos(pos)
+		return not advtrains.get_train_at_pos(pos)
 	end,
 	after_dig_node=function(pos)
 		advtrains.invalidate_all_paths()

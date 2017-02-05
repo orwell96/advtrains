@@ -40,7 +40,14 @@ advtrains.audit_interval=10
 
 
 advtrains.save_and_audit_timer=advtrains.audit_interval
-minetest.register_globalstep(function(dtime)
+minetest.register_globalstep(function(dtime_mt)
+	--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
+	local dtime=dtime_mt
+	if dtime>0.2 then
+		atprint("Limiting dtime to 0.2!")
+		dtime=0.2
+	end
+
 	advtrains.save_and_audit_timer=advtrains.save_and_audit_timer-dtime
 	if advtrains.save_and_audit_timer<=0 then
 		local t=os.clock()
@@ -251,8 +258,8 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 5. extend path as necessary ---
 	
-	local gen_front=math.max(train.index, train.detector_old_index) + 2
-	local gen_back=math.min(train.end_index, train.detector_old_end_index) - 2
+	local gen_front=math.max(train.index, train.detector_old_index) + 10
+	local gen_back=math.min(train.end_index, train.detector_old_end_index) - 10
 	
 	local maxn=train.path_extent_max or 0
 	while maxn < gen_front do--pregenerate
@@ -747,31 +754,11 @@ function advtrains.invert_train(train_id)
 	advtrains.update_trainpart_properties(train_id, true)
 end
 
-function advtrains.is_train_at_pos(pos)
-	--atprint("istrainat: pos "..minetest.pos_to_string(pos))
-	local checked_trains={}
-	local objrefs=minetest.get_objects_inside_radius(pos, 2)
-	for _,v in pairs(objrefs) do
-		local le=v:get_luaentity()
-		if le and le.is_wagon and le.initialized and le.train_id and not checked_trains[le.train_id] then
-			--atprint("istrainat: checking "..le.train_id)
-			checked_trains[le.train_id]=true
-			local path=le:train().path
-			if path then
-				--atprint("has path")
-				for i=math.floor(advtrains.get_train_end_index(le:train())+0.5),math.floor(le:train().index+0.5) do
-					if path[i] then
-						--atprint("has pathitem "..i.." "..minetest.pos_to_string(path[i]))
-						if vector.equals(advtrains.round_vector_floor_y(path[i]), pos) then
-							return true
-						end
-					end
-				end
-			end
-		end
-	end
-	return false
+function advtrains.get_train_at_pos(pos)
+	local ph=minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
+	return advtrains.detector.on_node[ph]
 end
+
 function advtrains.invalidate_all_paths()
 	--atprint("invalidating all paths")
 	for k,v in pairs(advtrains.trains) do

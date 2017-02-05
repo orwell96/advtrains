@@ -2,42 +2,22 @@
 --database of all nodes that have 'save_in_nodedb' field set to true in node definition
 
 
-
 --serialization format:
---(6byte poshash) (2byte contentid)
+--(2byte z) (2byte y) (2byte x) (2byte contentid)
 --contentid := (14bit nodeid, 2bit param2)
 
-local function hash_to_bytes(x)
-	local aH = math.floor(x / 1099511627776) % 256;
-	local aL = math.floor(x /    4294967296) % 256;
-	local bH = math.floor(x /      16777216) % 256;
-	local bL = math.floor(x /         65536) % 256;
-	local cH = math.floor(x /           256) % 256;
-	local cL = math.floor(x                ) % 256;
-	return(string.char(aH, aL, bH, bL, cH, cL));
-end
-local function cid_to_bytes(x)
+local function int_to_bytes(i)
+	local x=i+32768--clip to positive integers
 	local cH = math.floor(x /           256) % 256;
 	local cL = math.floor(x                ) % 256;
 	return(string.char(cH, cL));
 end
-local function bytes_to_hash(bytes)
-	local t={string.byte(bytes,1,-1)}
-	local n = 
-		t[1] * 1099511627776 +
-		t[2] *    4294967296 +
-		t[3] *      16777216 +
-		t[4] *         65536 +
-		t[5] *           256 +
-		t[6]
-    return n
-end
-local function bytes_to_cid(bytes)
+local function bytes_to_int(bytes)
 	local t={string.byte(bytes,1,-1)}
 	local n = 
 		t[1] *           256 +
 		t[2]
-    return n
+    return n-32768
 end
 local function l2b(x)
 	return x%4
@@ -51,25 +31,50 @@ local ndb={}
 local ndb_nodeids={}
 local ndb_nodes={}
 
+local function ndbget(x,y,z)
+	local ny=ndb_nodes[y]
+	if ny then
+		local nx=ny[x]
+		if nx then
+			return nx[z]
+		end
+	end
+	return nil
+end
+local function ndbset(x,y,z,v)
+	if not ndb_nodes[y] then
+		ndb_nodes[y]={}
+	end
+	if not ndb_nodes[y][x] then
+		ndb_nodes[y][x]={}
+	end
+	ndb_nodes[y][x][z]=v
+end
+
+
 --load
 --nodeids get loaded by advtrains init.lua and passed here
 function ndb.load_data(data)
 	ndb_nodeids = data and data.nodeids or {}
 end
 
-local path=minetest.get_worldpath().."/advtrains_ndb"
+local path=minetest.get_worldpath().."/advtrains_ndb2"
 
 local file, err = io.open(path, "r")
 if not file then
 	atprint("load ndb failed: ", err or "Unknown Error")
 else
 	local cnt=0
-	local hst=file:read(6)
+	local hst_z=file:read(2)
+	local hst_y=file:read(2)
+	local hst_x=file:read(2)
 	local cid=file:read(2)
-	while hst and #hst==6 and cid and #cid==2 do
-		ndb_nodes[bytes_to_hash(hst)]=bytes_to_cid(cid)
+	while hst_z and hst_y and hst_x and cid and #hst_z==2 and #hst_y==2 and #hst_x==2 and #cid==2 do
+		ndbset(bytes_to_int(hst_x), bytes_to_int(hst_y), bytes_to_int(hst_z), bytes_to_int(cid))
 		cnt=cnt+1
-		hst=file:read(6)
+		hst_z=file:read(2)
+		hst_y=file:read(2)
+		hst_x=file:read(2)
 		cid=file:read(2)
 	end
 	atprint("nodedb: read", cnt, "nodes.")
@@ -80,11 +85,17 @@ end
 function ndb.save_data()
 	local file, err = io.open(path, "w")
 	if not file then
-		atprint("load ndb failed: ", err or "Unknown Error")
+		atprint("save ndb failed: ", err or "Unknown Error")
 	else
-		for hash, cid in pairs(ndb_nodes) do
-			file:write(hash_to_bytes(hash))
-			file:write(cid_to_bytes(cid))
+		for y, ny in pairs(ndb_nodes) do
+			for x, nx in pairs(ny) do
+				for z, cid in pairs(nx) do
+					file:write(int_to_bytes(z))
+					file:write(int_to_bytes(y))
+					file:write(int_to_bytes(x))
+					file:write(int_to_bytes(cid))
+				end
+			end
 		end
 		file:close()
 	end
@@ -98,7 +109,7 @@ function ndb.get_node_or_nil(pos)
 		return node
 	else
 		--maybe we have the node in the database...
-		local cid=ndb_nodes[minetest.hash_node_position(pos)]
+		local cid=ndbget(pos.x, pos.y, pos.z)
 		if cid then
 			local nodeid = ndb_nodeids[u14b(cid)]
 			if nodeid then
@@ -136,19 +147,16 @@ function ndb.update(pos, pnode)
 			nid=#ndb_nodeids+1
 			ndb_nodeids[nid]=node.name
 		end
-		local hash = minetest.hash_node_position(pos)
-		ndb_nodes[hash] = (nid * 4) + (l2b(node.param2 or 0))
+		ndbset(pos.x, pos.y, pos.z, (nid * 4) + (l2b(node.param2 or 0)) )
 		--atprint("nodedb: updating node", pos, "stored nid",nid,"assigned",ndb_nodeids[nid],"resulting cid",ndb_nodes[hash])
 	else
 		--at this position there is no longer a node that needs to be tracked.
-		local hash = minetest.hash_node_position(pos)
-		ndb_nodes[hash] = nil
+		ndbset(pos.x, pos.y, pos.z, nil)
 	end
 end
 
 function ndb.clear(pos)
-	local hash = minetest.hash_node_position(pos)
-	ndb_nodes[hash] = nil
+	ndbset(pos.x, pos.y, pos.z, nil)
 end
 
 
@@ -195,7 +203,7 @@ minetest.register_abm({
         nodenames = {"group:save_in_nodedb"},
         run_at_every_load = true,
         action = function(pos, node)
-			local cid=ndb_nodes[minetest.hash_node_position(pos)]
+			local cid=ndbget(pos.x, pos.y, pos.z)
 			if cid then
 				--if in database, detect changes and apply.
 				local nodeid = ndb_nodeids[u14b(cid)]
@@ -208,6 +216,10 @@ minetest.register_abm({
 					if (nodeid~=node.name or param2~=node.param2) then
 						atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
 						minetest.swap_node(pos, {name=nodeid, param2 = param2})
+						local ndef=minetest.registered_nodes[nodeid]
+						if ndef and ndef.on_updated_from_nodedb then
+							ndef.on_updated_from_nodedb(pos, node)
+						end
 					end
 				end
 			else
@@ -224,9 +236,13 @@ minetest.register_on_dignode(function(pos, oldnode, digger)
 	ndb.clear(pos)
 end)
 
-function ndb.t()
-	return ndb_nodes[141061759008906]
+function ndb.get_nodes()
+	return ndb_nodes
 end
+function ndb.get_nodeids()
+	return ndb_nodeids
+end
+
 
 advtrains.ndb=ndb
 

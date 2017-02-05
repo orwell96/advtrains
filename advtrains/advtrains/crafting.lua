@@ -65,6 +65,45 @@ minetest.register_craft({
 	},
 })
 
+--boiler
+minetest.register_craft({
+	output = 'advtrains:boiler',
+	recipe = {
+		{'default:steel_ingot', 'default:steel_ingot', 'default:steel_ingot'},
+		{'doors:trapdoor_steel', '', 'default:steel_ingot'},
+		{'default:steel_ingot', 'default:steel_ingot', 'default:steel_ingot'},
+	},
+})
+
+--drivers'cab
+minetest.register_craft({
+	output = 'advtrains:driver_cab',
+	recipe = {
+		{'default:steel_ingot', 'default:steel_ingot', 'default:steel_ingot'},
+		{'', '', 'default:glass'},
+		{'default:steel_ingot', 'default:steel_ingot', 'default:steel_ingot'},
+	},
+})
+
+--drivers'cab
+minetest.register_craft({
+	output = 'advtrains:wheel',
+	recipe = {
+		{'', 'default:steel_ingot', ''},
+		{'default:steel_ingot', 'group:stick', 'default:steel_ingot'},
+		{'', 'default:steel_ingot', ''},
+	},
+})
+
+--chimney
+minetest.register_craft({
+	output = 'advtrains:chimney',
+	recipe = {
+		{'', 'default:steel_ingot', ''},
+		{'', 'default:steel_ingot', 'default:torch'},
+		{'', 'default:steel_ingot', ''},
+	},
+})
 
 
 --misc_nodes
