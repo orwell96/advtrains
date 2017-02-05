@@ -72,12 +72,15 @@ end
 local function cache_ndb()
 	itm_cache={}
 	local ndb_nodes=advtrains.ndb.get_nodes()
-	for phs,_ in pairs(ndb_nodes) do
-		local pos=minetest.get_position_from_hash(phs)
-		if not itm_cache[pos.x] then
-			itm_cache[pos.x]={}
+	for y, xzt in pairs(ndb_nodes) do
+		for x, zt in pairs(xzt) do
+			for z, _ in pairs(zt) do
+				if not itm_cache[x] then
+					itm_cache[x]={}
+				end
+				itm_cache[x][z]=y
+			end
 		end
-		itm_cache[pos.x][pos.z]=pos.y
 	end
 end
 
