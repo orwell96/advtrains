@@ -96,7 +96,7 @@ function ac.run_in_env(pos, evtdata, customfct_p)
 	end
 	
 	local meta
-	if minetest.get_node(pos) then
+	if minetest.get_node_or_nil(pos) then
 		meta=minetest.get_meta(pos)
 	end
 	
