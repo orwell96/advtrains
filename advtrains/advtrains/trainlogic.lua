@@ -159,6 +159,15 @@ function advtrains.train_step_a(id, train, dtime)
 		train.path_dist[-1]=vector.distance(train.last_pos, train.last_pos_prev)
 		train.path_extent_min=-1
 		train.path_extent_max=0
+		--[[
+		Bugfix for trains randomly ignoring ATC rails:
+		- Paths have been invalidated. 1 gets executed and ensures an initial path
+		- 2a sets train end index. The problem is that path_dist is not known for the whole path, so train end index will be nearly trainlen
+		- Since the detector indices are also unknown, they get set to the new (wrong) train_end_index. Enter_node calls are not executed for the nodes that lie in between real end_index and trainlen.
+		- The next step, mistake is recognized, train leaves some positions. From there, everything works again.
+		To overcome this, we will generate the full required path here so that path_dist is available for get_train_end_index(). 
+		]]
+		advtrains.pathpredict(id, train)
 	end
 	
 	--- 2a. set train.end_index which is required in different places, IF IT IS NOT SET YET by STMT afterwards. ---
@@ -186,17 +195,40 @@ function advtrains.train_step_a(id, train, dtime)
 	end
 	
 	--apply off-track handling:
-	--won't take any effect immediately after path reset because index_on_track not set, but that's not severe.
 	local front_off_track=train.max_index_on_track and train.index>train.max_index_on_track
 	local back_off_track=train.min_index_on_track and train.end_index<train.min_index_on_track
+	local pprint
 	if front_off_track and back_off_track then--allow movement in both directions
-		if train.tarvelocity>1 then train.tarvelocity=1 end
+		if train.tarvelocity>1 then
+			train.tarvelocity=1
+			atwarn("Train",sid(id)," is off track at both ends. Clipping velocity to 1")
+			pprint=true
+		end
 	elseif front_off_track then--allow movement only backward
-		if train.movedir==1 and train.tarvelocity>0 then train.tarvelocity=0 end
-		if train.movedir==-1 and train.tarvelocity>1 then train.tarvelocity=1 end
+		if train.movedir==1 and train.tarvelocity>0 then
+			train.tarvelocity=0
+			atwarn("Train",sid(id)," is off track. Trying to drive further out. Velocity clipped to 0")
+			pprint=true
+		end
+		if train.movedir==-1 and train.tarvelocity>1 then
+			train.tarvelocity=1
+			atwarn("Train",sid(id)," is off track. Velocity clipped to 1")
+			pprint=true
+		end
 	elseif back_off_track then--allow movement only forward
-		if train.movedir==-1 and train.tarvelocity>0 then train.tarvelocity=0 end
-		if train.movedir==1 and train.tarvelocity>1 then train.tarvelocity=1 end
+		if train.movedir==-1 and train.tarvelocity>0 then
+			train.tarvelocity=0
+			atwarn("Train",sid(id)," is off track. Trying to drive further out. Velocity clipped to 0")
+			pprint=true
+		end
+		if train.movedir==1 and train.tarvelocity>1 then
+			train.tarvelocity=1
+			atwarn("Train",sid(id)," is off track. Velocity clipped to 1")
+			pprint=true
+		end
+	end
+	if pprint then
+		atprint("max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> index", train.index, "end_index", train.end_index)
 	end
 	
 	--interpret ATC command
@@ -257,47 +289,8 @@ function advtrains.train_step_a(id, train, dtime)
 	train.end_index=advtrains.get_train_end_index(train)
 	
 	--- 5. extend path as necessary ---
-	
-	local gen_front=math.max(train.index, train.detector_old_index) + 10
-	local gen_back=math.min(train.end_index, train.detector_old_end_index) - 10
-	
-	local maxn=train.path_extent_max or 0
-	while maxn < gen_front do--pregenerate
-		--atprint("maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
-		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
-		if conway then
-			train.path[maxn+1]=conway
-			train.max_index_on_track=maxn
-		else
-			--do as if nothing has happened and preceed with path
-			--but do not update max_index_on_track
-			atprint("over-generating path max to index "..(maxn+1).." (position "..minetest.pos_to_string(train.path[maxn]).." )")
-			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
-		end
-		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
-		maxn=maxn+1
-	end
-	train.path_extent_max=maxn
-	
-	local minn=train.path_extent_min or -1
-	while minn > gen_back do
-		--atprint("minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
-		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
-		if conway then
-			train.path[minn-1]=conway
-			train.min_index_on_track=minn
-		else
-			--do as if nothing has happened and preceed with path
-			--but do not update min_index_on_track
-			atprint("over-generating path min to index "..(minn-1).." (position "..minetest.pos_to_string(train.path[minn]).." )")
-			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
-		end
-		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
-		minn=minn-1
-	end
-	train.path_extent_min=minn
-	if not train.min_index_on_track then train.min_index_on_track=-1 end
-	if not train.max_index_on_track then train.max_index_on_track=0 end
+	--why this is an extra function, see under 3.
+	advtrains.pathpredict(id, train, true)
 	
 	--make pos/yaw available for possible recover calls
 	if train.max_index_on_track<train.index then --whoops, train went too far. the saved position will be the last one that lies on a track, and savedpos_off_track_index_offset will hold how far to go from here
@@ -320,7 +313,9 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	-- when paths get cleared, the old indices set above will be up-to-date and represent the state in which the last run of this code was made
 	local ifo, ifn, ibo, ibn = train.detector_old_index, math.floor(train.index), train.detector_old_end_index, math.floor(train.end_index)
+	
 	local path=train.path
+	
 	if train.enter_node_all then
 		--field set by create_new_train_at.
 		--ensures that new train calls enter_node on all nodes
@@ -391,6 +386,57 @@ function advtrains.train_step_a(id, train, dtime)
 		return
 	end
 end
+
+--about regular: Used by 1. to ensure path gets generated far enough, since end index is not known at this time.
+function advtrains.pathpredict(id, train, regular)
+	local path_pregen=10
+	
+	local gen_front= path_pregen
+	local gen_back= - train.trainlen - path_pregen
+	if regular then
+		gen_front=math.max(train.index, train.detector_old_index) + path_pregen
+		gen_back=math.min(train.end_index, train.detector_old_end_index) - path_pregen
+	end
+	
+	local maxn=train.path_extent_max or 0
+	while maxn < gen_front do--pregenerate
+		--atprint("maxn conway for ",maxn,minetest.pos_to_string(path[maxn]),maxn-1,minetest.pos_to_string(path[maxn-1]))
+		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
+		if conway then
+			train.path[maxn+1]=conway
+			train.max_index_on_track=maxn
+		else
+			--do as if nothing has happened and preceed with path
+			--but do not update max_index_on_track
+			atprint("over-generating path max to index "..(maxn+1).." (position "..minetest.pos_to_string(train.path[maxn]).." )")
+			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
+		end
+		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
+		maxn=maxn+1
+	end
+	train.path_extent_max=maxn
+	
+	local minn=train.path_extent_min or -1
+	while minn > gen_back do
+		--atprint("minn conway for ",minn,minetest.pos_to_string(path[minn]),minn+1,minetest.pos_to_string(path[minn+1]))
+		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
+		if conway then
+			train.path[minn-1]=conway
+			train.min_index_on_track=minn
+		else
+			--do as if nothing has happened and preceed with path
+			--but do not update min_index_on_track
+			atprint("over-generating path min to index "..(minn-1).." (position "..minetest.pos_to_string(train.path[minn]).." )")
+			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
+		end
+		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
+		minn=minn-1
+	end
+	train.path_extent_min=minn
+	if not train.min_index_on_track then train.min_index_on_track=-1 end
+	if not train.max_index_on_track then train.max_index_on_track=0 end
+end
+
 
 function advtrains.train_step_b(id, train, dtime)
 
