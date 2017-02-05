@@ -321,7 +321,6 @@ function advtrains.register_tracks(tracktype, def, preset)
 			return not advtrains.get_train_at_pos(pos)
 		end,
 		after_dig_node=function(pos)
-			advtrains.invalidate_all_paths()
 			advtrains.ndb.update(pos)
 		end,
 		after_place_node=function(pos)
