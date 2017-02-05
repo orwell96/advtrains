@@ -666,7 +666,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 							wagon.seat_access[sgr] = fcont~="" and fcont or nil
 						end
 					end
-					wagon.lock_couples = fields.lock_couples == "true"
+					if fields.lock_couples then
+						wagon.lock_couples = fields.lock_couples == "true"
+					end
 				end
 			end
 		end
