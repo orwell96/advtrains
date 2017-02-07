@@ -55,7 +55,7 @@ advtrains.register_wagon("subway_wagon", {
 			require_doors_open=true,
 		},
 	},
-	assign_to_seat_group = {"dstand", "pass"},
+	assign_to_seat_group = {"pass","dstand"},
 	doors={
 		open={
 			[-1]={frames={x=0, y=20}, time=1},
@@ -68,6 +68,7 @@ advtrains.register_wagon("subway_wagon", {
 	},
 	visual_size = {x=1, y=1},
 	wagon_span=2,
+	--collisionbox = {-1.0,-0.5,-1.8, 1.0,2.5,1.8},
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	is_locomotive=true,
 	drops={"default:steelblock 4"},

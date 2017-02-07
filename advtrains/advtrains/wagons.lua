@@ -257,6 +257,14 @@ function wagon:on_step(dtime)
 					advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
 				end
 			end
+		else
+		   local pass = self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
+		   if pass and self:train().door_open~=0 then
+		      local pc=pass:get_player_control()
+		      if pc.up or pc.down then
+			 self:get_off(seatno)
+		      end
+		   end		      
 		end
 	end
 

@@ -15,7 +15,9 @@ minetest.register_globalstep(function(dtime)
 			if le and le.is_wagon and le.initialized and le:train() then
 				if (not advtrains.player_to_train_mapping[player:get_player_name()] or le.train_id~=advtrains.player_to_train_mapping[player:get_player_name()]) and math.abs(le:train().velocity)>2 then
 					--player:punch(object, 1000, {damage={fleshy=3*math.abs(le:train().velocity)}})
-					player:set_hp(player:get_hp()-math.abs(le:train().velocity)-3)
+				   player:set_hp(player:get_hp()-math.abs(le:train().velocity)-3)
+				elseif (not advtrains.player_to_train_mapping[player:get_player_name()] or le.train_id~=advtrains.player_to_train_mapping[player:get_player_name()]) and le:train().door_open~=0 then
+				   le:on_rightclick(player)
 				end
 			end
 		end
