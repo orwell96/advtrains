@@ -36,10 +36,9 @@ advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
-advtrains.audit_interval=10
+advtrains.save_interval=10
+advtrains.save_timer=advtrains.save_interval
 
-
-advtrains.save_and_audit_timer=advtrains.audit_interval
 minetest.register_globalstep(function(dtime_mt)
 	--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
 	local dtime=dtime_mt
@@ -48,13 +47,22 @@ minetest.register_globalstep(function(dtime_mt)
 		dtime=0.2
 	end
 
-	advtrains.save_and_audit_timer=advtrains.save_and_audit_timer-dtime
-	if advtrains.save_and_audit_timer<=0 then
+	advtrains.save_timer=advtrains.save_timer-dtime
+	if advtrains.save_timer<=0 then
 		local t=os.clock()
 		--save
 		advtrains.save()
-		advtrains.save_and_audit_timer=advtrains.audit_interval
+		advtrains.save_timer=advtrains.save_interval
 		atprintbm("saving", t)
+	end
+	--build a table of all players indexed by pts. used by damage and door system.
+	advtrains.playersbypts={}
+	for _, player in pairs(minetest.get_connected_players()) do
+		if not advtrains.player_to_train_mapping[player:get_player_name()] then
+			--players in train are not subject to damage
+			local ptspos=minetest.pos_to_string(vector.round(player:getpos()))
+			advtrains.playersbypts[ptspos]=player
+		end
 	end
 	--regular train step
 	-- do in two steps: 
@@ -67,13 +75,48 @@ minetest.register_globalstep(function(dtime_mt)
 		advtrains.train_step_a(k, v, dtime)
 	end
 	for k,v in pairs(advtrains.trains) do
-		advtrains.train_step_b(k, v, dtime)
+		advtrains.train_step_b(k, v, dtime, playersbypts)
 	end
 	
 	atprintbm("trainsteps", t)
 	endstep()
 end)
 
+minetest.register_on_joinplayer(function(player)
+	local pname=player:get_player_name()
+	local id=advtrains.player_to_train_mapping[pname]
+	if id then
+		local train=advtrains.trains[id]
+		if not train then advtrains.player_to_train_mapping[pname]=nil return end
+		--set the player to the train position.
+		--minetest will emerge the area and load the objects, which then will call reattach_all().
+		--because player is in mapping, it will not be subject to dying.
+		player:setpos(train.last_pos_prev)
+		--independent of this, cause all wagons of the train which are loaded to reattach their players
+		--needed because already loaded wagons won't call reattach_all()
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
+				wagon:reattach_all()
+			end
+		end
+	end
+end)
+
+minetest.register_on_dieplayer(function(player)
+	local pname=player:get_player_name()
+	local id=advtrains.player_to_train_mapping[pname]
+	if id then
+		local train=advtrains.trains[id]
+		if not train then advtrains.player_to_train_mapping[pname]=nil return end
+		for _,wagon in pairs(minetest.luaentities) do
+			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
+				--when player dies, detach him from the train
+				--call get_off_plr on every wagon since we don't know which one he's on.
+				wagon:get_off_plr(pname)
+			end
+		end
+	end
+end)
 --[[
 train step structure:
 
@@ -440,14 +483,11 @@ end
 
 function advtrains.train_step_b(id, train, dtime)
 
-	--- 8. check for collisions with other trains ---
+	--- 8. check for collisions with other trains and damage players ---
 	
 	local train_moves=(train.velocity~=0)
 	
 	if train_moves then
-		
-		--heh, new collision again.
-		--this time, based on NODES and the advtrains.detector.on_node table.
 		local collpos
 		local coll_grace=1
 		if train.movedir==1 then
@@ -460,6 +500,7 @@ function advtrains.train_step_b(id, train, dtime)
 			for x=-1,1 do
 				for z=-1,1 do
 					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
+					--- 8a Check collision ---
 					local testpts=minetest.pos_to_string(testpos)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
 						--collides
@@ -470,11 +511,27 @@ function advtrains.train_step_b(id, train, dtime)
 						train.movedir=train.movedir*-1
 						train.tarvelocity=0
 					end
+					--- 8b damage players ---
+					local player=advtrains.playersbypts[testpts]
+					if player and train.velocity>3 then
+						--instantly kill player
+						--drop inventory contents first, to not to spawn bones
+						local player_inv=player:get_inventory()
+						for i=1,player_inv:get_size("main") do
+							minetest.add_item(testpos, player_inv:get_stack("main", i))
+						end
+						for i=1,player_inv:get_size("craft") do
+							minetest.add_item(testpos, player_inv:get_stack("craft", i))
+						end
+						-- empty lists main and craft
+						player_inv:set_list("main", {})
+						player_inv:set_list("craft", {})
+						player:set_hp(0)
+					end
 				end
 			end
 		end
 	end
-	
 end
 
 

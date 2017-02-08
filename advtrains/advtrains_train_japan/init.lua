@@ -66,6 +66,7 @@ advtrains.register_wagon("engine_japan", {
 			[1]={frames={x=60, y=80}, time=1}
 		}
 	},
+	door_entry={-1},
 	visual_size = {x=1, y=1},
 	wagon_span=2.5,
 	is_locomotive=true,
@@ -134,6 +135,7 @@ advtrains.register_wagon("wagon_japan", {
 			[1]={frames={x=60, y=80}, time=1}
 		}
 	},
+	door_entry={-1, 1},
 	visual_size = {x=1, y=1},
 	wagon_span=2.3,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},

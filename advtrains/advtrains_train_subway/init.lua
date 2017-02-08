@@ -66,6 +66,7 @@ advtrains.register_wagon("subway_wagon", {
 			[1]={frames={x=60, y=80}, time=1}
 		}
 	},
+	door_entry={-1, 1},
 	visual_size = {x=1, y=1},
 	wagon_span=2,
 	--collisionbox = {-1.0,-0.5,-1.8, 1.0,2.5,1.8},
