@@ -165,7 +165,7 @@ function advtrains.train_step_a(id, train, dtime)
 		
 		if node_ok==nil then
 			--block not loaded, do nothing
-			atprint("last_pos not available")
+			atprint("last_pos", advtrains.round_vector_floor_y(train.last_pos), "not loaded and not in ndb, waiting")
 			return nil
 		elseif node_ok==false then
 			atprint("no track here, (fail) removing train.")
@@ -184,7 +184,7 @@ function advtrains.train_step_a(id, train, dtime)
 		
 		if prevnode_ok==nil then
 			--block not loaded, do nothing
-			atprint("prev not available")
+			atprint("last_pos_prev", advtrains.round_vector_floor_y(train.last_pos_prev), "not loaded and not in ndb, waiting")
 			return nil
 		elseif prevnode_ok==false then
 			atprint("no track at prev, (fail) removing train.")
@@ -482,6 +482,12 @@ end
 
 
 function advtrains.train_step_b(id, train, dtime)
+
+	--hacky fix: if train_step_a returned in phase 2, end_index may not be set.
+	--just return
+	if not train.end_index then
+		return
+	end
 
 	--- 8. check for collisions with other trains and damage players ---
 	
