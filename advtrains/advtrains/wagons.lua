@@ -227,6 +227,9 @@ function wagon:on_step(dtime)
 	if not self.seatp then
 		self.seatp={}
 	end
+	if not self.seatpc then
+		self.seatpc={}
+	end
 	
 	--Legacy: remove infotext since it does not work this way anyways
 	self.infotext=nil
