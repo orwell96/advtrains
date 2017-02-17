@@ -75,7 +75,7 @@ minetest.register_globalstep(function(dtime_mt)
 		advtrains.train_step_a(k, v, dtime)
 	end
 	for k,v in pairs(advtrains.trains) do
-		advtrains.train_step_b(k, v, dtime, playersbypts)
+		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	atprintbm("trainsteps", t)
