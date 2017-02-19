@@ -60,6 +60,10 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 			[1]={frames={x=60, y=80}, time=1} -- close right doors
 		}
 	},
+	door_entry={ 1.5, -1.5 }
+	^- optional. If defined, defines the locations of the doors on the model as distance from the object center on the path.
+	^- Getting on by walking in then takes effect.
+	^- Positive values mean front, negative ones back. Resulting position is automatically shifted to the right side.
 
 	wagon_span=2,
 	^- How far this wagon extends from its base position. Is the half of the wagon length.

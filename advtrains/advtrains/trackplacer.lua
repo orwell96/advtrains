@@ -256,7 +256,6 @@ minetest.register_craftitem("advtrains:trackworker",{
 				end
 				advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
 			end
-			advtrains.invalidate_all_paths()
 		end
 	end,
 	on_use=function(itemstack, user, pointed_thing)
@@ -285,8 +284,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 		    end
 			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
 			advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
-			--invalidate trains
-			advtrains.invalidate_all_paths()
+			
 		else
 			atprint(name, dump(tp.tracks))
 		end

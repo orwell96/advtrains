@@ -13,7 +13,7 @@ function iq.load(data)
 	timer = d.timer or 0
 end
 function iq.save()
-	return {queue = queue}
+	return {queue = queue, timer=timer}
 end
 
 function iq.add(t, pos, evtdata)

@@ -25,28 +25,6 @@ function atlatc.remove_invalid_data(o, nested)
 	nested[o] = nil
 	return o
 end
-function atlatc.replace_function_envs(o, fenv, nested)
-	if o==nil then return nil end
-	local valid_dt={["nil"]=true, boolean=true, number=true, string=true}
-	if type(o) ~= "table" then
-		--check valid data type
-		if type(o)=="function" then
-			setfenv(o, fenv)
-		end
-		return o
-	end
-	-- Contains table -> true/nil of currently nested tables
-	nested = nested or {}
-	if nested[o] then
-		return nil
-	end
-	nested[o] = true
-	for k, v in pairs(o) do
-		v = atlatc.replace_function_envs(v, fenv, nested)
-	end
-	nested[o] = nil
-	return o
-end
 
 
 local env_proto={
@@ -195,8 +173,11 @@ end
 -- F - Table global to the environment, can contain volatile data that is deleted when server quits.
 --     The init code should populate this table with functions and other definitions.
 
+local proxy_env={}
+--proxy_env gets a new metatable in every run, but is the shared environment of all functions ever defined.
+
 -- returns: true, fenv if successful; nil, error if error 
-function env_proto:execute_code(fenv, code, evtdata, customfct)
+function env_proto:execute_code(localenv, code, evtdata, customfct)
 	local metatbl ={
 		__index = function(t, i)
 			if i=="S" then
@@ -207,6 +188,8 @@ function env_proto:execute_code(fenv, code, evtdata, customfct)
 				return evtdata
 			elseif customfct and customfct[i] then
 				return customfct[i]
+			elseif localenv and localenv[i] then
+				return localenv[i]
 			end
 			return static_env[i]
 		end,
@@ -215,21 +198,19 @@ function env_proto:execute_code(fenv, code, evtdata, customfct)
 				debug.sethook()
 				error("Trying to overwrite environment contents")
 			end
-			rawset(t,i,v)
+			localenv[i]=v
 		end,
 	}
-	setmetatable(fenv, metatbl)
+	setmetatable(proxy_env, metatbl)
 	local fun, err=loadstring(code)
 	if not fun then
 		return false, err
 	end
-	--set function environment for all functions residing in F, so they get the right variables. Else it's a huge mess...
-	atlatc.replace_function_envs(self.fdata, fenv)
 	
-	setfenv(fun, fenv)
+	setfenv(fun, proxy_env)
 	local succ, data = pcall(fun)
 	if succ then
-		data=fenv
+		data=localenv
 	end
 	return succ, data
 end
@@ -240,6 +221,7 @@ function env_proto:run_initcode()
 		atprint("[atlatc]Running initialization code for environment '"..self.name.."'")
 		local succ, err = self:execute_code({}, self.init_code, {type="init", init=true})
 		if not succ then
+			atwarn("[atlatc]Executing InitCode for '"..self.name.."' failed:"..err)
 			self.init_err=err
 		end
 	end

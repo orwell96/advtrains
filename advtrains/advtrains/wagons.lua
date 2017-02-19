@@ -223,12 +223,16 @@ function wagon:on_step(dtime)
 		atprint("[wagon "..self.unique_id.."] missing train_id, destroying")
 		self.object:remove()
 		return
-	elseif not self.initialized then
-		self.initialized=true
 	end
 	if not self.seatp then
 		self.seatp={}
 	end
+	if not self.seatpc then
+		self.seatpc={}
+	end
+	
+	--Legacy: remove infotext since it does not work this way anyways
+	self.infotext=nil
 
 	--custom on_step function
 	if self.custom_on_step then
@@ -237,43 +241,38 @@ function wagon:on_step(dtime)
 
 	--driver control
 	for seatno, seat in ipairs(self.seats) do
-		if seat.driving_ctrl_access then
-			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-			local get_off_pressed=false
-			if driver and driver:get_player_control_bits()~=self.old_player_control_bits then
-				local pc=driver:get_player_control()
-				
+		local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
+		if seat.driving_ctrl_access and driver then
+			advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
+		end
+		if driver and driver:get_player_control_bits()~=self.seatpc[seatno] then
+			local pc=driver:get_player_control()
+			self.seatpc[seatno]=driver:get_player_control_bits()
+			
+			if seat.driving_ctrl_access then
+				--regular driver stand controls
 				advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
-				if pc.aux1 and pc.sneak then
-					get_off_pressed=true
-				end
-				
-				self.old_player_control_bits=driver:get_player_control_bits()
+			else
+				-- If on a passenger seat and doors are open, get off when W or D pressed.
+				local pass = self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
+				if pass and self:train().door_open~=0 then
+				local pc=pass:get_player_control()
+					if pc.up or pc.down then
+						self:get_off(seatno)
+					end
+				end		      
 			end
-			if driver then
-				if get_off_pressed then
-					self:get_off(seatno)
-				else
-					advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
-				end
+			if pc.aux1 and pc.sneak then
+				self:get_off(seatno)
 			end
-		else
-		   local pass = self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-		   if pass and self:train().door_open~=0 then
-		      local pc=pass:get_player_control()
-		      if pc.up or pc.down then
-			 self:get_off(seatno)
-		      end
-		   end		      
 		end
 	end
 
 	local gp=self:train()
-	
+	local fct=self.wagon_flipped and -1 or 1
 	--door animation
 	if self.doors then
 		if (self.door_anim_timer or 0)<=0 then
-			local fct=self.wagon_flipped and -1 or 1
 			local dstate = (gp.door_open or 0) * fct
 			if dstate ~= self.door_state then
 				local at
@@ -299,6 +298,7 @@ function wagon:on_step(dtime)
 			self.door_anim_timer = (self.door_anim_timer or 0) - dtime
 		end
 	end
+	
 	--DisCouple
 	if self.pos_in_trainparts and self.pos_in_trainparts>1 then
 		if gp.velocity==0 and not self.lock_couples then
@@ -333,6 +333,31 @@ function wagon:on_step(dtime)
 	
 	local index=advtrains.get_real_path_index(self:train(), self.pos_in_train)
 	--atprint("trainindex "..gp.index.." wagonindex "..index)
+	
+	--automatic get_on
+	--needs to know index and path
+	if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 then
+		--using the mapping created by the trainlogic globalstep
+		for i, ino in ipairs(self.door_entry) do
+			--fct is the flipstate flag from door animation above
+			local aci = index + ino*fct
+			local ix1=gp.path[math.floor(aci)]
+			local ix2=gp.path[math.floor(aci+1)]
+			-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
+			-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
+			local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
+			local pts1=minetest.pos_to_string(vector.round(vector.add(ix1, add)))
+			local pts2=minetest.pos_to_string(vector.round(vector.add(ix2, add)))
+
+			if advtrains.playersbypts[pts1] then
+				self:on_rightclick(advtrains.playersbypts[pts1])
+			end
+			if advtrains.playersbypts[pts2] then
+				self:on_rightclick(advtrains.playersbypts[pts2])
+			end
+			
+		end
+	end
 	
 	--position recalculation
 	local first_pos=gp.path[math.floor(index)]
@@ -490,6 +515,8 @@ function wagon:on_rightclick(clicker)
 			self:get_off(no)
 		end
 	else
+		--do not attach if already on a train
+		if advtrains.player_to_train_mapping[pname] then return end
 		if self.seat_groups then
 			if #self.seats==0 then
 				if self.has_inventory and self.get_inventory_formspec then
@@ -518,9 +545,9 @@ function wagon:on_rightclick(clicker)
 end
 
 function wagon:get_on(clicker, seatno)
-	if not self.seatp then
-		self.seatp={}
-	end
+	if not self.seatp then self.seatp={}end
+	if not self.seatpc then self.seatpc={}end--player controls in driver stands
+	
 	if not self.seats[seatno] then return end
 	local oldno=self:get_seatno(clicker:get_player_name())
 	if oldno then
@@ -535,6 +562,7 @@ function wagon:get_on(clicker, seatno)
 	end
 	atprint("get_on: attaching",clicker:get_player_name())
 	self.seatp[seatno] = clicker:get_player_name()
+	self.seatpc[seatno] = clicker:get_player_control_bits()
 	advtrains.player_to_train_mapping[clicker:get_player_name()]=self.train_id
 	clicker:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
 	clicker:set_eye_offset(self.seats[seatno].view_offset, self.seats[seatno].view_offset)
@@ -569,12 +597,14 @@ function wagon:get_off(seatno)
 		--abuse helper function
 		for _,r in ipairs({-1, 1}) do
 			local p=vector.add({x=isx and r or 0, y=0, z=not isx and r or 0}, objpos)
+			local offp=vector.add({x=isx and r*2 or 0, y=1, z=not isx and r*2 or 0}, objpos)
 			if minetest.get_item_group(minetest.get_node(p).name, "platform")>0 then
-				minetest.after(0.2, function() clicker:setpos({x=p.x, y=p.y+1, z=p.z}) end)
+				minetest.after(0.2, function() clicker:setpos(offp) end)
 			end
 		end
 	end
 	self.seatp[seatno]=nil
+	self.seatpc[seatno]=nil
 end
 function wagon:show_get_on_form(pname)
 	if not self.initialized then return end
@@ -660,7 +690,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	uid=string.match(formname, "^advtrains_prop_(.+)$")
 	if uid then
-		atprint(fields)
 		for _,wagon in pairs(minetest.luaentities) do
 			if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
 				local pname=player:get_player_name()
@@ -674,7 +703,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 							wagon.seat_access[sgr] = fcont~="" and fcont or nil
 						end
 					end
-					wagon.lock_couples = fields.lock_couples == "true"
+					if fields.lock_couples then
+						wagon.lock_couples = fields.lock_couples == "true"
+					end
 				end
 			end
 		end
@@ -729,13 +760,6 @@ function wagon:reattach_all()
 		end
 	end
 end
-minetest.register_on_joinplayer(function(player)
-	for _,wagon in pairs(minetest.luaentities) do
-		if wagon.is_wagon and wagon.initialized then
-			wagon:reattach_all()
-		end
-	end
-end)
 
 function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 	setmetatable(prototype, {__index=wagon})
@@ -774,7 +798,6 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 			local le=ob:get_luaentity()
 			
 			le.owner=placer:get_player_name()
-			le.infotext=desc..", owned by "..placer:get_player_name()
 			
 			local wagon_uid=le:init_new_instance(id, {})
 			

@@ -7,7 +7,7 @@ end
 
 --advtrains
 
-advtrains = {trains={}, wagon_save={}}
+advtrains = {trains={}, wagon_save={}, player_to_train_mapping={}}
 
 advtrains.modpath = minetest.get_modpath("advtrains")
 
@@ -84,7 +84,6 @@ dofile(advtrains.modpath.."/wagons.lua")
 dofile(advtrains.modpath.."/trackdb_legacy.lua")
 dofile(advtrains.modpath.."/nodedb.lua")
 dofile(advtrains.modpath.."/couple.lua")
-dofile(advtrains.modpath.."/damage.lua")
 
 dofile(advtrains.modpath.."/signals.lua")
 dofile(advtrains.modpath.."/misc_nodes.lua")
@@ -105,6 +104,7 @@ else
 			--congrats, we have the new save format.
 			advtrains.trains = tbl.trains
 			advtrains.wagon_save = tbl.wagon_save
+			advtrains.player_to_train_mapping = tbl.ptmap or {}
 			advtrains.ndb.load_data(tbl.ndb)
 			advtrains.atc.load_data(tbl.atc)
 		else
@@ -174,6 +174,7 @@ advtrains.save = function()
 	local save_tbl={
 		trains = advtrains.trains,
 		wagon_save = advtrains.wagon_save,
+		ptmap = advtrains.player_to_train_mapping,
 		atc = advtrains.atc.save_data(),
 		ndb = advtrains.ndb.save_data(),
 		version = 1,
