@@ -40,14 +40,14 @@ function atc.send_command(pos, par_tid)
 										advtrains.round_vector_floor_y(train.path[index+train.movedir])
 								)
 						advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-						atprint("Sending ATC Command: "..atc.controllers[pts].command)
+						atprint("Sending ATC Command: ", atc.controllers[pts].command)
 						return true
 					end
 				end
 				atwarn("ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
 				advtrains.trains[train_id].atc_arrow=true
 				advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-				atprint("Sending ATC Command: "..atc.controllers[pts].command)
+				atprint("Sending ATC Command: ", atc.controllers[pts].command)
 			else
 				atwarn("ATC rail at", pos, ": Sending command failed: The train",train_id,"does not exist. This seems to be a bug.")
 			end
