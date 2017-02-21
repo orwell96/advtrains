@@ -378,6 +378,11 @@ function advtrains.train_step_a(id, train, dtime)
 		if ifn>ifo then
 			for i=ifo+1, ifn do
 				if path[i] then
+					local pts=minetest.pos_to_string(path[i])
+					if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id then
+						--if another train has signed up for this position first, it won't be recognized in train_step_b. So do collision here.
+						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], false)
+					end
 					advtrains.detector.enter_node(path[i], id)
 				end
 			end
@@ -391,6 +396,11 @@ function advtrains.train_step_a(id, train, dtime)
 		if ibn<ibo then
 			for i=ibn, ibo-1 do
 				if path[i] then
+					local pts=minetest.pos_to_string(path[i])
+					if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id then
+						--if another train has signed up for this position first, it won't be recognized in train_step_b. So do collision here.
+						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], false)
+					end
 					advtrains.detector.enter_node(path[i], id)
 				end
 			end
@@ -510,12 +520,7 @@ function advtrains.train_step_b(id, train, dtime)
 					local testpts=minetest.pos_to_string(testpos)
 					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
 						--collides
-						advtrains.spawn_couple_on_collide(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
-						
-						train.recently_collided_with_env=true
-						train.velocity=0.5*train.velocity
-						train.movedir=train.movedir*-1
-						train.tarvelocity=0
+						advtrains.collide_and_spawn_couple(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
 					end
 					--- 8b damage players ---
 					local player=advtrains.playersbypts[testpts]
@@ -539,37 +544,6 @@ function advtrains.train_step_b(id, train, dtime)
 		end
 	end
 end
-
-
---structure of train table:
---[[
-trains={
-	[train_id]={
-		trainparts={
-			[n]=wagon_id
-		}
-		path={path}
-		velocity
-		tarvelocity
-		index
-		trainlen
-		path_inv_level
-		last_pos       |
-		last_dir       | for pathpredicting.
-	}
-}
---a wagon itself has the following properties:
-wagon={
-	unique_id
-	train_id
-	pos_in_train (is index difference, including train_span stuff)
-	pos_in_trainparts (is index in trainparts tabel of trains)
-}
-inherited by metatable:
-wagon_proto={
-	wagon_span
-}
-]]
 
 --returns new id
 function advtrains.create_new_train_at(pos, pos_prev)
@@ -750,10 +724,17 @@ function advtrains.trains_facing(train1, train2)
 	return nil
 end
 
-function advtrains.spawn_couple_on_collide(id1, pos, id2, t1_is_backpos)
+function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 	atprint("COLLISION: "..sid(id1).." and "..sid(id2).." at "..minetest.pos_to_string(pos)..", t1_is_backpos="..(t1_is_backpos and "true" or "false"))
 	--TODO:
 	local train1=advtrains.trains[id1]
+	
+	-- do collision
+	train1.recently_collided_with_env=true
+	train1.velocity=0.5*train1.velocity
+	train1.movedir=train1.movedir*-1
+	train1.tarvelocity=0
+	
 	local train2=advtrains.trains[id2]
 	
 	if not train1 or not train2 then return end
@@ -774,14 +755,8 @@ function advtrains.spawn_couple_on_collide(id1, pos, id2, t1_is_backpos)
 	local t2_is_backpos
 	atprint("End positions: "..minetest.pos_to_string(frontpos2)..minetest.pos_to_string(backpos2))
 	
-	if vector.distance(frontpos2, pos)<2 then
-		t2_is_backpos=false
-	elseif vector.distance(backpos2, pos)<2 then
-		t2_is_backpos=true
-	else
-		atprint("Err: not a endpos")
-		return --the collision position is not the end position.
-	end
+	t2_is_backpos = vector.distance(backpos2, pos) < vector.distance(frontpos2, pos)
+	
 	atprint("t2_is_backpos="..(t2_is_backpos and "true" or "false"))
 	
 	local t1_has_couple
@@ -827,7 +802,6 @@ function advtrains.spawn_couple_on_collide(id1, pos, id2, t1_is_backpos)
 	end
 	atprint("Couple entity:"..dump(le))
 	
-	--also TODO: integrate check_trainpartload into update_trainpart_properties. 
 end
 --order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
 --pos1 and pos2 are just needed to form a median.
