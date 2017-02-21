@@ -346,16 +346,20 @@ function wagon:on_step(dtime)
 			-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
 			-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
 			local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
-			local pts1=minetest.pos_to_string(vector.round(vector.add(ix1, add)))
-			local pts2=minetest.pos_to_string(vector.round(vector.add(ix2, add)))
-
-			if advtrains.playersbypts[pts1] then
-				self:on_rightclick(advtrains.playersbypts[pts1])
+			local pts1=vector.round(vector.add(ix1, add))
+			local pts2=vector.round(vector.add(ix2, add))
+			local ckpts={
+				pts1,
+				pts2,
+				vector.add(pts1, {x=0, y=1, z=0}),
+				vector.add(pts2, {x=0, y=1, z=0}),
+			}
+			for _,ckpos in ipairs(ckpts) do
+				local cpp=minetest.pos_to_string(ckpos)
+				if advtrains.playersbypts[cpp] then
+					self:on_rightclick(advtrains.playersbypts[cpp])
+				end
 			end
-			if advtrains.playersbypts[pts2] then
-				self:on_rightclick(advtrains.playersbypts[pts2])
-			end
-			
 		end
 	end
 	
