@@ -192,7 +192,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 			end
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above
-				local upos=pointed_thing.under
+				local upos=vector.subtract(pointed_thing.above, {x=0, y=1, z=0})
 				if minetest.is_protected(pos,name) and minetest.is_protected(upos,name) then
 				   return itemstack
 				end
