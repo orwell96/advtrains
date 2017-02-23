@@ -1,4 +1,0 @@
-Driver Stand = Führerstand
-Japanese Train Engine = Japanische Personenzug-Lokomotive
-Default Seat = Standardsitzplatz
-Japanese Train Wagon = Japanischer Personenzug-Passagierwaggon
