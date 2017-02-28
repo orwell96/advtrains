@@ -25,6 +25,7 @@ dofile(mp.."/interrupt.lua")
 dofile(mp.."/active_common.lua")
 dofile(mp.."/atc_rail.lua")
 dofile(mp.."/operation_panel.lua")
+dofile(mp.."/pcnaming.lua")
 if mesecon then
 	dofile(mp.."/p_mesecon_iface.lua")
 end
@@ -39,13 +40,13 @@ else
 	atprint("luaautomation reading file:",filename)
 	local tbl = minetest.deserialize(file:read("*a"))
 	if type(tbl) == "table" then
-		atprint(tbl)
 		if tbl.version==1 then
 			for envname, data in pairs(tbl.envs) do
 				atlatc.envs[envname]=atlatc.env_load(envname, data)
 			end
 			atlatc.active.load(tbl.active)
 			atlatc.interrupt.load(tbl.interrupt)
+			atlatc.pcnaming.load(tbl.pcnaming)
 		end
 	else
 		minetest.log("error", " Failed to read advtrains_luaautomation save data from file "..filename..": Not a table!")
@@ -69,6 +70,7 @@ atlatc.save = function()
 		envs=envdata,
 		active = atlatc.active.save(),
 		interrupt = atlatc.interrupt.save(),
+		pcnaming = atlatc.pcnaming.save(),
 	}
 	
 	local datastr = minetest.serialize(save_tbl)

@@ -57,9 +57,11 @@ Shorthand function to create a position vector {x=?, y=?, z=?} with less charact
 
 getstate(pos)
 Get the state of the passive component at position 'pos'. See section on passive components for more info.
+pos can be either a position vector (created by POS()) or a string, the name of this passive component.
 
 setstate(pos, newstate)
 Set the state of the passive component at position 'pos'.
+pos can be either a position vector (created by POS()) or a string, the name of this passive component.
 
 interrupt(time, message)
 Cause LuaAutomation to trigger an 'int' event on this component after the given time in seconds with the specified 'message' field. 'message' can be of any Lua data type.
@@ -86,18 +88,12 @@ if event.wanted then ...do stuff... end
 # Init code
 The initialization code is not a component as such, but rather a part of the whole environment. It can (and should) be used to make definitions that other components can refer to.
 Examples:
-A table with the positions of signals mapped to memorizable names, like this:
-F.signals={
-	station_platform1_leave_north=POS(204,5,678),
-	station_platform1_leave_south=POS(202,5,643),
-	station_platform2_leave_north=POS(208,5,678),
-	station_platform2_leave_south=POS(210,5,643),
-}
 A function to define behavior for trains in subway stations:
 function F.station()
 	if event.train then atc_send("B0WOL") end
 	if event.int and event.message="depart" then atc_send("OCD1SM") end
 end
+
 The init code is run whenever the F table needs to be refilled with data. This is the case on server startup and whenever the init code is changed and you choose to run it.
 Functions are run in the environment of the currently active node, regardless of where they were defined. So, the 'event' table always reflects the state of the calling node.
 
@@ -152,4 +148,10 @@ The Mesecon switch can be switched using LuaAutomation. Note that this is not po
 "on" - the switch is switched on
 "off" - the switch is switched off
 
+### Passive component naming
+You can assign names to passive components using the Passive Component Naming tool.
+Once you set a name for any component, you can reference it by that name in the getstate() and setstate() functions, like this:
+(Imagine a signal that you have named "Stn_P1_out" at position (1,2,3) )
+setstate("Stn_P1_out", "green") instead of setstate(POS(1,2,3), "green")
+This way, you don't need to memorize positions.
 
