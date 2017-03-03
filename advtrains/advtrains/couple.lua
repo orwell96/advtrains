@@ -10,6 +10,7 @@ wagon
 wagons keep their couple entity minetest-internal id inside the field discouple_id. if it refers to nowhere, they will spawn a new one if player is near
 ]]
 
+local couple_max_dist=3
 
 minetest.register_entity("advtrains:discouple", {
 	visual="sprite",
@@ -22,6 +23,7 @@ minetest.register_entity("advtrains:discouple", {
 	on_activate=function(self, staticdata) 
 		if staticdata=="DISCOUPLE" then
 			--couple entities have no right to exist further...
+			atprint("Discouple loaded from staticdata, destroying")
 			self.object:remove()
 			return
 		end
@@ -44,6 +46,7 @@ minetest.register_entity("advtrains:discouple", {
 					end
 				end
 			end
+			atprint("Discouple punched. Splitting train", self.wagon.train_id)
 			advtrains.split_train_at_wagon(self.wagon)--found in trainlogic.lua
 			self.object:remove()
 		elseif self.wagon.lock_couples then
@@ -56,10 +59,12 @@ minetest.register_entity("advtrains:discouple", {
 		local t=os.clock()
 		if not self.wagon then
 			self.object:remove()
+			atprint("Discouple: no wagon, destroying")
 			return
 		end
 		--getyaw seems to be a reliable method to check if an object is loaded...if it returns nil, it is not.
 		if not self.wagon.object:getyaw() then
+			atprint("Discouple: wagon no longer loaded, destroying")
 			self.object:remove()
 			return
 		end
@@ -96,6 +101,7 @@ minetest.register_entity("advtrains:couple", {
 	on_activate=function(self, staticdata) 
 		if staticdata=="COUPLE" then
 			--couple entities have no right to exist further...
+			atprint("Couple loaded from staticdata, destroying")
 			self.object:remove()
 			return
 		end
@@ -120,15 +126,21 @@ minetest.register_entity("advtrains:couple", {
 			advtrains.invert_train(id1)
 			advtrains.do_connect_trains(id1, id2, clicker)
 		end
+		atprint("Coupled trains", id1, id2)
 		self.object:remove()
 	end,
 	on_step=function(self, dtime)
 		local t=os.clock()
-		if not self.train_id_1 or not self.train_id_2 then atprint("wtf no train ids?")return end
+		if not self.train_id_1 or not self.train_id_2 then atprint("Couple: train ids not set!") self.object:remove() return end
 		local train1=advtrains.trains[self.train_id_1]
 		local train2=advtrains.trains[self.train_id_2]
-		if not train1 or not train2 or not train1.path or not train2.path or not train1.index or not train2.index then
+		if not train1 or not train2 then
+			atprint("Couple: trains missing, destroying")
 			self.object:remove()
+			return
+		end
+		if not train1.path or not train2.path or not train1.index or not train2.index or not train1.end_index or not train2.end_index then
+			atprint("Couple: paths or end_index missing. Might happen when paths got cleared")
 			return
 		end
 		
@@ -136,15 +148,16 @@ minetest.register_entity("advtrains:couple", {
 		if not self.train1_is_backpos then
 			tp1=advtrains.get_real_index_position(train1.path, train1.index)
 		else
-			tp1=advtrains.get_real_index_position(train1.path, advtrains.get_train_end_index(train1))
+			tp1=advtrains.get_real_index_position(train1.path, train1.end_index)
 		end
 		local tp2
 		if not self.train2_is_backpos then
 			tp2=advtrains.get_real_index_position(train2.path, train2.index)
 		else
-			tp2=advtrains.get_real_index_position(train2.path, advtrains.get_train_end_index(train2))
+			tp2=advtrains.get_real_index_position(train2.path, train2.end_index)
 		end
-		if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<2) then
+		if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<couple_max_dist) then
+			atprint("Couple: train end positions too distanced, destroying")
 			self.object:remove()
 			return
 		else

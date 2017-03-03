@@ -746,7 +746,7 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 		end
 	end
 	if not found then
-		atprint("Err: pos not in path")
+		atprint("Err: pos not in path. Not spawning a couple")
 		return 
 	end
 	
@@ -786,6 +786,7 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 	le.train1_is_backpos=t1_is_backpos
 	le.train2_is_backpos=t2_is_backpos
 	--find in object_refs
+	local p_aoi
 	for aoi, compare in pairs(minetest.object_refs) do
 		if compare==obj then
 			if t1_is_backpos then
@@ -798,10 +799,10 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 			else
 				train2.couple_eid_front=aoi
 			end
+			p_aoi=aoi
 		end
 	end
-	atprint("Couple entity:"..dump(le))
-	
+	atprint("Couple spawned (ActiveObjectID ",p_aoi,")")
 end
 --order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
 --pos1 and pos2 are just needed to form a median.
