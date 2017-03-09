@@ -161,7 +161,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 	else
 		local pc=puncher:get_player_control()
 		if not pc.sneak then
-			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, shift-leftclick the wagon."))
+			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, hold Sneak and left-click the wagon."))
 			return
 		end
 
@@ -543,7 +543,7 @@ function wagon:on_rightclick(clicker)
 				end
 			end
 			minetest.chat_send_player(pname, attrans("Can't get on: wagon full or doors closed!"))
-			minetest.chat_send_player(pname, attrans("Use shift+click to open doors forcefully!"))
+			minetest.chat_send_player(pname, attrans("Use Sneak+rightclick to bypass closed doors!"))
 		else
 			self:show_get_on_form(pname)
 		end
@@ -761,7 +761,7 @@ function wagon:seating_from_key_helper(pname, fields, no)
 		self:show_wagon_properties(pname)
 	end
 	if fields.dcwarn then
-		minetest.chat_send_player(pname, attrans("Doors are closed! Use shift-rightclick to open doors with force and get off!"))
+		minetest.chat_send_player(pname, attrans("Doors are closed! Use Sneak+rightclick to ignore the closed doors and get off!"))
 	end
 	if fields.off then
 		self:get_off(no)
