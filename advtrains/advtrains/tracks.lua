@@ -37,7 +37,7 @@ advtrains.all_tracktypes={}
 local function conns(c1, c2, r1, r2, rh, rots) return {conn1=c1, conn2=c2, rely1=r1, rely2=r2, railheight=rh} end
 
 local ap={}
-ap.t_30deg={
+ap.t_30deg_flat={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -46,11 +46,6 @@ ap.t_30deg={
 		swlcr=conns(0,7),
 		swrst=conns(0,8),
 		swrcr=conns(0,9),
-		vst1=conns(8,0,0,0.5,0.25),
-		vst2=conns(8,0,0.5,1,0.75),
-		vst31=conns(8,0,0,0.33,0.16),
-		vst32=conns(8,0,0.33,0.66,0.5),
-		vst33=conns(8,0,0.66,1,0.83),
 	},
 	description={
 		st="straight",
@@ -59,11 +54,6 @@ ap.t_30deg={
 		swlcr="left switch (curve)",
 		swrst="right switch (straight)",
 		swrcr="right switch (curve)",
-		vst1="steep uphill 1/2",
-		vst2="steep uphill 2/2",
-		vst31="uphill 1/3",
-		vst32="uphill 2/3",
-		vst33="uphill 3/3",
 	},
 	switch={
 		swlst="swlcr",
@@ -100,6 +90,29 @@ ap.t_30deg={
 		["swlcr"]="swrcr",
 		["swlst"]="swrst",
 	},
+	rotation={"", "_30", "_45", "_60"},
+	slopenodes={},
+	increativeinv={},
+}
+ap.t_30deg_slope={
+	regstep=1,
+	variant={
+		vst1=conns(8,0,0,0.5,0.25),
+		vst2=conns(8,0,0.5,1,0.75),
+		vst31=conns(8,0,0,0.33,0.16),
+		vst32=conns(8,0,0.33,0.66,0.5),
+		vst33=conns(8,0,0.66,1,0.83),
+	},
+	description={
+		vst1="steep uphill 1/2",
+		vst2="steep uphill 2/2",
+		vst31="uphill 1/3",
+		vst32="uphill 2/3",
+		vst33="uphill 3/3",
+	},
+	switch={},
+	switchmc={},
+	switchst={},
 	regsp=true,
 	slopenodes={
 		vst1=true, vst2=true,
@@ -115,6 +128,7 @@ ap.t_30deg={
 		max=2,
 	},
 	rotation={"", "_30", "_45", "_60"},
+	trackworker={},
 	increativeinv={},
 }
 ap.t_30deg_straightonly={
@@ -269,7 +283,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 		local img_suffix=suffix..rotation
 		return {
 			mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
-			tiles = {def.shared_texture or (def.texture_prefix.."_"..img_suffix..".png")},
+			tiles = {def.shared_texture or (def.texture_prefix.."_"..img_suffix..".png"), def.second_texture},
 			--inventory_image = def.texture_prefix.."_"..img_suffix..".png",
 			--wield_image = def.texture_prefix.."_"..img_suffix..".png",
 			description=def.description.."("..preset.description[suffix]..rotation..")",
@@ -567,16 +581,27 @@ advtrains.register_tracks("regular", {
 	formats={vst1={}, vst2={}},
 }, ap.t_45deg)
 
-
+--flat
 advtrains.register_tracks("default", {
 	nodename_prefix="advtrains:dtrack",
 	texture_prefix="advtrains_dtrack",
 	models_prefix="advtrains_dtrack",
 	models_suffix=".b3d",
-	shared_texture="advtrains_dtrack_rail.png",
+	shared_texture="advtrains_dtrack_shared.png",
+	description=attrans("Track"),
+	formats={},
+}, ap.t_30deg_flat)
+--slopes
+advtrains.register_tracks("default", {
+	nodename_prefix="advtrains:dtrack",
+	texture_prefix="advtrains_dtrack",
+	models_prefix="advtrains_dtrack",
+	models_suffix=".obj",
+	shared_texture="advtrains_dtrack_shared.png",
+	second_texture="default_gravel.png",
 	description=attrans("Track"),
 	formats={vst1={true, false, true}, vst2={true, false, true}, vst31={true}, vst32={true}, vst33={true}},
-}, ap.t_30deg)
+}, ap.t_30deg_slope)
 
 --bumpers
 advtrains.register_tracks("default", {
@@ -585,6 +610,7 @@ advtrains.register_tracks("default", {
 	models_prefix="advtrains_dtrack_bumper",
 	models_suffix=".b3d",
 	shared_texture="advtrains_dtrack_rail.png",
+	--bumpers still use the old texture until the models are redone.
 	description=attrans("Bumper"),
 	formats={},
 }, ap.t_30deg_straightonly)
@@ -597,9 +623,9 @@ if mesecon then
 	advtrains.register_tracks("default", {
 		nodename_prefix="advtrains:dtrack_detector_off",
 		texture_prefix="advtrains_dtrack_detector",
-		models_prefix="advtrains_dtrack_detector",
+		models_prefix="advtrains_dtrack",
 		models_suffix=".b3d",
-		shared_texture="advtrains_dtrack_rail.png",
+		shared_texture="advtrains_dtrack_shared_detector_off.png",
 		description=attrans("Detector Rail"),
 		formats={},
 		get_additional_definiton = function(def, preset, suffix, rotation)
@@ -621,10 +647,10 @@ if mesecon then
 	}, ap.t_30deg_straightonly)
 	advtrains.register_tracks("default", {
 		nodename_prefix="advtrains:dtrack_detector_on",
-		texture_prefix="advtrains_dtrack_detector",
-		models_prefix="advtrains_dtrack_detector",
+		texture_prefix="advtrains_dtrack",
+		models_prefix="advtrains_dtrack",
 		models_suffix=".b3d",
-		shared_texture="advtrains_dtrack_rail_detector_on.png",
+		shared_texture="advtrains_dtrack_shared_detector_on.png",
 		description="Detector(on)(you hacker you)",
 		formats={},
 		get_additional_definiton = function(def, preset, suffix, rotation)

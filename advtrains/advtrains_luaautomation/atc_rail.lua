@@ -70,9 +70,9 @@ end
 advtrains.register_tracks("default", {
 	nodename_prefix="advtrains_luaautomation:dtrack",
 	texture_prefix="advtrains_dtrack_atc",
-	models_prefix="advtrains_dtrack_detector",
+	models_prefix="advtrains_dtrack",
 	models_suffix=".b3d",
-	shared_texture="advtrains_dtrack_rail_atc.png",
+	shared_texture="advtrains_dtrack_shared_atc.png",
 	description=atltrans("LuaAutomation ATC Rail"),
 	formats={},
 	get_additional_definiton = function(def, preset, suffix, rotation)

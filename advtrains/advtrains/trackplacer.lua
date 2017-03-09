@@ -7,6 +7,7 @@ local tp={
 }
 
 function tp.register_tracktype(nnprefix, n_suffix)
+	if tp.tracks[nnprefix] then return end--due to the separate registration of slopes and flats for the same nnpref, definition would be overridden here. just don't.
 	tp.tracks[nnprefix]={
 		default=n_suffix,
 		single_conn={},
