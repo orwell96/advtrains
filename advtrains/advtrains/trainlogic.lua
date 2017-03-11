@@ -523,21 +523,23 @@ function advtrains.train_step_b(id, train, dtime)
 						advtrains.collide_and_spawn_couple(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
 					end
 					--- 8b damage players ---
-					local player=advtrains.playersbypts[testpts]
-					if player and train.velocity>3 then
-						--instantly kill player
-						--drop inventory contents first, to not to spawn bones
-						local player_inv=player:get_inventory()
-						for i=1,player_inv:get_size("main") do
-							minetest.add_item(testpos, player_inv:get_stack("main", i))
+					if not minetest.setting_getbool("creative_mode") then
+						local player=advtrains.playersbypts[testpts]
+						if player and train.velocity>3 then
+							--instantly kill player
+							--drop inventory contents first, to not to spawn bones
+							local player_inv=player:get_inventory()
+							for i=1,player_inv:get_size("main") do
+								minetest.add_item(testpos, player_inv:get_stack("main", i))
+							end
+							for i=1,player_inv:get_size("craft") do
+								minetest.add_item(testpos, player_inv:get_stack("craft", i))
+							end
+							-- empty lists main and craft
+							player_inv:set_list("main", {})
+							player_inv:set_list("craft", {})
+							player:set_hp(0)
 						end
-						for i=1,player_inv:get_size("craft") do
-							minetest.add_item(testpos, player_inv:get_stack("craft", i))
-						end
-						-- empty lists main and craft
-						player_inv:set_list("main", {})
-						player_inv:set_list("craft", {})
-						player:set_hp(0)
 					end
 				end
 			end
