@@ -1,8 +1,9 @@
 -- passive.lua
 -- API to passive components, as described in passive_api.txt
 
-local function getstate(pos)
-	if not type(pos)=="table" or not pos.x or not pos.y or not pos.z then
+local function getstate(parpos)
+	local pos=atlatc.pcnaming.resolve_pos(parpos)
+	if type(pos)~="table" or (not pos.x or not pos.y or not pos.z) then
 		debug.sethook()
 		error("Invalid position supplied to getstate")
 	end
@@ -19,8 +20,9 @@ local function getstate(pos)
 	return nil
 end
 
-local function setstate(pos, newstate)
-	if not type(pos)=="table" or not pos.x or not pos.y or not pos.z then
+local function setstate(parpos, newstate)
+	local pos=atlatc.pcnaming.resolve_pos(parpos)
+	if type(pos)~="table" or (not pos.x or not pos.y or not pos.z) then
 		debug.sethook()
 		error("Invalid position supplied to setstate")
 	end

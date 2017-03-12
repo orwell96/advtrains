@@ -7,6 +7,7 @@ local tp={
 }
 
 function tp.register_tracktype(nnprefix, n_suffix)
+	if tp.tracks[nnprefix] then return end--due to the separate registration of slopes and flats for the same nnpref, definition would be overridden here. just don't.
 	tp.tracks[nnprefix]={
 		default=n_suffix,
 		single_conn={},
@@ -192,7 +193,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 			end
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above
-				local upos=pointed_thing.under
+				local upos=vector.subtract(pointed_thing.above, {x=0, y=1, z=0})
 				if minetest.is_protected(pos,name) and minetest.is_protected(upos,name) then
 				   return itemstack
 				end

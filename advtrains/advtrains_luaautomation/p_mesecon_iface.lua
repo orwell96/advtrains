@@ -9,13 +9,9 @@ minetest.override_item("mesecons_switch:mesecon_switch_off", {
 		save_in_nodedb=1,
 	},
 	on_rightclick = function (pos, node)
-		if(mesecon.flipstate(pos, node) == "on") then
-			mesecon.receptor_on(pos)
-		else
-			mesecon.receptor_off(pos)
-		end
+		advtrains.ndb.swap_node(pos, {name="mesecons_switch:mesecon_switch_on", param2=node.param2})
+		mesecon.receptor_on(pos)
 		minetest.sound_play("mesecons_switch", {pos=pos})
-		advtrains.ndb.update(pos, node)
 	end,
 	on_updated_from_nodedb = function(pos, node)
 		mesecon.receptor_off(pos)
@@ -35,15 +31,12 @@ minetest.override_item("mesecons_switch:mesecon_switch_on", {
 	groups = {
 		dig_immediate=2,
 		save_in_nodedb=1,
+		not_in_creative_inventory=1,
 	},
 	on_rightclick = function (pos, node)
-		if(mesecon.flipstate(pos, node) == "on") then
-			mesecon.receptor_on(pos)
-		else
-			mesecon.receptor_off(pos)
-		end
+		advtrains.ndb.swap_node(pos, {name="mesecons_switch:mesecon_switch_off", param2=node.param2})
+		mesecon.receptor_off(pos)
 		minetest.sound_play("mesecons_switch", {pos=pos})
-		advtrains.ndb.update(pos, node)
 	end,
 	on_updated_from_nodedb = function(pos, node)
 		mesecon.receptor_on(pos)

@@ -114,7 +114,7 @@ On a train, right-clicking the wagon will make you get off the train unless:
 In case there's no possibility, does nothing.
 In case there are multiple possibilities, will show a form.
 
-If you can't enter a train because the doors are closed, any of the train's wagon owners or people authorized by them can open the doors(on the side they are standing) with shift-click.
+If you can't enter or leave a train because the doors are closed, holding the Sneak key while right-clicking bypasses the "doors have to be open" enforcement.
 
 ### Tracks
 Most modders will be satisfied with the built-in tracks. If cog railways, maglev trains and mine trains are added, it is necessary to understand the definition of tracks. Although the tracks API is there, explaining it would require more effort than me creating the wanted definitions myself. Contact me if you need to register your own rails using my registration functions.
@@ -141,11 +141,10 @@ minetest.register_node(nodename, {
 		return not advtrains.get_train_at_pos(pos)
 	end,
 	after_dig_node=function(pos)
-		advtrains.invalidate_all_paths()
-		advtrains.reset_trackdb_position(pos)
+		advtrains.ndb.update(pos)
 	end,
 	after_place_node=function(pos)
-		advtrains.reset_trackdb_position(pos)
+		advtrains.ndb.update(pos)
 	end,
 	^- the code in these 3 default minetest API functions is required for advtrains to work, however you can add your own code
 	

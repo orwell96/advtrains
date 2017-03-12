@@ -1,0 +1,630 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass paper
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1cm
+\topmargin 1cm
+\rightmargin 1cm
+\bottommargin 1cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Part*
+Advanced Trains 
+\end_layout
+
+\begin_layout Standard
+This mod aims to provide realistic, good-looking and functional trains by
+ introducing a revolutionary rail placement system.
+ It features several wagons that can be coupled together.
+\end_layout
+
+\begin_layout Standard
+This mod is not finished.
+ If you miss features, suggest them, but do not denounce this mod just because
+ they are not yet implemented.
+ They will be.
+\end_layout
+
+\begin_layout Subsection*
+Placing Rails
+\end_layout
+
+\begin_layout Standard
+Minetest's in-house rail system features rails that turn at an angle of
+ 90 degrees – totally impractical for the use with realistic trains.
+ So we have our own rails.
+ Remember: Carts can't drive on the rails provided by this mod, as do trains
+ not drive on minetest's default rails because of their different track
+ widths.
+\end_layout
+
+\begin_layout Standard
+First, craft some rails.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-43-29.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now, place one at any position and another one right next to it: you have
+ made your first railway track!
+\end_layout
+
+\begin_layout Standard
+To learn how to make turns have a look at the following examples.
+ A rail node has been placed only at the red-marked places.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-04-12.png
+	width 5cm
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-04-57.png
+	width 4cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-05-51.png
+	width 5cm
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-07-13.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As shown in the illustrations above, the 30-degree angled rails use a knight's
+ move (2 ahead, 1 aside) for placement.
+ For the rails to look realistic, I encourage you not to build turns that
+ are too narrow.
+ IMO the angles you can build with this are still way to narrow, but this
+ is the best compromise I can find.
+ 
+\end_layout
+
+\begin_layout Subsection*
+Switches
+\end_layout
+
+\begin_layout Standard
+To create switches we need the trackworker tool.
+ ATM it looks like a Doctor Who Sonic Screwdriver.
+ Aside from turning rails into switches, it is also capable of rotating
+ everything (rails, bumpers, signals) in this mod.
+ Due to internal mechanics, nothing can be rotated using the default screwdriver.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-56-34.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Place some rails.
+ Then left-click 1-2 times on one of these rails, until you see a switch.
+ Use right-click to rotate it how you need it.
+ You can change the switch direction by right-clicking the switch or by
+ powering it with mesecons.
+\end_layout
+
+\begin_layout Standard
+Unfortunately tracks that are placed next to switches don't always automatically
+ connect to them.
+ You need to correct manually using the Trackworker.
+ One day I will implement proper handling for these.
+ When you are finished it could look like this:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-08-02.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Rail crosses
+\end_layout
+
+\begin_layout Standard
+There are no real cross-rail nodes.
+ However you can create crossing rails by being creative and using the knight's
+ move or by placing opposing 45-degree rails.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-09-01.png
+	width 5cm
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_10-10-15.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Height differences 
+\end_layout
+
+\begin_layout Standard
+To master height differences you can craft slope nodes:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-45-38.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To place them, you have to prepare the base, then stand in the right direction
+ and point to the slope start point, then place it.
+ A slope will be constructed in the direction you are facing (45 degree
+ steps) leaned against the next solid node.
+ The right number of slopes is subtracted from the item stack if you are
+ in survival.
+\end_layout
+
+\begin_layout Subsection*
+Bumpers, platforms, signals and detector rails
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-48-54.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Bumpers are objects that are usually placed at the end of a track to prevent
+ trains rolling off it.
+ After placed, they can be rotated using the Trackworker.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-50-27.png
+	width 5cm
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-51-02.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These are a regular analog signal and an electric signal.
+ Like everything, you can rotate them using the Trackworker.
+ Right-click or power with mesecons to signal trains that they can pass
+ or have to stop.
+ The signals do not have any effect on trains, they can only signal the
+ driver.
+ A more advanced signalling system (with distant signals/signal combinations)
+ is planned.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-58-39.png
+	width 5cm
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2016-09-17_09-58-20.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These are some platform nodes.
+ I suggest using the left one, it's only half height and looks better.
+ These nodes also have a sandstone variant, craft with sandstone bricks
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2017-03-09_11-33-09.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These detector rails turn adjacent mesecons on when a train is standing/driving
+ over them.
+\end_layout
+
+\begin_layout Standard
+Notice: Detector rails and bumpers currently aren't aligned to the regular
+ tracks.
+ This will be fixed soon.
+ Meanwhile, you need to rotate them manually.
+\end_layout
+
+\begin_layout Subsection*
+Trains
+\end_layout
+
+\begin_layout Standard
+There are some wagons included in this modpack, however community members
+ (namely mbb and Andrey) have made some more wagons that can be downloaded
+ and enabled separately.
+ Visit the forum topic (
+\begin_inset Flex URL
+status collapsed
+
+\begin_layout Plain Layout
+
+https://forum.minetest.net/viewtopic.php?f=11&t=14726
+\end_layout
+
+\end_inset
+
+) to download them.
+\end_layout
+
+\begin_layout Standard
+To see what's included, look up in a craft guide or consult the creative
+ mode inventory.
+\end_layout
+
+\begin_layout Standard
+To place wagons simply craft and click a track.
+ To remove a wagon, punch it.
+ Only the person who placed the wagon can do this.
+ In survival if you destroy trains you get only some of your steel back,
+ so you will be asked to confirm if you really want to destroy a wagon.
+\end_layout
+
+\begin_layout Subsection*
+Driving trains
+\end_layout
+
+\begin_layout Standard
+Right-click any wagon to get on.
+ This will attach you to the wagon and register you as passenger.
+ Depending on how the wagon is set up, you are either in a passenger seat
+ or inside a driver stand.
+ Right-clicking again will show your possibilities on what you can do in/with
+ the wagon.
+\end_layout
+
+\begin_layout Standard
+Example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/Bildschirmfoto_2017-03-09_11-42-49.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+When entering a subway wagon, you are formally inside the passenger area.
+ You can see this by the fact that there's no head-up display.
+ Right-clicking brings up this form.
+\end_layout
+
+\begin_layout Standard
+The first button will make you move to the Driver stand, so you can drive
+ the train.
+\end_layout
+
+\begin_layout Standard
+The second button should say 
+\begin_inset Quotes eld
+\end_inset
+
+Wagon properties
+\begin_inset Quotes erd
+\end_inset
+
+ and appears only for the wagon owner.
+ See 
+\begin_inset Quotes eld
+\end_inset
+
+Wagon Properties
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The last button tells that the doors are closed, so you can't get off at
+ this time.
+ If the doors are open or the wagon has no doors, this button says 
+\begin_inset Quotes eld
+\end_inset
+
+Get off
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+It is always possible to bypass closed doors and get off by holding the
+ Sneak key and right-clicking the wagon or by holding Sneak and Use at the
+ same time.
+ Remember that this may result in your death when the train is travelling
+ fast.
+\end_layout
+
+\begin_layout Standard
+The Japanese train and the Subway train support automatic getting on by
+ just walking into the wagon.
+ As soon as you stand on a platform and walk towards a door, you will automatica
+lly get on the wagon.
+ On these, pressing W or S while inside the Passenger Area will also make
+ you get off.
+\end_layout
+
+\begin_layout Subsection*
+Train controls
+\end_layout
+
+\begin_layout Standard
+If you are inside a driver stand you are presented with a head-up display:
+\end_layout
+
+\begin_layout Standard
+The upper bar shows your current speed and the lower bar shows what speed
+ you ordered the train to hold.
+ Assuming you have the default controls (WASD, Shift for sneak, Space for
+ jump), the following key bindings apply: 
+\end_layout
+
+\begin_layout Itemize
+W - faster
+\end_layout
+
+\begin_layout Itemize
+S - slower / change direction
+\end_layout
+
+\begin_layout Itemize
+A / D – open/close doors
+\end_layout
+
+\begin_layout Itemize
+Space: brake (shown by =B=, target speed will be decreased automatically)
+\end_layout
+
+\begin_layout Itemize
+Sneak+S: set speed to 0 (train rolls out, brake to stop!)
+\end_layout
+
+\begin_layout Itemize
+Sneak+W: Set full speed
+\end_layout
+
+\begin_layout Itemize
+Sneak+A: Set speed to 4 (~40km/h)
+\end_layout
+
+\begin_layout Itemize
+Sneak+D: Set speed to 8 (~100km/h)
+\end_layout
+
+\begin_layout Itemize
+Sneak+Space: toggle brake (the brake will not release when releasing the
+ keys, shown by =^B=)
+\end_layout
+
+\begin_layout Subsection*
+Coupling wagons
+\end_layout
+
+\begin_layout Standard
+You just learned how to drive an engine.
+ Now place a wagon anywhere and drive your engine slowly towards that wagon.
+ As soon as they collided your engine will stop.
+ Now get off and right-click the green icon that appeared between the engine
+ and the train.
+ You have coupled the wagon to the engine.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename manual_img/screenshot_20161203_231622.png
+	width 5cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To discouple a wagon, punch the red icon between the wagons you want to
+ discouple while the train is standing.
+\end_layout
+
+\begin_layout Subsection*
+Automatic Train Control (ATC)
+\end_layout
+
+\begin_layout Standard
+ATC rails allow you to automate train operation.
+ There are two types of ATC rails:
+\end_layout
+
+\begin_layout Subsubsection*
+Regular ATC
+\end_layout
+
+\begin_layout Standard
+The ATC rail does not have a crafting recipe.
+ When placed, you can set a command and it will be sent to any train driving
+ over the controller.
+ 
+\end_layout
+
+\begin_layout Standard
+Only the static mode is implemented, changing the mode has no effect.
+\end_layout
+
+\begin_layout Standard
+For a detailed explanation how ATC commands work and their syntax see atc_comman
+d.txt
+\end_layout
+
+\begin_layout Standard
+Note: to rotate ATC rails, you need to bypass the formspec that is set for
+ the node.
+ To do this, hold Sneak when right-clicking the rail with the trackworker
+ tool.
+\end_layout
+
+\begin_layout Subsubsection*
+LUA ATC
+\end_layout
+
+\begin_layout Standard
+The LUA ATC suite is part of the mod advtrains_luaautomation.
+ The LUA ATC components are quite similar to Mesecons Luacontrollers and
+ allow to create all kinds of automation systems.
+ This tool is not intended for beginners or regular players, but for server
+ admins who wish to create a heavily automated subway system.
+\end_layout
+
+\begin_layout Standard
+More information on those can be found inside the mod directory of advtrains_lua
+automation.
+\end_layout
+
+\end_body
+\end_document

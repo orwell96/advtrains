@@ -40,14 +40,14 @@ function atc.send_command(pos, par_tid)
 										advtrains.round_vector_floor_y(train.path[index+train.movedir])
 								)
 						advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-						atprint("Sending ATC Command: "..atc.controllers[pts].command)
+						atprint("Sending ATC Command: ", atc.controllers[pts].command)
 						return true
 					end
 				end
 				atwarn("ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
 				advtrains.trains[train_id].atc_arrow=true
 				advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-				atprint("Sending ATC Command: "..atc.controllers[pts].command)
+				atprint("Sending ATC Command: ", atc.controllers[pts].command)
 			else
 				atwarn("ATC rail at", pos, ": Sending command failed: The train",train_id,"does not exist. This seems to be a bug.")
 			end
@@ -83,9 +83,9 @@ end
 advtrains.register_tracks("default", {
 	nodename_prefix="advtrains:dtrack_atc",
 	texture_prefix="advtrains_dtrack_atc",
-	models_prefix="advtrains_dtrack_detector",
+	models_prefix="advtrains_dtrack",
 	models_suffix=".b3d",
-	shared_texture="advtrains_dtrack_rail_atc.png",
+	shared_texture="advtrains_dtrack_shared_atc.png",
 	description=attrans("ATC controller"),
 	formats={},
 	get_additional_definiton = function(def, preset, suffix, rotation)

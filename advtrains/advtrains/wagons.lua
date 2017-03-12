@@ -161,7 +161,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 	else
 		local pc=puncher:get_player_control()
 		if not pc.sneak then
-			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, shift-leftclick the wagon."))
+			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, hold Sneak and left-click the wagon."))
 			return
 		end
 
@@ -346,16 +346,22 @@ function wagon:on_step(dtime)
 			-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
 			-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
 			local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
-			local pts1=minetest.pos_to_string(vector.round(vector.add(ix1, add)))
-			local pts2=minetest.pos_to_string(vector.round(vector.add(ix2, add)))
-
-			if advtrains.playersbypts[pts1] then
-				self:on_rightclick(advtrains.playersbypts[pts1])
+			local pts1=vector.round(vector.add(ix1, add))
+			local pts2=vector.round(vector.add(ix2, add))
+			if minetest.get_item_group(minetest.get_node(pts1).name, "platform")>0 then
+				local ckpts={
+					pts1,
+					pts2,
+					vector.add(pts1, {x=0, y=1, z=0}),
+					vector.add(pts2, {x=0, y=1, z=0}),
+				}
+				for _,ckpos in ipairs(ckpts) do
+					local cpp=minetest.pos_to_string(ckpos)
+					if advtrains.playersbypts[cpp] then
+						self:on_rightclick(advtrains.playersbypts[cpp])
+					end
+				end
 			end
-			if advtrains.playersbypts[pts2] then
-				self:on_rightclick(advtrains.playersbypts[pts2])
-			end
-			
 		end
 	end
 	
@@ -537,7 +543,7 @@ function wagon:on_rightclick(clicker)
 				end
 			end
 			minetest.chat_send_player(pname, attrans("Can't get on: wagon full or doors closed!"))
-			minetest.chat_send_player(pname, attrans("Use shift+click to open doors forcefully!"))
+			minetest.chat_send_player(pname, attrans("Use Sneak+rightclick to bypass closed doors!"))
 		else
 			self:show_get_on_form(pname)
 		end
@@ -587,24 +593,49 @@ function wagon:get_off(seatno)
 	local clicker = minetest.get_player_by_name(pname)
 	advtrains.player_to_train_mapping[pname]=nil
 	advtrains.clear_driver_hud(pname)
+	self.seatp[seatno]=nil
+	self.seatpc[seatno]=nil
 	if clicker then
 		atprint("get_off: detaching",clicker:get_player_name())
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
-		local objpos=advtrains.round_vector_floor_y(self.object:getpos())
-		local yaw=self.object:getyaw()
-		local isx=(yaw < math.pi/4) or (yaw > 3*math.pi/4 and yaw < 5*math.pi/4) or (yaw > 7*math.pi/4)
-		--abuse helper function
-		for _,r in ipairs({-1, 1}) do
-			local p=vector.add({x=isx and r or 0, y=0, z=not isx and r or 0}, objpos)
-			local offp=vector.add({x=isx and r*2 or 0, y=1, z=not isx and r*2 or 0}, objpos)
-			if minetest.get_item_group(minetest.get_node(p).name, "platform")>0 then
-				minetest.after(0.2, function() clicker:setpos(offp) end)
+		local gp=self:train()
+		--code as in step - automatic get on
+		if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 then
+			local index=advtrains.get_real_path_index(gp, self.pos_in_train)
+			--using the mapping created by the trainlogic globalstep
+			for i, ino in ipairs(self.door_entry) do
+				local aci = index + ino*(self.wagon_flipped and -1 or 1)
+				local ix1=gp.path[math.floor(aci)]
+				local ix2=gp.path[math.floor(aci+1)]
+				-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
+				-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
+				-- multiplied by 2 here, to place off on platform, y of add is 1.
+				local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open}
+				local oadd = { x = (ix2.z-ix1.z)*gp.door_open*2, y = 1, z = (ix1.x-ix2.x)*gp.door_open*2}
+				local platpos=vector.round(vector.add(ix1, add))
+				local offpos=vector.round(vector.add(ix1, oadd))
+				atprint("platpos:", platpos, "offpos:", offpos)
+				if minetest.get_item_group(minetest.get_node(platpos).name, "platform")>0 then
+					minetest.after(0.2, function() clicker:setpos(offpos) end)
+					return
+				end
+			end
+		else--if not door_entry, use old method
+			local objpos=advtrains.round_vector_floor_y(self.object:getpos())
+			local yaw=self.object:getyaw()
+			local isx=(yaw < math.pi/4) or (yaw > 3*math.pi/4 and yaw < 5*math.pi/4) or (yaw > 7*math.pi/4)
+			--abuse helper function
+			for _,r in ipairs({-1, 1}) do
+				local p=vector.add({x=isx and r or 0, y=0, z=not isx and r or 0}, objpos)
+				local offp=vector.add({x=isx and r*2 or 0, y=1, z=not isx and r*2 or 0}, objpos)
+				if minetest.get_item_group(minetest.get_node(p).name, "platform")>0 then
+					minetest.after(0.2, function() clicker:setpos(offp) end)
+					return
+				end
 			end
 		end
 	end
-	self.seatp[seatno]=nil
-	self.seatpc[seatno]=nil
 end
 function wagon:show_get_on_form(pname)
 	if not self.initialized then return end
@@ -730,7 +761,7 @@ function wagon:seating_from_key_helper(pname, fields, no)
 		self:show_wagon_properties(pname)
 	end
 	if fields.dcwarn then
-		minetest.chat_send_player(pname, attrans("Doors are closed! Use shift-rightclick to open doors with force and get off!"))
+		minetest.chat_send_player(pname, attrans("Doors are closed! Use Sneak+rightclick to ignore the closed doors and get off!"))
 	end
 	if fields.off then
 		self:get_off(no)
