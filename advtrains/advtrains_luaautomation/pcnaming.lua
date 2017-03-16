@@ -30,6 +30,7 @@ minetest.register_craftitem("advtrains_luaautomation:pcnaming",{
 		end
 		if not minetest.check_player_privs(pname, {atlatc=true}) then
 			minetest.chat_send_player(pname, "Missing privilege: atlatc")
+			return
 		end
 		if pointed_thing.type=="node" then
 			local pos=pointed_thing.under
