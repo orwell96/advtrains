@@ -48,6 +48,7 @@ function r.fire_event(pos, evtdata)
 	local customfct={
 		atc_send = function(cmd)
 			if not train_id then return false end
+			assertt(cmd, "string")
 			advtrains.atc.train_reset_command(train_id)
 			train.atc_command=cmd
 			train.atc_arrow=atc_arrow
@@ -55,6 +56,7 @@ function r.fire_event(pos, evtdata)
 		end,
 		atc_reset = function(cmd)
 			if not train_id then return false end
+			assertt(cmd, "string")
 			advtrains.atc.train_reset_command(train_id)
 			return true
 		end,
@@ -63,11 +65,13 @@ function r.fire_event(pos, evtdata)
 		atc_speed = tvel,
 		atc_set_text_outside = function(text)
 			if not train_id then return false end
+			if text then assertt(text, "string") end
 			advtrains.trains[train_id].text_outside=text
 			return true
 		end,
 		atc_set_text_inside = function(text)
 			if not train_id then return false end
+			if text then assertt(text, "string") end
 			advtrains.trains[train_id].text_inside=text
 			return true
 		end,
