@@ -75,7 +75,8 @@ function advtrains.on_control_change(pc, train, flip)
 	end
 end
 function advtrains.update_driver_hud(pname, train, flip)
-	advtrains.set_trainhud(pname, advtrains.hud_train_format(train, flip))
+	local inside=train.text_inside or ""
+	advtrains.set_trainhud(pname, inside.."\n"..advtrains.hud_train_format(train, flip))
 end
 function advtrains.clear_driver_hud(pname)
 	advtrains.set_trainhud(pname, "")

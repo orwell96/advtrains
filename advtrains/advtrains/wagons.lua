@@ -244,6 +244,10 @@ function wagon:on_step(dtime)
 		local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
 		if seat.driving_ctrl_access and driver then
 			advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
+		elseif driver then
+			--only show the inside text
+			local inside=self:train().text_inside or ""
+			advtrains.set_trainhud(driver:get_player_name(), inside)
 		end
 		if driver and driver:get_player_control_bits()~=self.seatpc[seatno] then
 			local pc=driver:get_player_control()
@@ -267,7 +271,13 @@ function wagon:on_step(dtime)
 			end
 		end
 	end
-
+	
+	--check infotext
+	local outside=self:train().text_outside or ""
+	if self.object:get_properties().infotext~=outside then
+		self.object:set_properties({infotext=outside})
+	end
+	
 	local gp=self:train()
 	local fct=self.wagon_flipped and -1 or 1
 	--door animation
@@ -662,8 +672,9 @@ function wagon:show_get_on_form(pname)
 	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form)
 end
 function wagon:show_wagon_properties(pname)
-	if not self.seat_groups then
-		return
+	local numsgr=0
+	if self.seat_groups then
+		numsgr=#self.seat_groups
 	end
 	if not self.seat_access then
 		self.seat_access={}
@@ -673,15 +684,21 @@ function wagon:show_wagon_properties(pname)
 	checkbox: lock couples
 	button: save
 	]]
-	local form="size[5,"..(#self.seat_groups*1.5+5).."]"
+	local form="size[5,"..(numsgr*1.5+7).."]"
 	local at=0
-	for sgr,sgrdef in pairs(self.seat_groups) do
-		local text = attrans("Access to @1",sgrdef.name)
-		form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..text..";"..(self.seat_access[sgr] or "").."]"
-		at=at+1
+	if self.seat_groups then
+		for sgr,sgrdef in pairs(self.seat_groups) do
+			local text = attrans("Access to @1",sgrdef.name)
+			form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..text..";"..(self.seat_access[sgr] or "").."]"
+			at=at+1
+		end
 	end
 	form=form.."checkbox[0,"..(at*1.5)..";lock_couples;"..attrans("Lock couples")..";"..(self.lock_couples and "true" or "false").."]"
-	form=form.."button_exit[0.5,"..(1+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
+	if self:train() then --just in case
+		form=form.."field[0.5,"..(1.5+at*1.5)..";4,1;text_outside;"..attrans("Text displayed outside on train")..";"..(self:train().text_outside or "").."]"
+		form=form.."field[0.5,"..(2.5+at*1.5)..";4,1;text_inside;"..attrans("Text displayed inside train")..";"..(self:train().text_inside or "").."]"
+	end
+	form=form.."button_exit[0.5,"..(3+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
@@ -737,6 +754,21 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					if fields.lock_couples then
 						wagon.lock_couples = fields.lock_couples == "true"
 					end
+					if fields.text_outside then
+						if fields.text_outside~="" then
+							wagon:train().text_outside=fields.text_outside
+						else
+							wagon:train().text_outside=nil
+						end
+					end
+					if fields.text_inside then
+						if fields.text_inside~="" then
+							wagon:train().text_inside=fields.text_inside
+						else
+							wagon:train().text_inside=nil
+						end
+					end
+					
 				end
 			end
 		end
