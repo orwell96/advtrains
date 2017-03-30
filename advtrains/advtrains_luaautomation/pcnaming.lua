@@ -34,7 +34,8 @@ minetest.register_craftitem("advtrains_luaautomation:pcnaming",{
 		end
 		if pointed_thing.type=="node" then
 			local pos=pointed_thing.under
-			if minetest.is_protected(pos, name) then
+			if advtrains.is_protected(pos, pname) then
+				minetest.record_protection_violation(pos, name)
 				return
 			end
 			local node=minetest.get_node(pos)

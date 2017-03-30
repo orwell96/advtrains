@@ -490,8 +490,8 @@ function sl.create_slopeplacer_on_place(def, preset)
 			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: space occupied!"))
 			return istack
 		end
-		if minetest.is_protected(pos, player:get_player_name()) then 
-			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: protected position!"))
+		if advtrains.is_protected(pos, player:get_player_name()) then 
+			minetest.record_protection_violation(pos, player:get_player_name())
 			return istack
 		end
 		--determine player orientation (only horizontal component)
@@ -525,7 +525,7 @@ function sl.create_slopeplacer_on_place(def, preset)
 		while step<=lookup.max do
 			local node=minetest.get_node(vector.add(pos, dirvec))
 			--next node solid?
-			if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to or minetest.is_protected(pos, player:get_player_name()) then 
+			if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to or advtrains.is_protected(pos, player:get_player_name()) then 
 				--do slopes of this distance exist?
 				if lookup[step] then
 					if minetest.setting_getbool("creative_mode") or istack:get_count()>=step then

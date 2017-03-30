@@ -194,8 +194,9 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.above
 				local upos=vector.subtract(pointed_thing.above, {x=0, y=1, z=0})
-				if minetest.is_protected(pos,name) and minetest.is_protected(upos,name) then
-				   return itemstack
+				if advtrains.is_protected(pos,name) then
+					minetest.record_protection_violation(pos, name)
+					return itemstack
 				end
 				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
 					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
@@ -225,7 +226,8 @@ minetest.register_craftitem("advtrains:trackworker",{
 		end
 		if pointed_thing.type=="node" then
 			local pos=pointed_thing.under
-			if minetest.is_protected(pos, name) then
+			if advtrains.is_protected(pos, name) then
+				minetest.record_protection_violation(pos, name)
 				return
 			end
 			local node=minetest.get_node(pos)
@@ -267,8 +269,9 @@ minetest.register_craftitem("advtrains:trackworker",{
 		if pointed_thing.type=="node" then
 			local pos=pointed_thing.under
 			local node=minetest.get_node(pos)
-			if minetest.is_protected(pos, name) then
-			   return
+			if advtrains.is_protected(pos, name) then
+			    minetest.record_protection_violation(pos, name)
+				return
 			end
 			
 			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end

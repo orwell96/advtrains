@@ -242,3 +242,14 @@ function advtrains.deserialize_inventory(sers, inv)
 	return false
 end
 
+--is_protected wrapper that checks for protection_bypass privilege
+function advtrains.is_protected(pos, name)
+	if not name then
+		error("advtrains.is_protected() called without name parameter!")
+	end
+	if minetest.check_player_privs(name, {protection_bypass=true}) then
+		--player can bypass protection
+		return false
+	end
+	return minetest.is_protected(pos, name)
+end
