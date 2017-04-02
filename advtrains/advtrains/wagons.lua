@@ -847,6 +847,10 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 				atprint("no track here, not placing.")
 				return itemstack
 			end
+			if not minetest.check_player_privs(placer, {train_place = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
+				minetest.record_protection_violation(pointed_thing.under, placer:get_player_name())
+				return
+			end
 			local conn1=advtrains.get_track_connections(node.name, node.param2)
 			local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 			
