@@ -611,7 +611,7 @@ function wagon:get_off(seatno)
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 		local gp=self:train()
 		--code as in step - automatic get on
-		if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 then
+		if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 and gp.index and gp.path then
 			local index=advtrains.get_real_path_index(gp, self.pos_in_train)
 			--using the mapping created by the trainlogic globalstep
 			for i, ino in ipairs(self.door_entry) do
@@ -631,7 +631,7 @@ function wagon:get_off(seatno)
 					return
 				end
 			end
-		else--if not door_entry, use old method
+		else--if not door_entry, or paths missing, fall back to old method
 			local objpos=advtrains.round_vector_floor_y(self.object:getpos())
 			local yaw=self.object:getyaw()
 			local isx=(yaw < math.pi/4) or (yaw > 3*math.pi/4 and yaw < 5*math.pi/4) or (yaw > 7*math.pi/4)
