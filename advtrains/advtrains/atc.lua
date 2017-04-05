@@ -92,12 +92,17 @@ advtrains.register_tracks("default", {
 		return {
 			after_place_node=apn_func,
 			after_dig_node=function(pos)
+			return advtrains.pcall(function()
+
 				advtrains.invalidate_all_paths()
 				advtrains.ndb.clear(pos)
 				local pts=minetest.pos_to_string(pos)
 				atc.controllers[pts]=nil
+			end)
 			end,
 			on_receive_fields = function(pos, formname, fields, player)
+			return advtrains.pcall(function()
+
 				if advtrains.is_protected(pos, player:get_player_name()) then
 					minetest.record_protection_violation(pos, player:get_player_name())
 					return
@@ -135,6 +140,7 @@ advtrains.register_tracks("default", {
 						atc.send_command(pos)
 					end
 				end
+			end)
 			end,
 			advtrains = {
 				on_train_enter = function(pos, train_id)

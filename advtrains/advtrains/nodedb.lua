@@ -203,6 +203,8 @@ minetest.register_abm({
         nodenames = {"group:save_in_nodedb"},
         run_at_every_load = true,
         action = function(pos, node)
+        return advtrains.pcall(function()
+
 			local cid=ndbget(pos.x, pos.y, pos.z)
 			if cid then
 				--if in database, detect changes and apply.
@@ -227,13 +229,17 @@ minetest.register_abm({
 				atprint("nodedb: ", pos, "not in database")
 				ndb.update(pos, node)
 			end
+		end)
         end,
         interval=10,
         chance=1,
     })
     
 minetest.register_on_dignode(function(pos, oldnode, digger)
+return advtrains.pcall(function()
+
 	ndb.clear(pos)
+end)
 end)
 
 function ndb.get_nodes()

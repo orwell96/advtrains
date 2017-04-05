@@ -50,6 +50,7 @@ function wagon:on_activate(sd_uid, dtime_s)
 end
 
 function wagon:get_staticdata()
+return advtrains.pcall(function()
 	if not self:ensure_init() then return end
 	atprint("[wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: saving to wagon_save")
 	--serialize inventory, if it has one
@@ -63,6 +64,7 @@ function wagon:get_staticdata()
 	advtrains.wagon_save[self.unique_id].name=nil
 	advtrains.wagon_save[self.unique_id].object=nil
 	return self.unique_id
+end)
 end
 --returns: uid of wagon
 function wagon:init_new_instance(train_id, properties)
@@ -147,6 +149,7 @@ end
 
 -- Remove the wagon
 function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direction)
+return advtrains.pcall(function()
 	if not self:ensure_init() then return end
 	if not puncher or not puncher:is_player() then
 		return
@@ -177,6 +180,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 			inv:add_item("main", item)
 		end
 	end
+end)
 end
 function wagon:destroy()
 	--some rules:
@@ -211,6 +215,8 @@ end
 
 
 function wagon:on_step(dtime)
+return advtrains.pcall(function()
+
 	if not self:ensure_init() then return end
 	
 	local t=os.clock()
@@ -465,6 +471,7 @@ function wagon:on_step(dtime)
 	self.old_acceleration_vector=accelerationvec
 	self.old_yaw=yaw
 	atprintbm("wagon step", t)
+end)
 end
 
 function advtrains.get_real_path_index(train, pit)
@@ -485,6 +492,8 @@ function advtrains.get_real_path_index(train, pit)
 end
 
 function wagon:on_rightclick(clicker)
+return advtrains.pcall(function()
+
 	if not self:ensure_init() then return end
 	if not clicker or not clicker:is_player() then
 		return
@@ -564,6 +573,7 @@ function wagon:on_rightclick(clicker)
 			self:show_get_on_form(pname)
 		end
 	end
+end)
 end
 
 function wagon:get_on(clicker, seatno)
@@ -708,6 +718,8 @@ function wagon:show_wagon_properties(pname)
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
+return advtrains.pcall(function()
+
 	local uid=string.match(formname, "^advtrains_geton_(.+)$")
 	if uid then
 		for _,wagon in pairs(minetest.luaentities) do
@@ -780,6 +792,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		end
 	end
 end)
+end)
 function wagon:seating_from_key_helper(pname, fields, no)
 	local sgr=self.seats[no].group
 	for _,access in ipairs(self.seat_groups[sgr].access_to) do
@@ -841,6 +854,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 		stack_max = 1,
 		
 		on_place = function(itemstack, placer, pointed_thing)
+			return advtrains.pcall(function()
 			if not pointed_thing.type == "node" then
 				return
 			end
@@ -876,6 +890,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 			end
 			return itemstack
 			
+		end)
 		end,
 	})
 end

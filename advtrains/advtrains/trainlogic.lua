@@ -40,6 +40,8 @@ advtrains.save_interval=10
 advtrains.save_timer=advtrains.save_interval
 
 minetest.register_globalstep(function(dtime_mt)
+return advtrains.pcall(function()
+
 	--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
 	local dtime=dtime_mt
 	if dtime>0.2 then
@@ -81,8 +83,11 @@ minetest.register_globalstep(function(dtime_mt)
 	atprintbm("trainsteps", t)
 	endstep()
 end)
+end)
 
 minetest.register_on_joinplayer(function(player)
+return advtrains.pcall(function()
+
 	local pname=player:get_player_name()
 	local id=advtrains.player_to_train_mapping[pname]
 	if id then
@@ -101,8 +106,11 @@ minetest.register_on_joinplayer(function(player)
 		end
 	end
 end)
+end)
 
 minetest.register_on_dieplayer(function(player)
+return advtrains.pcall(function()
+
 	local pname=player:get_player_name()
 	local id=advtrains.player_to_train_mapping[pname]
 	if id then
@@ -116,6 +124,7 @@ minetest.register_on_dieplayer(function(player)
 			end
 		end
 	end
+end)
 end)
 --[[
 train step structure:

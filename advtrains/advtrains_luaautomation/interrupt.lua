@@ -22,6 +22,8 @@ function iq.add(t, pos, evtdata)
 end
 
 minetest.register_globalstep(function(dtime)
+return advtrains.pcall(function()
+
 	if run then
 		timer=timer + math.min(dtime, 0.2)
 		for i=1,#queue do
@@ -41,6 +43,7 @@ minetest.register_globalstep(function(dtime)
 			end
 		end
 	end
+end)
 end)
 
 

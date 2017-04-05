@@ -9,6 +9,29 @@ end
 
 advtrains = {trains={}, wagon_save={}, player_to_train_mapping={}}
 
+--pcall
+local no_action=true
+function advtrains.pcall(fun)
+	if no_action then return end
+	
+	local succ, err, return1, return2, return3, return4=pcall(fun)
+	if not succ then
+		atwarn("Lua Error occured: ", err)
+		atwarn("Restoring saved state in 1 second...")
+		no_action=true
+		--read last save state and continue, as if server was restarted
+		for aoi, le in pairs(minetest.luaentities) do
+			if le.is_wagon then
+				le.object:remove()
+			end
+		end
+		minetest.after(1, advtrains.load)
+	else
+		return err, return1, return2, return3, return4
+	end
+end
+
+
 advtrains.modpath = minetest.get_modpath("advtrains")
 
 function advtrains.print_concat_table(a)
@@ -94,6 +117,9 @@ dofile(advtrains.modpath.."/craft_items.lua")
 --load/save
 
 advtrains.fpath=minetest.get_worldpath().."/advtrains"
+
+function advtrains.load()
+
 local file, err = io.open(advtrains.fpath, "r")
 if not file then
 	minetest.log("error", " Failed to read advtrains save data from file "..advtrains.fpath..": "..(err or "Unknown Error"))
@@ -142,6 +168,10 @@ else
 	end
 	file:close()
 end
+no_action=false
+
+end
+advtrains.load()
 
 advtrains.save = function()
 	--atprint("saving")

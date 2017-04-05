@@ -31,6 +31,8 @@ minetest.register_entity("advtrains:discouple", {
 	end,
 	get_staticdata=function() return "DISCOUPLE" end,
 	on_punch=function(self, player)
+	return advtrains.pcall(function()
+
 		--only if player owns at least one wagon next to this
 		local own=player:get_player_name()
 		if self.wagon.owner and self.wagon.owner==own and not self.wagon.lock_couples then
@@ -54,8 +56,11 @@ minetest.register_entity("advtrains:discouple", {
 		else
 			minetest.chat_send_player(own, attrans("You need to own at least one neighboring wagon to destroy this couple."))
 		end
+	end)
 	end,
 	on_step=function(self, dtime)
+	return advtrains.pcall(function()
+
 		local t=os.clock()
 		if not self.wagon then
 			self.object:remove()
@@ -77,6 +82,7 @@ minetest.register_entity("advtrains:discouple", {
 			self.updatepct_timer=2
 		end
 		atprintbm("discouple_step", t)
+	end)
 	end,
 })
 
@@ -98,16 +104,21 @@ minetest.register_entity("advtrains:couple", {
 	initial_sprite_basepos = {x=0, y=0},
 	
 	is_couple=true,
-	on_activate=function(self, staticdata) 
+	on_activate=function(self, staticdata)
+	return advtrains.pcall(function()
+
 		if staticdata=="COUPLE" then
 			--couple entities have no right to exist further...
 			atprint("Couple loaded from staticdata, destroying")
 			self.object:remove()
 			return
 		end
+	end)
 	end,
 	get_staticdata=function(self) return "COUPLE" end,
 	on_rightclick=function(self, clicker)
+	return advtrains.pcall(function()
+
 		if not self.train_id_1 or not self.train_id_2 then return end
 		
 		local id1, id2=self.train_id_1, self.train_id_2
@@ -128,8 +139,11 @@ minetest.register_entity("advtrains:couple", {
 		end
 		atprint("Coupled trains", id1, id2)
 		self.object:remove()
+	end)
 	end,
 	on_step=function(self, dtime)
+	return advtrains.pcall(function()
+
 		local t=os.clock()
 		if not self.train_id_1 or not self.train_id_2 then atprint("Couple: train ids not set!") self.object:remove() return end
 		local train1=advtrains.trains[self.train_id_1]
@@ -167,5 +181,6 @@ minetest.register_entity("advtrains:couple", {
 			end
 		end
 		atprintbm("couple step", t)
+	end)
 	end,
 }) 
