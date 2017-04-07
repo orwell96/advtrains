@@ -99,7 +99,7 @@ advtrains.register_tracks("default", {
 			end,
 			on_receive_fields = function(pos, formname, fields, player)
 				if advtrains.is_protected(pos, player:get_player_name()) then
-					minetest.record_protection_violation(pos, name)
+					minetest.record_protection_violation(pos, player:get_player_name())
 					return
 				end
 				local meta=minetest.get_meta(pos)
