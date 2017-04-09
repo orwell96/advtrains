@@ -41,8 +41,10 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
 				end
 			}},
-			on_rightclick=function(pos, node, clicker)
-				advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
+			on_rightclick=function(pos, node, player)
+				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
+				end
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:retrosignal", r, rotation, nil)
@@ -83,8 +85,10 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 					end
 				end,
 			},
-			on_rightclick=function(pos, node, clicker)
-				advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
+			on_rightclick=function(pos, node, player)
+				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
+				end
 			end,
 		})
 		advtrains.trackplacer.add_worked("advtrains:signal", r, rotation, nil)
@@ -130,8 +134,10 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 					end
 				end,
 			},
-			on_rightclick=function(pos, node, clicker)
-				advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2})
+			on_rightclick=function(pos, node, player)
+				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2})
+				end
 			end,
 		})
 	end

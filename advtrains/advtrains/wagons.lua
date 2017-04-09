@@ -8,6 +8,11 @@ minetest.register_privilege("train_remove", {
 	description = "Player can remove trains not owned by player",
 	give_to_singleplayer= false,
 });
+minetest.register_privilege("train_operator", {
+	description = "Player may operate trains and switch signals. Given by default. Revoke to prevent players from griefing automated subway systems.",
+	give_to_singleplayer= true,
+	default= true,
+});
 
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
@@ -242,7 +247,8 @@ function wagon:on_step(dtime)
 	--driver control
 	for seatno, seat in ipairs(self.seats) do
 		local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-		if seat.driving_ctrl_access and driver then
+		local has_driverstand=seat.driving_ctrl_access and self.seatp[seatno] and minetest.check_player_privs(self.seatp[seatno], {train_operator=true})
+		if has_driverstand and driver then
 			advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
 		elseif driver then
 			--only show the inside text
@@ -253,7 +259,7 @@ function wagon:on_step(dtime)
 			local pc=driver:get_player_control()
 			self.seatpc[seatno]=driver:get_player_control_bits()
 			
-			if seat.driving_ctrl_access then
+			if has_driverstand then
 				--regular driver stand controls
 				advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
 			else
