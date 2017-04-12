@@ -263,11 +263,13 @@ function advtrains.register_tracks(tracktype, def, preset)
 		local rcswitchfunc=function(pos, node, player)
 			if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
 				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+				advtrains.invalidate_all_paths()
 			end
 		end
 		local switchfunc=function(pos, node, newstate)
 			if newstate~=is_state then
 				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+				advtrains.invalidate_all_paths()
 			end
 		end
 		local mesec
