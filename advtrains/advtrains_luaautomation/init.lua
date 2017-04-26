@@ -16,6 +16,13 @@ atlatc = { envs = {}}
 
 minetest.register_privilege("atlatc", { description = "Player can place and modify LUA ATC components. Grant with care! Allows to execute bad LUA code.", give_to_singleplayer = false, default= false })
 
+--assertt helper. error if a variable is not of a type
+function assertt(var, typ)
+	if type(var)~=typ then
+		error("Assertion failed, variable has to be of type "..typ)
+	end
+end
+
 local mp=minetest.get_modpath("advtrains_luaautomation")
 if not mp then
 	error("Mod name error: Mod folder is not named 'advtrains_luaautomation'!")

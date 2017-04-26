@@ -98,8 +98,8 @@ advtrains.register_tracks("default", {
 				atc.controllers[pts]=nil
 			end,
 			on_receive_fields = function(pos, formname, fields, player)
-				if minetest.is_protected(pos, player:get_player_name()) then
-					minetest.chat_send_player(player:get_player_name(), attrans("This position is protected!"))
+				if advtrains.is_protected(pos, player:get_player_name()) then
+					minetest.record_protection_violation(pos, player:get_player_name())
 					return
 				end
 				local meta=minetest.get_meta(pos)

@@ -260,11 +260,17 @@ advtrains.trackpresets = ap
 }]]
 function advtrains.register_tracks(tracktype, def, preset)
 	local function make_switchfunc(suffix_target, mesecon_state, is_state)
+		local rcswitchfunc=function(pos, node, player)
+			if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+				advtrains.invalidate_all_paths()
+			end
+		end
 		local switchfunc=function(pos, node, newstate)
 			if newstate~=is_state then
 				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
+				advtrains.invalidate_all_paths()
 			end
-			advtrains.invalidate_all_paths()
 		end
 		local mesec
 		if mesecon_state then -- if mesecons is not wanted, do not.
@@ -273,13 +279,13 @@ function advtrains.register_tracks(tracktype, def, preset)
 				rules=advtrains.meseconrules
 			}}
 		end
-		return switchfunc, mesec,
+		return rcswitchfunc, mesec,
 		{ 
 			getstate = is_state,
 			setstate = switchfunc,
 		}
 	end
-	local function make_overdef(suffix, rotation, conns, switchfunc, mesecontbl, luaautomation, in_creative_inv, drop_slope)
+	local function make_overdef(suffix, rotation, conns, rcswitchfunc, mesecontbl, luaautomation, in_creative_inv, drop_slope)
 		local img_suffix=suffix..rotation
 		return {
 			mesh = def.shared_model or (def.models_prefix.."_"..img_suffix..def.models_suffix),
@@ -293,7 +299,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			rely2=conns.rely2 or 0,
 			railheight=conns.railheight or 0,
 			
-			on_rightclick=switchfunc,
+			on_rightclick=rcswitchfunc,
 			groups = {
 				attached_node=1,
 				["advtrains_track_"..tracktype]=1,
@@ -352,9 +358,9 @@ function advtrains.register_tracks(tracktype, def, preset)
 	for suffix, conns in pairs(preset.variant) do
 		for rotid, rotation in ipairs(preset.rotation) do
 			if not def.formats[suffix] or def.formats[suffix][rotid] then
-				local switchfunc, mesecontbl, luaautomation
+				local rcswitchfunc, mesecontbl, luaautomation
 				if preset.switch[suffix] then
-					switchfunc, mesecontbl, luaautomation=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix], preset.switchst[suffix])
+					rcswitchfunc, mesecontbl, luaautomation=make_switchfunc(preset.switch[suffix]..rotation, preset.switchmc[suffix], preset.switchst[suffix])
 				end
 				local adef={}
 				if def.get_additional_definiton then
@@ -366,7 +372,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 					make_overdef(
 						suffix, rotation,
 						cycle_conns(conns, rotid),
-						switchfunc, mesecontbl, luaautomation, preset.increativeinv[suffix], preset.slopenodes[suffix]
+						rcswitchfunc, mesecontbl, luaautomation, preset.increativeinv[suffix], preset.slopenodes[suffix]
 						),
 					adef
 					)
@@ -490,8 +496,8 @@ function sl.create_slopeplacer_on_place(def, preset)
 			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: space occupied!"))
 			return istack
 		end
-		if minetest.is_protected(pos, player:get_player_name()) then 
-			minetest.chat_send_player(player:get_player_name(), attrans("Can't place: protected position!"))
+		if advtrains.is_protected(pos, player:get_player_name()) then 
+			minetest.record_protection_violation(pos, player:get_player_name())
 			return istack
 		end
 		--determine player orientation (only horizontal component)
@@ -525,7 +531,7 @@ function sl.create_slopeplacer_on_place(def, preset)
 		while step<=lookup.max do
 			local node=minetest.get_node(vector.add(pos, dirvec))
 			--next node solid?
-			if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to or minetest.is_protected(pos, player:get_player_name()) then 
+			if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to or advtrains.is_protected(pos, player:get_player_name()) then 
 				--do slopes of this distance exist?
 				if lookup[step] then
 					if minetest.setting_getbool("creative_mode") or istack:get_count()>=step then

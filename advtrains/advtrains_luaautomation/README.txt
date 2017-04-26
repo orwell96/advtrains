@@ -122,6 +122,10 @@ atc_id
 	Train ID of the train currently passing the controller. Nil if there's no train.
 atc_speed
 	Speed of the train, or nil if there is no train.
+atc_set_text_outside(text)
+	Set text shown on the outside of the train. Pass nil to show no text.
+atc_set_text_inside(text)
+	Set text shown to train passengers. Pass nil to show no text.
 
 # Operator panel
 This simple node executes its actions when punched. It can be used to change a switch and update the corresponding signals or similar applications.

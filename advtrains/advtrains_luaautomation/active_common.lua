@@ -58,6 +58,7 @@ end
 function ac.on_receive_fields(pos, formname, fields, player)
 	if not minetest.check_player_privs(player:get_player_name(), {atlatc=true}) then
 		minetest.chat_send_player(player:get_player_name(), "Missing privilege: atlatc - Operation cancelled!")
+		return
 	end
 	
 	local meta=minetest.get_meta(pos)

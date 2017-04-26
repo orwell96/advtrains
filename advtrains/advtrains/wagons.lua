@@ -8,6 +8,11 @@ minetest.register_privilege("train_remove", {
 	description = "Player can remove trains not owned by player",
 	give_to_singleplayer= false,
 });
+minetest.register_privilege("train_operator", {
+	description = "Player may operate trains and switch signals. Given by default. Revoke to prevent players from griefing automated subway systems.",
+	give_to_singleplayer= true,
+	default= true,
+});
 
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
@@ -242,14 +247,19 @@ function wagon:on_step(dtime)
 	--driver control
 	for seatno, seat in ipairs(self.seats) do
 		local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-		if seat.driving_ctrl_access and driver then
+		local has_driverstand=seat.driving_ctrl_access and self.seatp[seatno] and minetest.check_player_privs(self.seatp[seatno], {train_operator=true})
+		if has_driverstand and driver then
 			advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
+		elseif driver then
+			--only show the inside text
+			local inside=self:train().text_inside or ""
+			advtrains.set_trainhud(driver:get_player_name(), inside)
 		end
 		if driver and driver:get_player_control_bits()~=self.seatpc[seatno] then
 			local pc=driver:get_player_control()
 			self.seatpc[seatno]=driver:get_player_control_bits()
 			
-			if seat.driving_ctrl_access then
+			if has_driverstand then
 				--regular driver stand controls
 				advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
 			else
@@ -267,7 +277,13 @@ function wagon:on_step(dtime)
 			end
 		end
 	end
-
+	
+	--check infotext
+	local outside=self:train().text_outside or ""
+	if self.object:get_properties().infotext~=outside then
+		self.object:set_properties({infotext=outside})
+	end
+	
 	local gp=self:train()
 	local fct=self.wagon_flipped and -1 or 1
 	--door animation
@@ -601,7 +617,7 @@ function wagon:get_off(seatno)
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
 		local gp=self:train()
 		--code as in step - automatic get on
-		if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 then
+		if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 and gp.index and gp.path then
 			local index=advtrains.get_real_path_index(gp, self.pos_in_train)
 			--using the mapping created by the trainlogic globalstep
 			for i, ino in ipairs(self.door_entry) do
@@ -621,7 +637,7 @@ function wagon:get_off(seatno)
 					return
 				end
 			end
-		else--if not door_entry, use old method
+		else--if not door_entry, or paths missing, fall back to old method
 			local objpos=advtrains.round_vector_floor_y(self.object:getpos())
 			local yaw=self.object:getyaw()
 			local isx=(yaw < math.pi/4) or (yaw > 3*math.pi/4 and yaw < 5*math.pi/4) or (yaw > 7*math.pi/4)
@@ -662,8 +678,9 @@ function wagon:show_get_on_form(pname)
 	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form)
 end
 function wagon:show_wagon_properties(pname)
-	if not self.seat_groups then
-		return
+	local numsgr=0
+	if self.seat_groups then
+		numsgr=#self.seat_groups
 	end
 	if not self.seat_access then
 		self.seat_access={}
@@ -673,15 +690,21 @@ function wagon:show_wagon_properties(pname)
 	checkbox: lock couples
 	button: save
 	]]
-	local form="size[5,"..(#self.seat_groups*1.5+5).."]"
+	local form="size[5,"..(numsgr*1.5+7).."]"
 	local at=0
-	for sgr,sgrdef in pairs(self.seat_groups) do
-		local text = attrans("Access to @1",sgrdef.name)
-		form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..text..";"..(self.seat_access[sgr] or "").."]"
-		at=at+1
+	if self.seat_groups then
+		for sgr,sgrdef in pairs(self.seat_groups) do
+			local text = attrans("Access to @1",sgrdef.name)
+			form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..text..";"..(self.seat_access[sgr] or "").."]"
+			at=at+1
+		end
 	end
 	form=form.."checkbox[0,"..(at*1.5)..";lock_couples;"..attrans("Lock couples")..";"..(self.lock_couples and "true" or "false").."]"
-	form=form.."button_exit[0.5,"..(1+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
+	if self:train() then --just in case
+		form=form.."field[0.5,"..(1.5+at*1.5)..";4,1;text_outside;"..attrans("Text displayed outside on train")..";"..(self:train().text_outside or "").."]"
+		form=form.."field[0.5,"..(2.5+at*1.5)..";4,1;text_inside;"..attrans("Text displayed inside train")..";"..(self:train().text_inside or "").."]"
+	end
+	form=form.."button_exit[0.5,"..(3+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
@@ -737,6 +760,21 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					if fields.lock_couples then
 						wagon.lock_couples = fields.lock_couples == "true"
 					end
+					if fields.text_outside then
+						if fields.text_outside~="" then
+							wagon:train().text_outside=fields.text_outside
+						else
+							wagon:train().text_outside=nil
+						end
+					end
+					if fields.text_inside then
+						if fields.text_inside~="" then
+							wagon:train().text_inside=fields.text_inside
+						else
+							wagon:train().text_inside=nil
+						end
+					end
+					
 				end
 			end
 		end
@@ -815,10 +853,10 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 				atprint("no track here, not placing.")
 				return itemstack
 			end
-			if minetest.is_protected(pointed_thing.under, placer:get_player_name()) and (not minetest.check_player_privs(puncher, {train_remove = true }))then
-	   			minetest.chat_send_player(placer:get_player_name(), S("This position is protected!"))
-	   			return itemstack
-	   		end
+			if not minetest.check_player_privs(placer, {train_place = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
+				minetest.record_protection_violation(pointed_thing.under, placer:get_player_name())
+				return
+			end
 			local conn1=advtrains.get_track_connections(node.name, node.param2)
 			local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 			
