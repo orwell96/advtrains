@@ -30,7 +30,7 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 			on_rightclick=switchfunc,
 			sunlight_propagates=true,
 			groups = {
-				choppy=3,
+				cracky=3,
 				not_blocking_trains=1,
 				not_in_creative_inventory=crea,
 				save_in_nodedb=1,
@@ -64,7 +64,7 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 			description=attrans("Signal (@1)", attrans(r..rotation)),
 			on_rightclick=switchfunc,
 			groups = {
-				choppy=3,
+				cracky=3,
 				not_blocking_trains=1,
 				not_in_creative_inventory=crea,
 				save_in_nodedb=1,
@@ -113,7 +113,7 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 			drop="advtrains:signal_wall_"..loc.."_off",
 			description=attrans("Wallmounted Signal ("..loc..")"),
 			groups = {
-				choppy=3,
+				cracky=3,
 				not_blocking_trains=1,
 				not_in_creative_inventory=crea,
 				save_in_nodedb=1,
@@ -142,3 +142,88 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 		})
 	end
 end
+
+-- level crossing
+-- german version (Andrew's Cross)
+minetest.register_node("advtrains:across_off", {
+	drawtype = "mesh",
+	paramtype="light",
+	paramtype2="facedir",
+	walkable = false,
+	selection_box = {
+		type = "fixed",
+		fixed = {-1/4, -1/2, -1/2, 1/4, 1.5, 0},
+	},
+	mesh = "advtrains_across.obj",
+	tiles = {"advtrains_across.png"},
+	drop="advtrains:across_off",
+	description=attrans("Andrew's Cross"),
+	groups = {
+		cracky=3,
+		not_blocking_trains=1,
+		save_in_nodedb=1,
+		not_in_creative_inventory=nil,
+	},
+	light_source = 1,
+	sunlight_propagates=true,
+	mesecons = {effector = {
+		rules = advtrains.meseconrules,
+		action_on = function (pos, node)
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2})
+		end
+	}},
+	luaautomation = {
+		getstate = "off",
+		setstate = function(pos, node, newstate)
+			if newstate == "on" then
+				advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2})
+			end
+		end,
+	},
+	on_rightclick=function(pos, node, player)
+		if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2})
+		end
+	end,
+})
+minetest.register_node("advtrains:across_on", {
+	drawtype = "mesh",
+	paramtype="light",
+	paramtype2="facedir",
+	walkable = false,
+	selection_box = {
+		type = "fixed",
+		fixed = {-1/4, -1/2, -1/2, 1/4, 1.5, 0},
+	},
+	mesh = "advtrains_across.obj",
+	tiles = {{name="advtrains_across_anim.png", animation={type="vertical_frames", aspect_w=64, aspect_h=64, length=1.0}}},
+	drop="advtrains:across_off",
+	description=attrans("Andrew's Cross (on) (you hacker you)"),
+	groups = {
+		cracky=3,
+		not_blocking_trains=1,
+		save_in_nodedb=1,
+		not_in_creative_inventory=1,
+	},
+	light_source = 1,
+	sunlight_propagates=true,
+	mesecons = {effector = {
+		rules = advtrains.meseconrules,
+		action_off = function (pos, node)
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2})
+		end
+	}},
+	luaautomation = {
+		getstate = "on",
+		setstate = function(pos, node, newstate)
+			if newstate == "off" then
+				advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2})
+			end
+		end,
+	},
+	on_rightclick=function(pos, node, player)
+		if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2})
+		end
+	end,
+})

@@ -152,6 +152,10 @@ The Mesecon switch can be switched using LuaAutomation. Note that this is not po
 "on" - the switch is switched on
 "off" - the switch is switched off
 
+##Andrew's Cross
+"on" - it blinks
+"off" - it does not blink
+
 ### Passive component naming
 You can assign names to passive components using the Passive Component Naming tool.
 Once you set a name for any component, you can reference it by that name in the getstate() and setstate() functions, like this:
