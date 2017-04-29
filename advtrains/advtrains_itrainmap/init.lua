@@ -136,7 +136,7 @@ function advtrains_itm_mainloop(dtime)
 		end
 		timer=2
 	end
-end)
+end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	if formname=="itrainmap" and fields.quit then
 		itm_pdata[player:get_player_name()]=nil

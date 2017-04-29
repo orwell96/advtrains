@@ -203,37 +203,41 @@ minetest.register_abm({
         nodenames = {"group:save_in_nodedb"},
         run_at_every_load = true,
         action = function(pos, node)
-			local cid=ndbget(pos.x, pos.y, pos.z)
-			if cid then
-				--if in database, detect changes and apply.
-				local nodeid = ndb_nodeids[u14b(cid)]
-				local param2 = l2b(cid)
-				if not nodeid then
-					--something went wrong
-					atprint("nodedb: lbm nid not found", pos, "with nid", u14b(cid), "param2", param2, "cid is", cid)
-					ndb.update(pos, node)
-				else
-					if (nodeid~=node.name or param2~=node.param2) then
-						atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
-						minetest.swap_node(pos, {name=nodeid, param2 = param2})
-						local ndef=minetest.registered_nodes[nodeid]
-						if ndef and ndef.on_updated_from_nodedb then
-							ndef.on_updated_from_nodedb(pos, node)
+			return advtrains.pcall(function()
+				local cid=ndbget(pos.x, pos.y, pos.z)
+				if cid then
+					--if in database, detect changes and apply.
+					local nodeid = ndb_nodeids[u14b(cid)]
+					local param2 = l2b(cid)
+					if not nodeid then
+						--something went wrong
+						atprint("nodedb: lbm nid not found", pos, "with nid", u14b(cid), "param2", param2, "cid is", cid)
+						ndb.update(pos, node)
+					else
+						if (nodeid~=node.name or param2~=node.param2) then
+							atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
+							minetest.swap_node(pos, {name=nodeid, param2 = param2})
+							local ndef=minetest.registered_nodes[nodeid]
+							if ndef and ndef.on_updated_from_nodedb then
+								ndef.on_updated_from_nodedb(pos, node)
+							end
 						end
 					end
+				else
+					--if not in database, take it.
+					atprint("nodedb: ", pos, "not in database")
+					ndb.update(pos, node)
 				end
-			else
-				--if not in database, take it.
-				atprint("nodedb: ", pos, "not in database")
-				ndb.update(pos, node)
-			end
+			end)
         end,
         interval=10,
         chance=1,
     })
     
 minetest.register_on_dignode(function(pos, oldnode, digger)
-	ndb.clear(pos)
+	return advtrains.pcall(function()
+		ndb.clear(pos)
+	end)
 end)
 
 function ndb.get_nodes()

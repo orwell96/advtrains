@@ -37,8 +37,7 @@ advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acc
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
 
-advtrains.mainloop_trainlogic(function(dtime)
-
+advtrains.mainloop_trainlogic=function(dtime)
 	--build a table of all players indexed by pts. used by damage and door system.
 	advtrains.playersbypts={}
 	for _, player in pairs(minetest.get_connected_players()) do
@@ -67,39 +66,43 @@ advtrains.mainloop_trainlogic(function(dtime)
 end
 
 minetest.register_on_joinplayer(function(player)
-	local pname=player:get_player_name()
-	local id=advtrains.player_to_train_mapping[pname]
-	if id then
-		local train=advtrains.trains[id]
-		if not train then advtrains.player_to_train_mapping[pname]=nil return end
-		--set the player to the train position.
-		--minetest will emerge the area and load the objects, which then will call reattach_all().
-		--because player is in mapping, it will not be subject to dying.
-		player:setpos(train.last_pos_prev)
-		--independent of this, cause all wagons of the train which are loaded to reattach their players
-		--needed because already loaded wagons won't call reattach_all()
-		for _,wagon in pairs(minetest.luaentities) do
-			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
-				wagon:reattach_all()
+	return advtrains.pcall(function()
+		local pname=player:get_player_name()
+		local id=advtrains.player_to_train_mapping[pname]
+		if id then
+			local train=advtrains.trains[id]
+			if not train then advtrains.player_to_train_mapping[pname]=nil return end
+			--set the player to the train position.
+			--minetest will emerge the area and load the objects, which then will call reattach_all().
+			--because player is in mapping, it will not be subject to dying.
+			player:setpos(train.last_pos_prev)
+			--independent of this, cause all wagons of the train which are loaded to reattach their players
+			--needed because already loaded wagons won't call reattach_all()
+			for _,wagon in pairs(minetest.luaentities) do
+				if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
+					wagon:reattach_all()
+				end
 			end
 		end
-	end
+	end)
 end)
 
 minetest.register_on_dieplayer(function(player)
-	local pname=player:get_player_name()
-	local id=advtrains.player_to_train_mapping[pname]
-	if id then
-		local train=advtrains.trains[id]
-		if not train then advtrains.player_to_train_mapping[pname]=nil return end
-		for _,wagon in pairs(minetest.luaentities) do
-			if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
-				--when player dies, detach him from the train
-				--call get_off_plr on every wagon since we don't know which one he's on.
-				wagon:get_off_plr(pname)
+	return advtrains.pcall(function()
+		local pname=player:get_player_name()
+		local id=advtrains.player_to_train_mapping[pname]
+		if id then
+			local train=advtrains.trains[id]
+			if not train then advtrains.player_to_train_mapping[pname]=nil return end
+			for _,wagon in pairs(minetest.luaentities) do
+				if wagon.is_wagon and wagon.initialized and wagon.train_id==id then
+					--when player dies, detach him from the train
+					--call get_off_plr on every wagon since we don't know which one he's on.
+					wagon:get_off_plr(pname)
+				end
 			end
 		end
-	end
+	end)
 end)
 --[[
 train step structure:
@@ -797,6 +800,10 @@ end
 function advtrains.do_connect_trains(first_id, second_id, player)
 	local first, second=advtrains.trains[first_id], advtrains.trains[second_id]
 	
+	if not first or not second or not first.index or not second.index or not first.end_index or not second.end_index then
+		return false
+	end
+	
 	if first.couple_lock_back or second.couple_lock_front then
 		-- trains are ordered correctly!
 		if player then
@@ -817,6 +824,7 @@ function advtrains.do_connect_trains(first_id, second_id, player)
 	advtrains.update_trainpart_properties(first_id)
 	advtrains.trains[first_id].velocity=new_velocity
 	advtrains.trains[first_id].tarvelocity=0
+	return true
 end
 
 function advtrains.invert_train(train_id)

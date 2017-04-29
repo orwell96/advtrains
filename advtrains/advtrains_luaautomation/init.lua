@@ -62,10 +62,10 @@ function atlatc.load()
 		end
 		file:close()
 	end
+	-- run init code of all environments
+	atlatc.run_initcode()
 end
 
--- run init code of all environments
-atlatc.run_initcode()
 
 atlatc.save = function()
 	--versions:
@@ -107,4 +107,4 @@ function atlatc.mainloop_stepcode(dtime)
 		timer=0
 		atlatc.run_stepcode()
 	end
-end)
+end

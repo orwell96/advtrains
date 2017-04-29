@@ -187,26 +187,28 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 		wield_image = imgprefix.."_placer.png",
 		groups={},
 		on_place = function(itemstack, placer, pointed_thing)
-		        local name = placer:get_player_name()
-			if not name then
-			   return itemstack
-			end
-			if pointed_thing.type=="node" then
-				local pos=pointed_thing.above
-				local upos=vector.subtract(pointed_thing.above, {x=0, y=1, z=0})
-				if advtrains.is_protected(pos,name) then
-					minetest.record_protection_violation(pos, name)
-					return itemstack
+			return advtrains.pcall(function()
+					local name = placer:get_player_name()
+				if not name then
+				   return itemstack
 				end
-				if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
-					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
-					tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing)
-					if not minetest.setting_getbool("creative_mode") then
-						itemstack:take_item()
+				if pointed_thing.type=="node" then
+					local pos=pointed_thing.above
+					local upos=vector.subtract(pointed_thing.above, {x=0, y=1, z=0})
+					if advtrains.is_protected(pos,name) then
+						minetest.record_protection_violation(pos, name)
+						return itemstack
+					end
+					if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
+						and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
+						tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing)
+						if not minetest.setting_getbool("creative_mode") then
+							itemstack:take_item()
+						end
 					end
 				end
-			end
-			return itemstack
+				return itemstack
+			end)
 		end,
 	})
 end
@@ -220,78 +222,82 @@ minetest.register_craftitem("advtrains:trackworker",{
 	wield_image = "advtrains_trackworker.png",
 	stack_max = 1,
 	on_place = function(itemstack, placer, pointed_thing)
-		local name = placer:get_player_name()
-		if not name then
-			return
-		end
-		if pointed_thing.type=="node" then
-			local pos=pointed_thing.under
-			if advtrains.is_protected(pos, name) then
-				minetest.record_protection_violation(pos, name)
+		return advtrains.pcall(function()
+			local name = placer:get_player_name()
+			if not name then
 				return
 			end
-			local node=minetest.get_node(pos)
+			if pointed_thing.type=="node" then
+				local pos=pointed_thing.under
+				if advtrains.is_protected(pos, name) then
+					minetest.record_protection_violation(pos, name)
+					return
+				end
+				local node=minetest.get_node(pos)
 
-			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
-			if advtrains.get_train_at_pos(pos) then return end
+				--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
+				if advtrains.get_train_at_pos(pos) then return end
 
-			local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
-			--atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
-			if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
-				nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
-				rotation = ""
+				local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
+				--atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
 				if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
-					minetest.chat_send_player(placer:get_player_name(), attrans("This node can't be rotated using the trackworker!"))
-					return
-				end
-			end
-			local modext=tp.tracks[nnprefix].twrotate[suffix]
-
-			if rotation==modext[#modext] then --increase param2
-				advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
-				return
-			else
-				local modpos
-				for k,v in pairs(modext) do if v==rotation then modpos=k end end
-					if not modpos then
+					nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
+					rotation = ""
+					if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twrotate[suffix] then
 						minetest.chat_send_player(placer:get_player_name(), attrans("This node can't be rotated using the trackworker!"))
-					return
+						return
+					end
 				end
-				advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
+				local modext=tp.tracks[nnprefix].twrotate[suffix]
+
+				if rotation==modext[#modext] then --increase param2
+					advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[1], param2=(node.param2+1)%4})
+					return
+				else
+					local modpos
+					for k,v in pairs(modext) do if v==rotation then modpos=k end end
+						if not modpos then
+							minetest.chat_send_player(placer:get_player_name(), attrans("This node can't be rotated using the trackworker!"))
+						return
+					end
+					advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..suffix..modext[modpos+1], param2=node.param2})
+				end
 			end
-		end
+		end)
 	end,
 	on_use=function(itemstack, user, pointed_thing)
-	        local name = user:get_player_name()
-		if not name then
-		   return
-		end
-		if pointed_thing.type=="node" then
-			local pos=pointed_thing.under
-			local node=minetest.get_node(pos)
-			if advtrains.is_protected(pos, name) then
-			    minetest.record_protection_violation(pos, name)
-				return
+		return advtrains.pcall(function()
+				local name = user:get_player_name()
+			if not name then
+			   return
 			end
-			
-			--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
-			if advtrains.get_train_at_pos(pos) then return end
-			local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
-	        --atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
-		    if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
-			  nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
-			  rotation = ""
-			  if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
-			    minetest.chat_send_player(user:get_player_name(), attrans("This node can't be changed using the trackworker!"))
-			    return
-			  end
-		    end
-			local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
-			advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
-			
-		else
-			atprint(name, dump(tp.tracks))
-		end
+			if pointed_thing.type=="node" then
+				local pos=pointed_thing.under
+				local node=minetest.get_node(pos)
+				if advtrains.is_protected(pos, name) then
+					minetest.record_protection_violation(pos, name)
+					return
+				end
+				
+				--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
+				if advtrains.get_train_at_pos(pos) then return end
+				local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
+				--atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)
+				if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
+				  nnprefix, suffix=string.match(node.name, "^(.+)_([^_]+)$")
+				  rotation = ""
+				  if not tp.tracks[nnprefix] or not tp.tracks[nnprefix].twcycle[suffix] then
+					minetest.chat_send_player(user:get_player_name(), attrans("This node can't be changed using the trackworker!"))
+					return
+				  end
+				end
+				local nextsuffix=tp.tracks[nnprefix].twcycle[suffix]
+				advtrains.ndb.swap_node(pos, {name=nnprefix.."_"..nextsuffix..rotation, param2=node.param2})
+				
+			else
+				atprint(name, dump(tp.tracks))
+			end
+		end)
 	end,
 })
 

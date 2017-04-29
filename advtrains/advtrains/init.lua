@@ -9,6 +9,29 @@ end
 
 advtrains = {trains={}, wagon_save={}, player_to_train_mapping={}}
 
+--pcall
+local no_action=false
+function advtrains.pcall(fun)
+	if no_action then return end
+	
+	local succ, err, return1, return2, return3, return4=pcall(fun)
+	if not succ then
+		atwarn("Lua Error occured: ", err)
+		atwarn("Restoring saved state in 1 second...")
+		no_action=true
+		--read last save state and continue, as if server was restarted
+		for aoi, le in pairs(minetest.luaentities) do
+			if le.is_wagon then
+				le.object:remove()
+			end
+		end
+		minetest.after(1, advtrains.load)
+	else
+		return err, return1, return2, return3, return4
+	end
+end
+
+
 advtrains.modpath = minetest.get_modpath("advtrains")
 
 function advtrains.print_concat_table(a)
@@ -94,6 +117,7 @@ dofile(advtrains.modpath.."/craft_items.lua")
 --load/save
 
 advtrains.fpath=minetest.get_worldpath().."/advtrains"
+
 function advtrains.avt_load()
 	local file, err = io.open(advtrains.fpath, "r")
 	if not file then
@@ -197,43 +221,46 @@ end
 
 --## MAIN LOOP ##--
 --Calls all subsequent main tasks of both advtrains and atlatc
-local init_load
+local init_load=false
 local save_interval=20
 local save_timer=save_interval
 
 minetest.register_globalstep(function(dtime_mt)
-	--call load once. see advtrains.load() comment
-	if not init_load then
-		advtrains.load()
-	end
-	--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
-	local dtime=dtime_mt
-	if dtime>0.2 then
-		atprint("Limiting dtime to 0.2!")
-		dtime=0.2
-	end
-	
-	advtrains.mainloop_trainlogic(dtime)
-	if advtrains_itm_mainloop then
-		advtrains_itm_mainloop(dtime)
-	end
-	if atlatc then
-		atlatc.mainloop_stepcode(dtime)
-		atlatc.interrupt.mainloop(dtime)
-	end
-	
-	
-	--trigger a save when necessary
-	save_timer=save_timer-dtime
-	if save_timer<=0 then
-		local t=os.clock()
-		--save
-		advtrains.save()
-		save_timer=save_interval
-		atprintbm("saving", t)
-	end
-	
+	return advtrains.pcall(function()
+		--call load once. see advtrains.load() comment
+		if not init_load then
+			advtrains.load()
+		end
+		--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
+		local dtime=dtime_mt
+		if dtime>0.2 then
+			atprint("Limiting dtime to 0.2!")
+			dtime=0.2
+		end
+		
+		advtrains.mainloop_trainlogic(dtime)
+		if advtrains_itm_mainloop then
+			advtrains_itm_mainloop(dtime)
+		end
+		if atlatc then
+			atlatc.mainloop_stepcode(dtime)
+			atlatc.interrupt.mainloop(dtime)
+		end
+		
+		
+		--trigger a save when necessary
+		save_timer=save_timer-dtime
+		if save_timer<=0 then
+			local t=os.clock()
+			--save
+			advtrains.save()
+			save_timer=save_interval
+			atprintbm("saving", t)
+		end
+	end)
 end)
+
+--if something goes wrong in these functions, there is no help. no pcall here.
 
 --## MAIN LOAD ROUTINE ##
 -- Causes the loading of everything
@@ -247,6 +274,8 @@ function advtrains.load()
 		advtrains_itm_init()
 	end
 	init_load=true
+	no_action=false
+	atprint("[load_all]Loaded advtrains save files")
 end
 
 --## MAIN SAVE ROUTINE ##
@@ -261,5 +290,6 @@ function advtrains.save()
 	if atlatc then
 		atlatc.save()
 	end
+	atprint("[save_all]Saved advtrains save files")
 end
 minetest.register_on_shutdown(advtrains.save)
