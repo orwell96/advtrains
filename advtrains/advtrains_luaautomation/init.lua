@@ -40,25 +40,28 @@ dofile(mp.."/chatcmds.lua")
 
 
 local filename=minetest.get_worldpath().."/advtrains_luaautomation"
-local file, err = io.open(filename, "r")
-if not file then
-	minetest.log("error", " Failed to read advtrains_luaautomation save data from file "..filename..": "..(err or "Unknown Error"))
-else
-	atprint("luaautomation reading file:",filename)
-	local tbl = minetest.deserialize(file:read("*a"))
-	if type(tbl) == "table" then
-		if tbl.version==1 then
-			for envname, data in pairs(tbl.envs) do
-				atlatc.envs[envname]=atlatc.env_load(envname, data)
-			end
-			atlatc.active.load(tbl.active)
-			atlatc.interrupt.load(tbl.interrupt)
-			atlatc.pcnaming.load(tbl.pcnaming)
-		end
+
+function atlatc.load()
+	local file, err = io.open(filename, "r")
+	if not file then
+		minetest.log("error", " Failed to read advtrains_luaautomation save data from file "..filename..": "..(err or "Unknown Error"))
 	else
-		minetest.log("error", " Failed to read advtrains_luaautomation save data from file "..filename..": Not a table!")
+		atprint("luaautomation reading file:",filename)
+		local tbl = minetest.deserialize(file:read("*a"))
+		if type(tbl) == "table" then
+			if tbl.version==1 then
+				for envname, data in pairs(tbl.envs) do
+					atlatc.envs[envname]=atlatc.env_load(envname, data)
+				end
+				atlatc.active.load(tbl.active)
+				atlatc.interrupt.load(tbl.interrupt)
+				atlatc.pcnaming.load(tbl.pcnaming)
+			end
+		else
+			minetest.log("error", " Failed to read advtrains_luaautomation save data from file "..filename..": Not a table!")
+		end
+		file:close()
 	end
-	file:close()
 end
 
 -- run init code of all environments
@@ -94,21 +97,14 @@ atlatc.save = function()
 	file:close()
 end
 
-minetest.register_on_shutdown(atlatc.save)
 
 -- globalstep for step code
 local timer, step_int=0, 2
-local stimer, sstep_int=0, 10
 
-minetest.register_globalstep(function(dtime)
+function atlatc.mainloop_stepcode(dtime)
 	timer=timer+dtime
 	if timer>step_int then
 		timer=0
 		atlatc.run_stepcode()
-	end
-	stimer=stimer+dtime
-	if stimer>sstep_int then
-		stimer=0
-		atlatc.save()
 	end
 end)

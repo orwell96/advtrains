@@ -36,25 +36,9 @@ advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
 advtrains.train_emerg_force=10--for emergency brakes(when going off track)
 
-advtrains.save_interval=10
-advtrains.save_timer=advtrains.save_interval
 
-minetest.register_globalstep(function(dtime_mt)
-	--limit dtime: if trains move too far in one step, automation may cause stuck and wrongly braking trains
-	local dtime=dtime_mt
-	if dtime>0.2 then
-		atprint("Limiting dtime to 0.2!")
-		dtime=0.2
-	end
+advtrains.mainloop_trainlogic(function(dtime)
 
-	advtrains.save_timer=advtrains.save_timer-dtime
-	if advtrains.save_timer<=0 then
-		local t=os.clock()
-		--save
-		advtrains.save()
-		advtrains.save_timer=advtrains.save_interval
-		atprintbm("saving", t)
-	end
 	--build a table of all players indexed by pts. used by damage and door system.
 	advtrains.playersbypts={}
 	for _, player in pairs(minetest.get_connected_players()) do
@@ -80,7 +64,7 @@ minetest.register_globalstep(function(dtime_mt)
 	
 	atprintbm("trainsteps", t)
 	endstep()
-end)
+end
 
 minetest.register_on_joinplayer(function(player)
 	local pname=player:get_player_name()

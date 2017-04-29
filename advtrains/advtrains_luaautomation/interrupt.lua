@@ -21,7 +21,7 @@ function iq.add(t, pos, evtdata)
 	run=true
 end
 
-minetest.register_globalstep(function(dtime)
+function iq.mainloop(dtime)
 	if run then
 		timer=timer + math.min(dtime, 0.2)
 		for i=1,#queue do

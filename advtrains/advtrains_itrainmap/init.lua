@@ -128,7 +128,7 @@ minetest.register_chatcommand("itm_cache_ndb", {
 })
 
 local timer=0
-minetest.register_globalstep(function(dtime)
+function advtrains_itm_mainloop(dtime)
 	timer=timer-math.min(dtime, 0.1)
 	if timer<=0 then
 		for pname,d in pairs(itm_pdata) do
@@ -143,5 +143,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end
 end)
 
---automatically run itm_cache_ndb
-minetest.after(2, cache_ndb)
+function advtrains_itm_init()
+	--automatically run itm_cache_ndb
+	minetest.after(2, cache_ndb)
+end
