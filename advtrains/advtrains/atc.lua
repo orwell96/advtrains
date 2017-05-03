@@ -93,7 +93,7 @@ advtrains.register_tracks("default", {
 			after_place_node=apn_func,
 			after_dig_node=function(pos)
 				return advtrains.pcall(function()
-					advtrains.invalidate_all_paths()
+					advtrains.invalidate_all_paths(pos)
 					advtrains.ndb.clear(pos)
 					local pts=minetest.pos_to_string(pos)
 					atc.controllers[pts]=nil

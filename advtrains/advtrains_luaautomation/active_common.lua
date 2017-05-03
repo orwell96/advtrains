@@ -49,7 +49,7 @@ function ac.getform(pos, meta_p)
 end
 
 function ac.after_dig_node(pos, node, player)
-	advtrains.invalidate_all_paths()
+	advtrains.invalidate_all_paths(pos)
 	advtrains.ndb.clear(pos)
 	local ph=minetest.pos_to_string(pos)
 	ac.nodes[ph]=nil

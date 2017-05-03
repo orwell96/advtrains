@@ -37,7 +37,7 @@ advtrains.modpath = minetest.get_modpath("advtrains")
 function advtrains.print_concat_table(a)
 	local str=""
 	local stra=""
-	for i=1,50 do
+	for i=1,10 do
 		t=a[i]
 		if t==nil then
 			stra=stra.."nil "
@@ -67,9 +67,12 @@ end
 atprint=function() end
 if minetest.setting_getbool("advtrains_debug") then
 	atprint=function(t, ...)
+		local context=advtrains.atprint_context_tid
+		if not context then context="" end
+		--if context~="4527" then return end
 		local text=advtrains.print_concat_table({t, ...})
-		minetest.log("action", "[advtrains]"..text)
-		minetest.chat_send_all("[advtrains]"..text)
+		minetest.log("action", "[advtrains]"..context..">"..text)
+		minetest.chat_send_all("[advtrains]"..context..">"..text)
 	end
 end
 atwarn=function(t, ...)
@@ -171,7 +174,8 @@ end
 
 advtrains.avt_save = function()
 	--atprint("saving")
-	advtrains.invalidate_all_paths()
+	--No more invalidating.
+	--Instead, remove path a.s.o from the saved table manually
 	
 	-- update wagon saves
 	for _,wagon in pairs(minetest.luaentities) do
@@ -195,10 +199,34 @@ advtrains.avt_save = function()
 		end
 	end
 	
+	local tmp_trains={}
+	for id, train in pairs(advtrains.trains) do
+		--first, deep_copy the train
+		local v=advtrains.merge_tables(train)
+		--then invalidate
+		if v.index then
+			v.restore_add_index=v.index-math.floor(v.index+0.5)
+		end
+		v.path=nil
+		v.path_dist=nil
+		v.index=nil
+		v.end_index=nil
+		v.min_index_on_track=nil
+		v.max_index_on_track=nil
+		v.path_extent_min=nil
+		v.path_extent_max=nil
+		
+		v.detector_old_index=nil
+		v.detector_old_end_index=nil
+		
+		--then save it
+		tmp_trains[id]=v
+	end
+	
 	--versions:
 	-- 1 - Initial new save format.
 	local save_tbl={
-		trains = advtrains.trains,
+		trains = tmp_trains,
 		wagon_save = advtrains.wagon_save,
 		ptmap = advtrains.player_to_train_mapping,
 		atc = advtrains.atc.save_data(),
