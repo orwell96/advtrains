@@ -338,12 +338,12 @@ function advtrains.train_step_a(id, train, dtime)
 		train.savedpos_off_track_index_offset=train.index-train.max_index_on_track
 		train.last_pos=train.path[train.max_index_on_track]
 		train.last_pos_prev=train.path[train.max_index_on_track-1]
-		atprint("train is off-track (front), last positions kept at "..minetest.pos_to_string(train.last_pos).." / "..minetest.pos_to_string(train.last_pos_prev))
+		atprint("train is off-track (front), last positions kept at", train.last_pos, "/", train.last_pos_prev)
 	elseif train.min_index_on_track+1>train.index then --whoops, train went even more far. same behavior
 		train.savedpos_off_track_index_offset=train.index-train.min_index_on_track
 		train.last_pos=train.path[train.min_index_on_track+1]
 		train.last_pos_prev=train.path[train.min_index_on_track]
-		atprint("train is off-track (back), last positions kept at "..minetest.pos_to_string(train.last_pos).." / "..minetest.pos_to_string(train.last_pos_prev))
+		atprint("train is off-track (back), last positions kept at", train.last_pos, "/", train.last_pos_prev)
 	else --regular case
 		train.savedpos_off_track_index_offset=nil
 		train.last_pos=train.path[math.floor(train.index+0.5)]
@@ -482,7 +482,7 @@ function advtrains.pathpredict(id, train, regular)
 	
 	local maxn=train.path_extent_max or 0
 	while maxn < gen_front do--pregenerate
-		atprint("maxn conway for ",maxn,minetest.pos_to_string(train.path[maxn]),maxn-1,minetest.pos_to_string(train.path[maxn-1]))
+		atprint("maxn conway for ",maxn,train.path[maxn],maxn-1,train.path[maxn-1])
 		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
 		if conway then
 			train.path[maxn+1]=conway
@@ -490,7 +490,7 @@ function advtrains.pathpredict(id, train, regular)
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update max_index_on_track
-			atprint("over-generating path max to index "..(maxn+1).." (position "..minetest.pos_to_string(train.path[maxn]).." )")
+			atprint("over-generating path max to index ",(maxn+1)," (position ",train.path[maxn]," )")
 			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
 		end
 		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
@@ -500,7 +500,7 @@ function advtrains.pathpredict(id, train, regular)
 	
 	local minn=train.path_extent_min or -1
 	while minn > gen_back do
-		atprint("minn conway for ",minn,minetest.pos_to_string(train.path[minn]),minn+1,minetest.pos_to_string(train.path[minn+1]))
+		atprint("minn conway for ",minn,train.path[minn],minn+1,train.path[minn+1])
 		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
 		if conway then
 			train.path[minn-1]=conway
@@ -508,7 +508,7 @@ function advtrains.pathpredict(id, train, regular)
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update min_index_on_track
-			atprint("over-generating path min to index "..(minn-1).." (position "..minetest.pos_to_string(train.path[minn]).." )")
+			atprint("over-generating path min to index ",(minn-1)," (position ",train.path[minn]," )")
 			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
 		end
 		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
@@ -696,7 +696,7 @@ function advtrains.split_train_at_wagon(wagon)
 	end
 	local node_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.drives_on)
 	if not node_ok then
-		atprint("split_train: pos_for_new_train "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." not loaded or is not a rail")
+		atprint("split_train: pos_for_new_train ",advtrains.round_vector_floor_y(pos_for_new_train_prev)," not loaded or is not a rail")
 		return false
 	end
 	
@@ -707,7 +707,7 @@ function advtrains.split_train_at_wagon(wagon)
 	
 	local prevnode_ok=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(pos_for_new_train), train.drives_on)
 	if not prevnode_ok then
-		atprint("split_train: pos_for_new_train_prev "..minetest.pos_to_string(advtrains.round_vector_floor_y(pos_for_new_train_prev)).." not loaded or is not a rail")
+		atprint("split_train: pos_for_new_train_prev ", advtrains.round_vector_floor_y(pos_for_new_train_prev), " not loaded or is not a rail")
 		return false
 	end
 	
@@ -756,7 +756,7 @@ function advtrains.trains_facing(train1, train2)
 end
 
 function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
-	atprint("COLLISION: "..sid(id1).." and "..sid(id2).." at "..minetest.pos_to_string(pos)..", t1_is_backpos="..(t1_is_backpos and "true" or "false"))
+	atprint("COLLISION: "..sid(id1).." and "..sid(id2).." at ",pos,", t1_is_backpos="..(t1_is_backpos and "true" or "false"))
 	--TODO:
 	local train1=advtrains.trains[id1]
 	
@@ -784,7 +784,7 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 	local frontpos2=train2.path[math.floor(train2.detector_old_index)]
 	local backpos2=train2.path[math.floor(train2.detector_old_end_index)]
 	local t2_is_backpos
-	atprint("End positions: "..minetest.pos_to_string(frontpos2)..minetest.pos_to_string(backpos2))
+	atprint("End positions: ",frontpos2,backpos2)
 	
 	t2_is_backpos = vector.distance(backpos2, pos) < vector.distance(frontpos2, pos)
 	
