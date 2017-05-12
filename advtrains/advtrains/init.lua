@@ -14,9 +14,11 @@ local no_action=false
 function advtrains.pcall(fun)
 	if no_action then return end
 	
-	local succ, err, return1, return2, return3, return4=pcall(fun)
+	local succ, return1, return2, return3, return4=xpcall(fun, function(err)
+			atwarn("Lua Error occured: ", err)
+			atwarn(debug.traceback())
+		end)
 	if not succ then
-		atwarn("Lua Error occured: ", err)
 		atwarn("Restoring saved state in 1 second...")
 		no_action=true
 		--read last save state and continue, as if server was restarted
@@ -25,9 +27,13 @@ function advtrains.pcall(fun)
 				le.object:remove()
 			end
 		end
-		minetest.after(1, advtrains.load)
+		minetest.after(1, function()
+			advtrains.load()
+			atwarn("Reload successful!")
+			advtrains.ndb.restore_all()
+		end)
 	else
-		return err, return1, return2, return3, return4
+		return return1, return2, return3, return4
 	end
 end
 

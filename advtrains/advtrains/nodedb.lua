@@ -197,13 +197,16 @@ function advtrains.get_rail_info_at(pos, drives_on)
 	return true, conn1, conn2, rely1, rely2, railheight
 end
 
-
-minetest.register_abm({
-        name = "advtrains:nodedb_on_load_update",
-        nodenames = {"group:save_in_nodedb"},
-        run_at_every_load = true,
-        action = function(pos, node)
+ndb.run_lbm = function(pos, nodep)
 			return advtrains.pcall(function()
+				local node=nodep
+				if not node then
+					node=minetest.get_node_or_nil(pos)
+					if not node then
+						--this is defintely not loaded
+						return nil
+					end
+				end
 				local cid=ndbget(pos.x, pos.y, pos.z)
 				if cid then
 					--if in database, detect changes and apply.
@@ -215,11 +218,17 @@ minetest.register_abm({
 						ndb.update(pos, node)
 					else
 						if (nodeid~=node.name or param2~=node.param2) then
-							atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
-							minetest.swap_node(pos, {name=nodeid, param2 = param2})
-							local ndef=minetest.registered_nodes[nodeid]
-							if ndef and ndef.on_updated_from_nodedb then
-								ndef.on_updated_from_nodedb(pos, node)
+							local ori_ndef=minetest.registered_nodes[node.name]
+							if ori_ndef and ori_ndef.groups.save_in_nodedb then --check if this node has been worldedited, and don't replace then
+								atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
+								minetest.swap_node(pos, {name=nodeid, param2 = param2})
+								local ndef=minetest.registered_nodes[nodeid]
+								if ndef and ndef.on_updated_from_nodedb then
+									ndef.on_updated_from_nodedb(pos, node)
+								end
+								return true
+							else
+								ndb.clear(pos)
 							end
 						end
 					end
@@ -228,11 +237,35 @@ minetest.register_abm({
 					atprint("nodedb: ", pos, "not in database")
 					ndb.update(pos, node)
 				end
+				return false
 			end)
-        end,
+        end
+
+
+minetest.register_abm({
+        name = "advtrains:nodedb_on_load_update",
+        nodenames = {"group:save_in_nodedb"},
+        run_at_every_load = true,
+        action = ndb.run_lbm,
         interval=10,
         chance=1,
     })
+
+--used when restoring stuff after a crash
+ndb.restore_all = function()
+	atwarn("Updating the map from the nodedb, this may take a while")
+	local cnt=0
+	for y, ny in pairs(ndb_nodes) do
+		for x, nx in pairs(ny) do
+			for z, _ in pairs(nx) do
+				if ndb.run_lbm({x=x, y=y, z=z}) then
+					cnt=cnt+1
+				end
+			end
+		end
+	end
+	atwarn("Updated",cnt,"nodes")
+end
     
 minetest.register_on_dignode(function(pos, oldnode, digger)
 	return advtrains.pcall(function()
