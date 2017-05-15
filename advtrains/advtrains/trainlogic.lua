@@ -482,8 +482,11 @@ function advtrains.pathpredict(id, train, regular)
 	
 	local maxn=train.path_extent_max or 0
 	while maxn < gen_front do--pregenerate
-		atprint("maxn conway for ",maxn,train.path[maxn],maxn-1,train.path[maxn-1])
-		local conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
+		local conway
+		if train.max_index_on_track == train.path_extent_max then
+			atprint("maxn conway for ",maxn,train.path[maxn],maxn-1,train.path[maxn-1])
+			conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
+		end
 		if conway then
 			train.path[maxn+1]=conway
 			train.max_index_on_track=maxn
@@ -500,8 +503,11 @@ function advtrains.pathpredict(id, train, regular)
 	
 	local minn=train.path_extent_min or -1
 	while minn > gen_back do
-		atprint("minn conway for ",minn,train.path[minn],minn+1,train.path[minn+1])
-		local conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
+		local conway
+		if train.min_index_on_track == train.path_extent_min then
+			atprint("minn conway for ",minn,train.path[minn],minn+1,train.path[minn+1])
+			conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
+		end
 		if conway then
 			train.path[minn-1]=conway
 			train.min_index_on_track=minn
