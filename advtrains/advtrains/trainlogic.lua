@@ -193,6 +193,9 @@ function advtrains.train_step_a(id, train, dtime)
 		train.path_dist[-1]=vector.distance(train.last_pos, train.last_pos_prev)
 		train.path_extent_min=-1
 		train.path_extent_max=0
+		train.min_index_on_track=-1
+		train.max_index_on_track=0
+		
 		--[[
 		Bugfix for trains randomly ignoring ATC rails:
 		- Paths have been invalidated. 1 gets executed and ensures an initial path
@@ -355,7 +358,7 @@ function advtrains.train_step_a(id, train, dtime)
 	local path_pregen_keep=20
 	local offtrack_keep=4
 	local gen_front_keep= path_pregen_keep
-	local gen_back_keep= - train.trainlen - path_pregen_keep
+	local gen_back_keep= math.floor(- train.trainlen - path_pregen_keep)
 	
 	local delete_min=math.min(train.max_index_on_track - offtrack_keep, math.floor(train.index)+gen_back_keep)
 	local delete_max=math.max(train.min_index_on_track + offtrack_keep, math.floor(train.index)+gen_front_keep)
@@ -483,13 +486,13 @@ function advtrains.pathpredict(id, train, regular)
 	local maxn=train.path_extent_max or 0
 	while maxn < gen_front do--pregenerate
 		local conway
-		if train.max_index_on_track == train.path_extent_max then
+		if train.max_index_on_track == maxn then
 			atprint("maxn conway for ",maxn,train.path[maxn],maxn-1,train.path[maxn-1])
 			conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
 		end
 		if conway then
 			train.path[maxn+1]=conway
-			train.max_index_on_track=maxn
+			train.max_index_on_track=maxn+1
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update max_index_on_track
@@ -504,13 +507,13 @@ function advtrains.pathpredict(id, train, regular)
 	local minn=train.path_extent_min or -1
 	while minn > gen_back do
 		local conway
-		if train.min_index_on_track == train.path_extent_min then
+		if train.min_index_on_track == minn then
 			atprint("minn conway for ",minn,train.path[minn],minn+1,train.path[minn+1])
 			conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
 		end
 		if conway then
 			train.path[minn-1]=conway
-			train.min_index_on_track=minn
+			train.min_index_on_track=minn-1
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update min_index_on_track

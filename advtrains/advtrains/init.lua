@@ -43,7 +43,7 @@ advtrains.modpath = minetest.get_modpath("advtrains")
 function advtrains.print_concat_table(a)
 	local str=""
 	local stra=""
-	for i=1,10 do
+	for i=1,20 do
 		t=a[i]
 		if t==nil then
 			stra=stra.."nil "
@@ -70,23 +70,20 @@ function advtrains.print_concat_table(a)
 	end
 	return str
 end
+
 atprint=function() end
-if minetest.setting_getbool("advtrains_debug") then
-	atprint=function(t, ...)
-		local context=advtrains.atprint_context_tid
-		if not context then context="" end
-		--if context~="4527" then return end
-		local text=advtrains.print_concat_table({t, ...})
-		minetest.log("action", "[advtrains]"..context..">"..text)
-		minetest.chat_send_all("[advtrains]"..context..">"..text)
-	end
+atlog=function(t, ...)
+	local context=advtrains.atprint_context_tid
+	if not context then return end
+	local text=advtrains.print_concat_table({t, ...})
+	minetest.log("action", text)
 end
 atwarn=function(t, ...)
 	local text=advtrains.print_concat_table({t, ...})
 	minetest.log("warning", "[advtrains]"..text)
 	minetest.chat_send_all("[advtrains] -!- "..text)
 end
-sid=function(id) return string.sub(id, -4) end
+sid=function(id) return string.sub(id, -6) end
 
 dofile(advtrains.modpath.."/helpers.lua");
 --dofile(advtrains.modpath.."/debugitems.lua");
@@ -105,6 +102,7 @@ advtrains.meseconrules =
  {x=0,  y=1,  z=-1},
  {x=0,  y=-1, z=-1},
  {x=0, y=-2, z=0}}
+ 
  
 dofile(advtrains.modpath.."/trainlogic.lua")
 dofile(advtrains.modpath.."/trainhud.lua")
@@ -309,7 +307,7 @@ function advtrains.load()
 	end
 	init_load=true
 	no_action=false
-	atprint("[load_all]Loaded advtrains save files")
+	atlog("[load_all]Loaded advtrains save files")
 end
 
 --## MAIN SAVE ROUTINE ##
@@ -324,6 +322,6 @@ function advtrains.save()
 	if atlatc then
 		atlatc.save()
 	end
-	atprint("[save_all]Saved advtrains save files")
+	atlog("[save_all]Saved advtrains save files")
 end
 minetest.register_on_shutdown(advtrains.save)

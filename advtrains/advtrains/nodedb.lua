@@ -52,40 +52,38 @@ local function ndbset(x,y,z,v)
 end
 
 
+local path=minetest.get_worldpath().."/advtrains_ndb2"
 --load
 --nodeids get loaded by advtrains init.lua and passed here
 function ndb.load_data(data)
 	ndb_nodeids = data and data.nodeids or {}
-end
-
-local path=minetest.get_worldpath().."/advtrains_ndb2"
-
-local file, err = io.open(path, "r")
-if not file then
-	atprint("load ndb failed: ", err or "Unknown Error")
-else
-	local cnt=0
-	local hst_z=file:read(2)
-	local hst_y=file:read(2)
-	local hst_x=file:read(2)
-	local cid=file:read(2)
-	while hst_z and hst_y and hst_x and cid and #hst_z==2 and #hst_y==2 and #hst_x==2 and #cid==2 do
-		ndbset(bytes_to_int(hst_x), bytes_to_int(hst_y), bytes_to_int(hst_z), bytes_to_int(cid))
-		cnt=cnt+1
-		hst_z=file:read(2)
-		hst_y=file:read(2)
-		hst_x=file:read(2)
-		cid=file:read(2)
+	local file, err = io.open(path, "r")
+	if not file then
+		atwarn("Couldn't load the node database: ", err or "Unknown Error")
+	else
+		local cnt=0
+		local hst_z=file:read(2)
+		local hst_y=file:read(2)
+		local hst_x=file:read(2)
+		local cid=file:read(2)
+		while hst_z and hst_y and hst_x and cid and #hst_z==2 and #hst_y==2 and #hst_x==2 and #cid==2 do
+			ndbset(bytes_to_int(hst_x), bytes_to_int(hst_y), bytes_to_int(hst_z), bytes_to_int(cid))
+			cnt=cnt+1
+			hst_z=file:read(2)
+			hst_y=file:read(2)
+			hst_x=file:read(2)
+			cid=file:read(2)
+		end
+		atlog("nodedb: read", cnt, "nodes.")
+		file:close()
 	end
-	atprint("nodedb: read", cnt, "nodes.")
-	file:close()
 end
 
 --save
 function ndb.save_data()
 	local file, err = io.open(path, "w")
 	if not file then
-		atprint("save ndb failed: ", err or "Unknown Error")
+		atwarn("Couldn't save the node database: ", err or "Unknown Error")
 	else
 		for y, ny in pairs(ndb_nodes) do
 			for x, nx in pairs(ny) do
@@ -197,57 +195,45 @@ function advtrains.get_rail_info_at(pos, drives_on)
 	return true, conn1, conn2, rely1, rely2, railheight
 end
 
-ndb.run_lbm = function(pos, nodep)
-			return advtrains.pcall(function()
-				local node=nodep
-				if not node then
-					node=minetest.get_node_or_nil(pos)
-					if not node then
-						--this is defintely not loaded
-						return nil
+ndb.run_lbm = function(pos, node)
+	return advtrains.pcall(function()
+		local cid=ndbget(pos.x, pos.y, pos.z)
+		if cid then
+			--if in database, detect changes and apply.
+			local nodeid = ndb_nodeids[u14b(cid)]
+			local param2 = l2b(cid)
+			if not nodeid then
+				--something went wrong
+				atwarn("Node Database corruption, couldn't determine node to set at", pos)
+				ndb.update(pos, node)
+			else
+				if (nodeid~=node.name or param2~=node.param2) then
+					atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
+					minetest.swap_node(pos, {name=nodeid, param2 = param2})
+					local ndef=minetest.registered_nodes[nodeid]
+					if ndef and ndef.on_updated_from_nodedb then
+						ndef.on_updated_from_nodedb(pos, node)
 					end
+					return true
 				end
-				local cid=ndbget(pos.x, pos.y, pos.z)
-				if cid then
-					--if in database, detect changes and apply.
-					local nodeid = ndb_nodeids[u14b(cid)]
-					local param2 = l2b(cid)
-					if not nodeid then
-						--something went wrong
-						atprint("nodedb: lbm nid not found", pos, "with nid", u14b(cid), "param2", param2, "cid is", cid)
-						ndb.update(pos, node)
-					else
-						if (nodeid~=node.name or param2~=node.param2) then
-							local ori_ndef=minetest.registered_nodes[node.name]
-							if ori_ndef and ori_ndef.groups.save_in_nodedb then --check if this node has been worldedited, and don't replace then
-								atprint("nodedb: lbm replaced", pos, "with nodeid", nodeid, "param2", param2, "cid is", cid)
-								minetest.swap_node(pos, {name=nodeid, param2 = param2})
-								local ndef=minetest.registered_nodes[nodeid]
-								if ndef and ndef.on_updated_from_nodedb then
-									ndef.on_updated_from_nodedb(pos, node)
-								end
-								return true
-							else
-								ndb.clear(pos)
-							end
-						end
-					end
-				else
-					--if not in database, take it.
-					atprint("nodedb: ", pos, "not in database")
-					ndb.update(pos, node)
-				end
-				return false
-			end)
-        end
+			end
+		else
+			--if not in database, take it.
+			atlog("Node Database:", pos, "was not found in the database, have you used worldedit?")
+			ndb.update(pos, node)
+		end
+		return false
+	end)
+end
 
 
-minetest.register_abm({
+minetest.register_lbm({
         name = "advtrains:nodedb_on_load_update",
         nodenames = {"group:save_in_nodedb"},
         run_at_every_load = true,
+        run_on_every_load = true,
         action = ndb.run_lbm,
-        interval=10,
+        interval=30,
         chance=1,
     })
 
@@ -258,8 +244,20 @@ ndb.restore_all = function()
 	for y, ny in pairs(ndb_nodes) do
 		for x, nx in pairs(ny) do
 			for z, _ in pairs(nx) do
-				if ndb.run_lbm({x=x, y=y, z=z}) then
-					cnt=cnt+1
+				local pos={x=x, y=y, z=z}
+				local node=minetest.get_node_or_nil(pos)
+				if node then
+					local ori_ndef=minetest.registered_nodes[node.name]
+					local ndbnode=ndb.get_node(pos)
+					if ori_ndef and ori_ndef.groups.save_in_nodedb then --check if this node has been worldedited, and don't replace then
+						if (ndbnode.name~=node.name or ndbnode.param2~=node.param2) then
+							minetest.swap_node(pos, ndbnode)
+							atwarn("Replaced",node.name,"@",pos,"with",ndbnode.name)
+						end
+					else
+						ndb.clear(pos)
+						atwarn("Found ghost node (former",ndbnode.name,") @",pos,"deleting")
+					end
 				end
 			end
 		end
@@ -282,4 +280,21 @@ end
 
 
 advtrains.ndb=ndb
+
+local ptime
+
+minetest.register_chatcommand("at_restore_ndb",
+	{
+        params = "", -- Short parameter description
+        description = "Write node db back to map", -- Full description
+        privs = {train_operator=true, worldedit=true}, -- Require the "privs" privilege to run
+        func = function(name, param)
+			if !minetest.check_player_privs(name, {server=true}) and os.time() < ptime+30 then
+				return false, "Please wait at least 30s from the previous execution of /at_restore_ndb!"
+			end
+			ndb.restore_all()
+			ptime=os.time()
+			return true
+        end,
+    })
 

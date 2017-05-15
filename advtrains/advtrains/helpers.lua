@@ -170,12 +170,6 @@ function advtrains.minAngleDiffRad(r1, r2)
 		return try3
 	end
 end
-function advtrains.dumppath(path)
-	if not path then atprint("dumppath: no path(nil)") return end
-	local min=advtrains.minN(path)
-	local max=advtrains.maxN(path)
-	for i=min, max do atprint("["..i.."] "..(path[i] and minetest.pos_to_string(path[i]) or "nil")) end
-end
 
 function advtrains.merge_tables(a, ...)
 	local new={}
