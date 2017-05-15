@@ -57,6 +57,7 @@ function atc.send_command(pos, par_tid)
 	else
 		atwarn("ATC rail at", pos, ": Sending command failed: Entry for controller not found.")
 		atwarn("ATC rail at", pos, ": Please visit controller and click 'Save'")
+		blablubb()
 	end
 	return false
 end

@@ -56,14 +56,17 @@ advtrains.mainloop_trainlogic=function(dtime)
 	advtrains.detector.on_node={}
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid_full=k
 		advtrains.train_step_a(k, v, dtime)
 	end
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid_full=k
 		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	advtrains.atprint_context_tid=nil
+	advtrains.atprint_context_tid_full=nil
 	
 	atprintbm("trainsteps", t)
 	endstep()
@@ -131,6 +134,8 @@ train step structure:
 ]]
 
 function advtrains.train_step_a(id, train, dtime)
+	atprint("--- runcnt ",advtrains.mainloop_runcnt,": index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
+	
 	--- 1. LEGACY STUFF ---
 	if not train.drives_on or not train.max_speed then
 		advtrains.update_trainpart_properties(id)
@@ -193,6 +198,9 @@ function advtrains.train_step_a(id, train, dtime)
 		train.path_dist[-1]=vector.distance(train.last_pos, train.last_pos_prev)
 		train.path_extent_min=-1
 		train.path_extent_max=0
+		train.min_index_on_track=-1
+		train.max_index_on_track=0
+		
 		--[[
 		Bugfix for trains randomly ignoring ATC rails:
 		- Paths have been invalidated. 1 gets executed and ensures an initial path
@@ -232,6 +240,7 @@ function advtrains.train_step_a(id, train, dtime)
 	local t_info, train_pos=sid(id), train.path[math.floor(train.index)]
 	if train_pos then
 		t_info=t_info.." @"..minetest.pos_to_string(train_pos)
+		atprint("train_pos:",train_pos)
 	end
 	
 	--apply off-track handling:
@@ -483,13 +492,13 @@ function advtrains.pathpredict(id, train, regular)
 	local maxn=train.path_extent_max or 0
 	while maxn < gen_front do--pregenerate
 		local conway
-		if train.max_index_on_track == train.path_extent_max then
+		if train.max_index_on_track == maxn then
 			atprint("maxn conway for ",maxn,train.path[maxn],maxn-1,train.path[maxn-1])
 			conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
 		end
 		if conway then
 			train.path[maxn+1]=conway
-			train.max_index_on_track=maxn
+			train.max_index_on_track=maxn+1
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update max_index_on_track
@@ -504,13 +513,13 @@ function advtrains.pathpredict(id, train, regular)
 	local minn=train.path_extent_min or -1
 	while minn > gen_back do
 		local conway
-		if train.min_index_on_track == train.path_extent_min then
+		if train.min_index_on_track == minn then
 			atprint("minn conway for ",minn,train.path[minn],minn+1,train.path[minn+1])
 			conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
 		end
 		if conway then
 			train.path[minn-1]=conway
-			train.min_index_on_track=minn
+			train.min_index_on_track=minn-1
 		else
 			--do as if nothing has happened and preceed with path
 			--but do not update min_index_on_track
