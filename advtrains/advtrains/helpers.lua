@@ -171,6 +171,19 @@ function advtrains.minAngleDiffRad(r1, r2)
 	end
 end
 
+function advtrains.dumppath(path)
+	atlog("Dumping a path:")
+	if not path then atlog("dumppath: no path(nil)") return end
+	local temp_path={}
+	for ipt, iit in pairs(path) do 
+		temp_path[#temp_path+1]={i=ipt, p=iit}
+	end
+	table.sort(temp_path, function (k1, k2) return k1.i < k2.i end)
+	for _,pit in ipairs(temp_path) do
+		atlog(pit.i.." > "..minetest.pos_to_string(pit.p))
+	end
+end
+
 function advtrains.merge_tables(a, ...)
 	local new={}
 	for _,t in ipairs({a,...}) do

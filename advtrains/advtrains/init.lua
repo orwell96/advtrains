@@ -15,6 +15,13 @@ function advtrains.pcall(fun)
 	if no_action then return end
 	
 	local succ, return1, return2, return3, return4=xpcall(fun, function(err)
+			if advtrains.atprint_context_tid then
+				local train=advtrains.trains[advtrains.atprint_context_tid_full]
+				advtrains.dumppath(train.path)
+				atwarn("Dumping last debug outputs: ", err)
+				atprint("Train state: index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
+				advtrains.drb_dump(advtrains.atprint_context_tid)
+			end
 			atwarn("Lua Error occured: ", err)
 			atwarn(debug.traceback())
 		end)
@@ -72,7 +79,12 @@ function advtrains.print_concat_table(a)
 	return str
 end
 
-atprint=function() end
+atprint=function(t, ...)
+	local context=advtrains.atprint_context_tid
+	if not context then return end
+	local text=advtrains.print_concat_table({t, ...})
+	advtrains.drb_record(context, text)
+end
 atlog=function(t, ...)
 	local context=advtrains.atprint_context_tid
 	if not context then return end
@@ -104,6 +116,8 @@ advtrains.meseconrules =
  {x=0,  y=-1, z=-1},
  {x=0, y=-2, z=0}}
  
+
+dofile(advtrains.modpath.."/debugringbuffer.lua")
  
 dofile(advtrains.modpath.."/trainlogic.lua")
 dofile(advtrains.modpath.."/trainhud.lua")
@@ -260,9 +274,12 @@ end
 local init_load=false
 local save_interval=20
 local save_timer=save_interval
+advtrains.mainloop_runcnt=0
 
 minetest.register_globalstep(function(dtime_mt)
 	return advtrains.pcall(function()
+		advtrains.mainloop_runcnt=advtrains.mainloop_runcnt+1
+		atprint("Running the main loop, runcnt",advtrains.mainloop_runcnt)
 		--call load once. see advtrains.load() comment
 		if not init_load then
 			advtrains.load()

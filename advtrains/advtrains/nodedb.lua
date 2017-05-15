@@ -286,7 +286,7 @@ local ptime=0
 minetest.register_chatcommand("at_restore_ndb",
 	{
         params = "", -- Short parameter description
-        description = "Write node db back to map", -- Full description
+        description = "Write node db back to map and find ghost nodes", -- Full description
         privs = {train_operator=true, worldedit=true}, -- Require the "privs" privilege to run
         func = function(name, param)
 			return advtrains.pcall(function()
@@ -298,5 +298,9 @@ minetest.register_chatcommand("at_restore_ndb",
 				return true
 			end)
         end,
+        privs = {train_operator=true}, -- Require the "privs" privilege to run
+        func = function(name, param)
+			ndb.restore_all()
+        end, -- Called when command is run.
     })
 

@@ -56,14 +56,17 @@ advtrains.mainloop_trainlogic=function(dtime)
 	advtrains.detector.on_node={}
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid_full=k
 		advtrains.train_step_a(k, v, dtime)
 	end
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid_full=k
 		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	advtrains.atprint_context_tid=nil
+	advtrains.atprint_context_tid_full=nil
 	
 	atprintbm("trainsteps", t)
 	endstep()
@@ -131,6 +134,10 @@ train step structure:
 ]]
 
 function advtrains.train_step_a(id, train, dtime)
+	atprint("--- runcnt ",advtrains.mainloop_runcnt,": index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
+	if train.min_index_on_track then
+		assert(math.floor(train.min_index_on_track)==train.min_index_on_track)
+	end
 	--- 1. LEGACY STUFF ---
 	if not train.drives_on or not train.max_speed then
 		advtrains.update_trainpart_properties(id)
@@ -235,6 +242,7 @@ function advtrains.train_step_a(id, train, dtime)
 	local t_info, train_pos=sid(id), train.path[math.floor(train.index)]
 	if train_pos then
 		t_info=t_info.." @"..minetest.pos_to_string(train_pos)
+		--atprint("train_pos:",train_pos)
 	end
 	
 	--apply off-track handling:
