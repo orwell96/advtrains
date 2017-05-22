@@ -281,7 +281,7 @@ end
 
 advtrains.ndb=ndb
 
-local ptime
+local ptime=0
 
 minetest.register_chatcommand("at_restore_ndb",
 	{
@@ -289,12 +289,14 @@ minetest.register_chatcommand("at_restore_ndb",
         description = "Write node db back to map", -- Full description
         privs = {train_operator=true, worldedit=true}, -- Require the "privs" privilege to run
         func = function(name, param)
-			if not minetest.check_player_privs(name, {server=true}) and os.time() < ptime+30 then
-				return false, "Please wait at least 30s from the previous execution of /at_restore_ndb!"
-			end
-			ndb.restore_all()
-			ptime=os.time()
-			return true
+			return advtrains.pcall(function()
+				if not minetest.check_player_privs(name, {server=true}) and os.time() < ptime+30 then
+					return false, "Please wait at least 30s from the previous execution of /at_restore_ndb!"
+				end
+				ndb.restore_all()
+				ptime=os.time()
+				return true
+			end)
         end,
     })
 
