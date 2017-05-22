@@ -17,6 +17,10 @@ function r.fire_event(pos, evtdata)
 	
 	
 	local arrowconn = railtbl.arrowconn
+	if not arrowconn then
+		atwarn("LuaAutomation ATC interface rail at",ph,": Incomplete Data! Please visit position and click 'Save'!")
+		return
+	end
 	
 	--prepare ingame API for ATC. Regenerate each time since pos needs to be known
 	--If no train, then return false.
