@@ -121,6 +121,9 @@ dofile(advtrains.modpath.."/misc_nodes.lua")
 dofile(advtrains.modpath.."/crafting.lua")
 dofile(advtrains.modpath.."/craft_items.lua")
 
+if digtron then
+	dofile(advtrains.modpath.."/digtron.lua")
+end
 
 --load/save
 

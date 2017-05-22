@@ -185,19 +185,19 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 		description = dispname,
 		inventory_image = imgprefix.."_placer.png",
 		wield_image = imgprefix.."_placer.png",
-		groups={},
+		groups={advtrains_trackplacer=1},
 		on_place = function(itemstack, placer, pointed_thing)
 			return advtrains.pcall(function()
 					local name = placer:get_player_name()
 				if not name then
-				   return itemstack
+				   return itemstack, false
 				end
 				if pointed_thing.type=="node" then
 					local pos=pointed_thing.above
 					local upos=vector.subtract(pointed_thing.above, {x=0, y=1, z=0})
 					if advtrains.is_protected(pos,name) then
 						minetest.record_protection_violation(pos, name)
-						return itemstack
+						return itemstack, false
 					end
 					if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
 						and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
@@ -207,7 +207,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 						end
 					end
 				end
-				return itemstack
+				return itemstack, true
 			end)
 		end,
 	})
