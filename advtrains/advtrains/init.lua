@@ -43,6 +43,7 @@ advtrains.modpath = minetest.get_modpath("advtrains")
 function advtrains.print_concat_table(a)
 	local str=""
 	local stra=""
+	local t
 	for i=1,20 do
 		t=a[i]
 		if t==nil then

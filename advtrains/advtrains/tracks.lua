@@ -154,7 +154,7 @@ ap.t_30deg_straightonly={
 	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={st},
+	increativeinv={"st"},
 }
 ap.t_30deg_straightonly_noplacer={
 	regstep=1,
@@ -179,7 +179,7 @@ ap.t_30deg_straightonly_noplacer={
 	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={st},
+	increativeinv={"st"},
 }
 ap.t_45deg={
 	regstep=2,
@@ -310,7 +310,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			},
 			mesecons=mesecontbl,
 			luaautomation=luaautomation,
-			drop = increativeinv and def.nodename_prefix.."_"..suffix..rotation or (drop_slope and def.nodename_prefix.."_slopeplacer" or def.nodename_prefix.."_placer"),
+			drop = (drop_slope and def.nodename_prefix.."_slopeplacer" or def.nodename_prefix.."_placer"),
 			}
 	end
 	local function cycle_conns(conns, rotid)
