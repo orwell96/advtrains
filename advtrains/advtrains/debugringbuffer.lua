@@ -17,14 +17,14 @@ function advtrains.drb_record(tid, msg)
 	end
 end
 function advtrains.drb_dump(tid)
-	atlog("Debug ring buffer output for '"..tid.."':")
+	atdebug("Debug ring buffer output for '"..tid.."':")
 	local stopcnt=ringbufcnt[tid]
 	if not stopcnt then
-		atlog("ID unknown!")
+		atdebug("ID unknown!")
 		return
 	end
 	repeat
-		atlog(ringbufs[tid][ringbufcnt[tid]])
+		atdebug(ringbufs[tid][ringbufcnt[tid]])
 		ringbufcnt[tid]=ringbufcnt[tid]+1
 		if ringbufcnt[tid] > ringbuflen then
 			ringbufcnt[tid]=0

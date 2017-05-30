@@ -134,7 +134,7 @@ train step structure:
 ]]
 
 function advtrains.train_step_a(id, train, dtime)
-	atprint("--- runcnt ",advtrains.mainloop_runcnt,": index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
+	--atprint("--- runcnt ",advtrains.mainloop_runcnt,": index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
 	if train.min_index_on_track then
 		assert(math.floor(train.min_index_on_track)==train.min_index_on_track)
 	end
@@ -410,7 +410,10 @@ function advtrains.train_step_a(id, train, dtime)
 	else
 		for i=ibn, ifn do
 			if path[i] then
-				advtrains.detector.stay_node(path[i], id)
+				local pts=minetest.pos_to_string(path[i])
+				if not (advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id) then
+					advtrains.detector.stay_node(path[i], id)
+				end
 			end
 		end
 		
@@ -420,8 +423,10 @@ function advtrains.train_step_a(id, train, dtime)
 					local pts=minetest.pos_to_string(path[i])
 					if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id then
 						--if another train has signed up for this position first, it won't be recognized in train_step_b. So do collision here.
+						atprint("Collision detected in enter_node callbacks (front) @",pts,"with",sid(advtrains.detector.on_node[pts]))
 						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], false)
 					end
+					atprint("enter_node (front) @index",i,"@",pts,"on_node",sid(advtrains.detector.on_node[pts]))
 					advtrains.detector.enter_node(path[i], id)
 				end
 			end
@@ -438,8 +443,10 @@ function advtrains.train_step_a(id, train, dtime)
 					local pts=minetest.pos_to_string(path[i])
 					if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id then
 						--if another train has signed up for this position first, it won't be recognized in train_step_b. So do collision here.
-						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], false)
+						atprint("Collision detected in enter_node callbacks (back) @",pts,"on_node",sid(advtrains.detector.on_node[pts]))
+						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], true)
 					end
+					atprint("enter_node (back) @index",i,"@",pts,"with",sid(advtrains.detector.on_node[pts]))
 					advtrains.detector.enter_node(path[i], id)
 				end
 			end

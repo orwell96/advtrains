@@ -285,8 +285,8 @@ function wagon:on_step(dtime)
 		
 		--check infotext
 		local outside=self:train().text_outside or ""
-		if self.object:get_properties().infotext~=outside then
-			self.object:set_properties({infotext=sid(self.train_id)})
+		if self.object:get_properties().infotext==outside  then
+			self.object:set_properties({infotext=outside})
 		end
 		
 		local gp=self:train()

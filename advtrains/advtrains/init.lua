@@ -86,10 +86,13 @@ atprint=function(t, ...)
 	advtrains.drb_record(context, text)
 end
 atlog=function(t, ...)
-	local context=advtrains.atprint_context_tid
-	if not context then return end
 	local text=advtrains.print_concat_table({t, ...})
-	minetest.log("action", text)
+	minetest.log("action", "[advtrains]"..text)
+end
+atdebug=function(t, ...)
+	local text=advtrains.print_concat_table({t, ...})
+	minetest.log("action", "[advtrains]"..text)
+	minetest.chat_send_all("[advtrains]"..text)
 end
 atwarn=function(t, ...)
 	local text=advtrains.print_concat_table({t, ...})

@@ -138,6 +138,8 @@ minetest.register_entity("advtrains:couple", {
 	end,
 	on_step=function(self, dtime)
 		return advtrains.pcall(function()
+			advtrains.atprint_context_tid=sid(self.train_id_1)
+			advtrains.atprint_context_tid_full=self.train_id_1
 			local t=os.clock()
 			if not self.train_id_1 or not self.train_id_2 then atprint("Couple: train ids not set!") self.object:remove() return end
 			local train1=advtrains.trains[self.train_id_1]
@@ -165,7 +167,7 @@ minetest.register_entity("advtrains:couple", {
 				tp2=advtrains.get_real_index_position(train2.path, train2.end_index)
 			end
 			if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<couple_max_dist) then
-				atprint("Couple: train end positions too distanced, destroying")
+				atprint("Couple: train end positions too distanced, destroying (distance is",vector.distance(tp1,tp2),")")
 				self.object:remove()
 				return
 			else
@@ -175,6 +177,8 @@ minetest.register_entity("advtrains:couple", {
 				end
 			end
 			atprintbm("couple step", t)
+			advtrains.atprint_context_tid=nil
+			advtrains.atprint_context_tid_full=nil
 		end)
 	end,
 }) 
