@@ -79,20 +79,11 @@ function advtrains.print_concat_table(a)
 	return str
 end
 
-atprint=function(t, ...)
-	local context=advtrains.atprint_context_tid
-	if not context then return end
-	local text=advtrains.print_concat_table({t, ...})
-	advtrains.drb_record(context, text)
-end
+atprint=function() end
+atdebug=function() end
 atlog=function(t, ...)
 	local text=advtrains.print_concat_table({t, ...})
 	minetest.log("action", "[advtrains]"..text)
-end
-atdebug=function(t, ...)
-	local text=advtrains.print_concat_table({t, ...})
-	minetest.log("action", "[advtrains]"..text)
-	minetest.chat_send_all("[advtrains]"..text)
 end
 atwarn=function(t, ...)
 	local text=advtrains.print_concat_table({t, ...})
@@ -100,6 +91,21 @@ atwarn=function(t, ...)
 	minetest.chat_send_all("[advtrains] -!- "..text)
 end
 sid=function(id) return string.sub(id, -6) end
+
+if minetest.settings:get_bool("advtrains_enable_debugging") then
+	atprint=function(t, ...)
+		local context=advtrains.atprint_context_tid
+		if not context then return end
+		local text=advtrains.print_concat_table({t, ...})
+		advtrains.drb_record(context, text)
+	end
+	atdebug=function(t, ...)
+		local text=advtrains.print_concat_table({t, ...})
+		minetest.log("action", "[advtrains]"..text)
+		minetest.chat_send_all("[advtrains]"..text)
+	end
+	dofile(advtrains.modpath.."/debugringbuffer.lua")
+end
 
 dofile(advtrains.modpath.."/helpers.lua");
 --dofile(advtrains.modpath.."/debugitems.lua");
@@ -120,7 +126,6 @@ advtrains.meseconrules =
  {x=0, y=-2, z=0}}
  
 
-dofile(advtrains.modpath.."/debugringbuffer.lua")
  
 dofile(advtrains.modpath.."/trainlogic.lua")
 dofile(advtrains.modpath.."/trainhud.lua")
