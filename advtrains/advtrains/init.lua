@@ -90,7 +90,7 @@ atwarn=function(t, ...)
 	minetest.log("warning", "[advtrains]"..text)
 	minetest.chat_send_all("[advtrains] -!- "..text)
 end
-sid=function(id) return string.sub(id, -6) end
+sid=function(id) if id then return string.sub(id, -6) end end
 
 if minetest.settings:get_bool("advtrains_enable_debugging") then
 	atprint=function(t, ...)

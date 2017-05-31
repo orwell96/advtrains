@@ -107,14 +107,7 @@ function ndb.get_node_or_nil(pos)
 		return node
 	else
 		--maybe we have the node in the database...
-		local cid=ndbget(pos.x, pos.y, pos.z)
-		if cid then
-			local nodeid = ndb_nodeids[u14b(cid)]
-			if nodeid then
-				--atprint("ndb.get_node_or_nil",pos,"found node",nodeid,"cid",cid,"par2",l2b(cid))
-				return {name=nodeid, param2 = l2b(cid)}
-			end
-		end
+		return ndb.get_node_raw(pos)
 	end
 	atprint("ndb.get_node_or_nil",pos,"not found")
 end
@@ -125,6 +118,17 @@ function ndb.get_node(pos)
 	end
 	return n
 end
+function ndb.get_node_raw(pos)
+	local cid=ndbget(pos.x, pos.y, pos.z)
+	if cid then
+		local nodeid = ndb_nodeids[u14b(cid)]
+		if nodeid then
+			return {name=nodeid, param2 = l2b(cid)}
+		end
+	end
+	return nil
+end
+
 
 function ndb.swap_node(pos, node)
 	minetest.swap_node(pos, node)
@@ -248,7 +252,7 @@ ndb.restore_all = function()
 				local node=minetest.get_node_or_nil(pos)
 				if node then
 					local ori_ndef=minetest.registered_nodes[node.name]
-					local ndbnode=ndb.get_node(pos)
+					local ndbnode=ndb.get_node_raw(pos)
 					if ori_ndef and ori_ndef.groups.save_in_nodedb then --check if this node has been worldedited, and don't replace then
 						if (ndbnode.name~=node.name or ndbnode.param2~=node.param2) then
 							minetest.swap_node(pos, ndbnode)
@@ -283,7 +287,7 @@ advtrains.ndb=ndb
 
 local ptime=0
 
-minetest.register_chatcommand("at_restore_ndb",
+minetest.register_chatcommand("at_sync_ndb",
 	{
         params = "", -- Short parameter description
         description = "Write node db back to map and find ghost nodes", -- Full description
