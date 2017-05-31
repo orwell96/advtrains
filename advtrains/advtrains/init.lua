@@ -142,6 +142,7 @@ dofile(advtrains.modpath.."/signals.lua")
 dofile(advtrains.modpath.."/misc_nodes.lua")
 dofile(advtrains.modpath.."/crafting.lua")
 dofile(advtrains.modpath.."/craft_items.lua")
+dofile(advtrains.modpath.."/loading.lua")
 
 if digtron then
 	dofile(advtrains.modpath.."/digtron.lua")
