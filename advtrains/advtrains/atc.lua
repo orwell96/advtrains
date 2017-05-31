@@ -92,49 +92,53 @@ advtrains.register_tracks("default", {
 		return {
 			after_place_node=apn_func,
 			after_dig_node=function(pos)
-				advtrains.invalidate_all_paths()
-				advtrains.ndb.clear(pos)
-				local pts=minetest.pos_to_string(pos)
-				atc.controllers[pts]=nil
+				return advtrains.pcall(function()
+					advtrains.invalidate_all_paths(pos)
+					advtrains.ndb.clear(pos)
+					local pts=minetest.pos_to_string(pos)
+					atc.controllers[pts]=nil
+				end)
 			end,
 			on_receive_fields = function(pos, formname, fields, player)
-				if advtrains.is_protected(pos, player:get_player_name()) then
-					minetest.record_protection_violation(pos, player:get_player_name())
-					return
-				end
-				local meta=minetest.get_meta(pos)
-				if meta then
-					if not fields.save then 
-						--maybe only the dropdown changed
-						if fields.mode then
-							meta:set_string("mode", idxtrans[fields.mode])
-							if fields.mode=="digiline" then
-								meta:set_string("infotext", attrans("ATC controller, mode @1\nChannel: @2", fields.mode, meta:get_string("command")) )
-							else
-								meta:set_string("infotext", attrans("ATC controller, mode @1\nCommand: @2", fields.mode, meta:get_string("command")) )
-							end
-							meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
-						end
+				return advtrains.pcall(function()
+					if advtrains.is_protected(pos, player:get_player_name()) then
+						minetest.record_protection_violation(pos, player:get_player_name())
 						return
 					end
-					meta:set_string("mode", idxtrans[fields.mode])
-					meta:set_string("command", fields.command)
-					meta:set_string("command_on", fields.command_on)
-					meta:set_string("channel", fields.channel)
-					if fields.mode=="digiline" then
-						meta:set_string("infotext", attrans("ATC controller, mode @1\nChannel: @2", fields.mode, meta:get_string("command")) )
-					else
-						meta:set_string("infotext", attrans("ATC controller, mode @1\nCommand: @2", fields.mode, meta:get_string("command")) )
+					local meta=minetest.get_meta(pos)
+					if meta then
+						if not fields.save then 
+							--maybe only the dropdown changed
+							if fields.mode then
+								meta:set_string("mode", idxtrans[fields.mode])
+								if fields.mode=="digiline" then
+									meta:set_string("infotext", attrans("ATC controller, mode @1\nChannel: @2", fields.mode, meta:get_string("command")) )
+								else
+									meta:set_string("infotext", attrans("ATC controller, mode @1\nCommand: @2", fields.mode, meta:get_string("command")) )
+								end
+								meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
+							end
+							return
+						end
+						meta:set_string("mode", idxtrans[fields.mode])
+						meta:set_string("command", fields.command)
+						meta:set_string("command_on", fields.command_on)
+						meta:set_string("channel", fields.channel)
+						if fields.mode=="digiline" then
+							meta:set_string("infotext", attrans("ATC controller, mode @1\nChannel: @2", fields.mode, meta:get_string("command")) )
+						else
+							meta:set_string("infotext", attrans("ATC controller, mode @1\nCommand: @2", fields.mode, meta:get_string("command")) )
+						end
+						meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
+						
+						local pts=minetest.pos_to_string(pos)
+						local _, conn1=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
+						atc.controllers[pts]={command=fields.command, arrowconn=conn1}
+						if advtrains.detector.on_node[pts] then
+							atc.send_command(pos)
+						end
 					end
-					meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
-					
-					local pts=minetest.pos_to_string(pos)
-					local _, conn1=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
-					atc.controllers[pts]={command=fields.command, arrowconn=conn1}
-					if advtrains.detector.on_node[pts] then
-						atc.send_command(pos)
-					end
-				end
+				end)
 			end,
 			advtrains = {
 				on_train_enter = function(pos, train_id)

@@ -154,7 +154,7 @@ ap.t_30deg_straightonly={
 	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={st},
+	increativeinv={"st"},
 }
 ap.t_30deg_straightonly_noplacer={
 	regstep=1,
@@ -179,7 +179,7 @@ ap.t_30deg_straightonly_noplacer={
 	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
-	increativeinv={st},
+	increativeinv={"st"},
 }
 ap.t_45deg={
 	regstep=2,
@@ -263,13 +263,13 @@ function advtrains.register_tracks(tracktype, def, preset)
 		local rcswitchfunc=function(pos, node, player)
 			if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
 				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
-				advtrains.invalidate_all_paths()
+				advtrains.invalidate_all_paths(pos)
 			end
 		end
 		local switchfunc=function(pos, node, newstate)
 			if newstate~=is_state then
 				advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..suffix_target, param2=node.param2})
-				advtrains.invalidate_all_paths()
+				advtrains.invalidate_all_paths(pos)
 			end
 		end
 		local mesec
@@ -310,7 +310,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			},
 			mesecons=mesecontbl,
 			luaautomation=luaautomation,
-			drop = increativeinv and def.nodename_prefix.."_"..suffix..rotation or (drop_slope and def.nodename_prefix.."_slopeplacer" or def.nodename_prefix.."_placer"),
+			drop = (drop_slope and def.nodename_prefix.."_slopeplacer" or def.nodename_prefix.."_placer"),
 			}
 	end
 	local function cycle_conns(conns, rotid)
@@ -644,7 +644,7 @@ if mesecon then
 				},
 				advtrains = {
 					on_train_enter=function(pos, train_id)
-						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_on".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
+						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_on".."_"..suffix..rotation, param2=advtrains.ndb.get_node(pos).param2})
 						mesecon.receptor_on(pos, advtrains.meseconrules)
 					end
 				}
@@ -669,7 +669,7 @@ if mesecon then
 				},
 				advtrains = {
 					on_train_leave=function(pos, train_id)
-						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_off".."_"..suffix..rotation, param2=minetest.get_node(pos).param2})
+						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_off".."_"..suffix..rotation, param2=advtrains.ndb.get_node(pos).param2})
 						mesecon.receptor_off(pos, advtrains.meseconrules)
 					end
 				}

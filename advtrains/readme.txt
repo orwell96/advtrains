@@ -9,7 +9,7 @@ Manual:
 If manual.pdf is not present (which is the case when you downloaded the zip file), see https://github.com/orwell96/advtrains/blob/master/manual.pdf
 
 License of code: LGPL 2.1
-License of media: CC-BY-NC-SA 3.0
+License of media: CC-BY-SA 3.0
 
 Contributions:
 
