@@ -463,7 +463,7 @@ function advtrains.train_step_a(id, train, dtime)
 	--check for any trainpart entities if they have been unloaded. do this only if train is near a player, to not spawn entities into unloaded areas
 	
 	train.check_trainpartload=(train.check_trainpartload or 0)-dtime
-	local node_range=(math.max((minetest.setting_get("active_block_range") or 0),1)*16)
+	local node_range=(math.max((minetest.settings:get("active_block_range") or 0),1)*16)
 	if train.check_trainpartload<=0 then
 		local ori_pos=train_pos --see 3a.
 		--atprint("[train "..id.."] at "..minetest.pos_to_string(vector.round(ori_pos)))
@@ -576,7 +576,7 @@ function advtrains.train_step_b(id, train, dtime)
 						advtrains.collide_and_spawn_couple(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
 					end
 					--- 8b damage players ---
-					if not minetest.setting_getbool("creative_mode") then
+					if not minetest.settings:get_bool("creative_mode") then
 						local player=advtrains.playersbypts[testpts]
 						if player and train.velocity>3 then
 							--instantly kill player
