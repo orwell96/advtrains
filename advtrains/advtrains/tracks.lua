@@ -534,12 +534,12 @@ function sl.create_slopeplacer_on_place(def, preset)
 			if not minetest.registered_nodes[node.name] or not minetest.registered_nodes[node.name].buildable_to or advtrains.is_protected(pos, player:get_player_name()) then 
 				--do slopes of this distance exist?
 				if lookup[step] then
-					if minetest.setting_getbool("creative_mode") or istack:get_count()>=step then
+					if minetest.settings:get_bool("creative_mode") or istack:get_count()>=step then
 						--start placing
 						local placenodes=lookup[step]
 						while step>0 do
 							minetest.set_node(pos, {name=def.nodename_prefix.."_"..placenodes[step], param2=param2})
-							if not minetest.setting_getbool("creative_mode") then
+							if not minetest.settings:get_bool("creative_mode") then
 								istack:take_item()
 							end
 							step=step-1

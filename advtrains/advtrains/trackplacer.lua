@@ -202,7 +202,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 					if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
 						and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
 						tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing)
-						if not minetest.setting_getbool("creative_mode") then
+						if not minetest.settings:get_bool("creative_mode") then
 							itemstack:take_item()
 						end
 					end
