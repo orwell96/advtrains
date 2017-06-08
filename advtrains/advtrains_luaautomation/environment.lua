@@ -217,12 +217,17 @@ end
 
 function env_proto:run_initcode()
 	if self.init_code and self.init_code~="" then
+		local old_fdata=self.fdata
 		self.fdata = {}
 		atprint("[atlatc]Running initialization code for environment '"..self.name.."'")
 		local succ, err = self:execute_code({}, self.init_code, {type="init", init=true})
 		if not succ then
 			atwarn("[atlatc]Executing InitCode for '"..self.name.."' failed:"..err)
 			self.init_err=err
+			if old_fdata then
+				self.fdata=old_fdata
+				atwarn("[atlatc]The 'F' table has been restored to the previous state.")
+			end
 		end
 	end
 end
