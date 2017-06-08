@@ -352,6 +352,6 @@ function advtrains.save()
 	if atlatc then
 		atlatc.save()
 	end
-	atlog("[save_all]Saved advtrains save files")
+	atprint("[save_all]Saved advtrains save files")
 end
 minetest.register_on_shutdown(advtrains.save)
