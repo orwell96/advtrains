@@ -144,7 +144,7 @@ dofile(advtrains.modpath.."/crafting.lua")
 dofile(advtrains.modpath.."/craft_items.lua")
 dofile(advtrains.modpath.."/loading.lua")
 
-if digtron then
+if minetest.global_exists("digtron") then
 	dofile(advtrains.modpath.."/digtron.lua")
 end
 
