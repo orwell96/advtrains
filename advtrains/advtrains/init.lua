@@ -11,6 +11,23 @@ advtrains = {trains={}, wagon_save={}, player_to_train_mapping={}}
 
 --pcall
 local no_action=false
+
+local function reload_saves()
+	atwarn("Restoring saved state in 1 second...")
+	no_action=true
+	--read last save state and continue, as if server was restarted
+	for aoi, le in pairs(minetest.luaentities) do
+		if le.is_wagon then
+			le.object:remove()
+		end
+	end
+	minetest.after(1, function()
+		advtrains.load()
+		atwarn("Reload successful!")
+		advtrains.ndb.restore_all()
+	end)
+end
+
 function advtrains.pcall(fun)
 	if no_action then return end
 	
@@ -26,19 +43,7 @@ function advtrains.pcall(fun)
 			atwarn(debug.traceback())
 		end)
 	if not succ then
-		atwarn("Restoring saved state in 1 second...")
-		no_action=true
-		--read last save state and continue, as if server was restarted
-		for aoi, le in pairs(minetest.luaentities) do
-			if le.is_wagon then
-				le.object:remove()
-			end
-		end
-		minetest.after(1, function()
-			advtrains.load()
-			atwarn("Reload successful!")
-			advtrains.ndb.restore_all()
-		end)
+		reload_saves()
 	else
 		return return1, return2, return3, return4
 	end
@@ -203,7 +208,7 @@ function advtrains.avt_load()
 	end
 end
 
-advtrains.avt_save = function()
+advtrains.avt_save = function(remove_players_from_wagons)
 	--atprint("saving")
 	--No more invalidating.
 	--Instead, remove path a.s.o from the saved table manually
@@ -228,6 +233,12 @@ advtrains.avt_save = function()
 			data.discouple.object:remove()
 			data.discouple=nil
 		end
+		if remove_players_from_wagons then
+			data.seatp={}
+		end
+	end
+	if remove_players_from_wagons then
+		advtrains.player_to_train_mapping={}
 	end
 	
 	local tmp_trains={}
@@ -342,16 +353,34 @@ end
 
 --## MAIN SAVE ROUTINE ##
 -- Causes the saving of everything
-function advtrains.save()
+function advtrains.save(remove_players_from_wagons)
 	if not init_load then
 		--wait... we haven't loaded yet?!
 		atwarn("Instructed to save() but load() was never called!")
 		return
 	end
-	advtrains.avt_save() --saving advtrains. includes ndb at advtrains.ndb.save_data()
+	advtrains.avt_save(remove_players_from_wagons) --saving advtrains. includes ndb at advtrains.ndb.save_data()
 	if atlatc then
 		atlatc.save()
 	end
 	atprint("[save_all]Saved advtrains save files")
 end
 minetest.register_on_shutdown(advtrains.save)
+
+-- This chat command provides a solution to the problem known on the LinuxWorks server
+-- There are many players that joined a single time, got on a train and then left forever
+-- These players still occupy seats in the trains.
+minetest.register_chatcommand("at_empty_seats",
+	{
+        params = "", -- Short parameter description
+        description = "Detach all players, especially the offline ones, from all trains. Use only when no one serious is on a train.", -- Full description
+        privs = {train_operator=true, server=true}, -- Require the "privs" privilege to run
+        func = function(name, param)
+			return advtrains.pcall(function()
+				atwarn("Data is being saved. While saving, advtrains will remove the players from trains. Save files will be reloaded afterwards!")
+				advtrains.save(true)
+				reload_saves()
+			end)
+        end,
+        privs = {train_operator=true}, -- Require the "privs" privilege to run
+    })
