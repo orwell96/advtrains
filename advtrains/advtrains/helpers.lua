@@ -81,7 +81,7 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	--dir2???
 	local cor2=advtrains.dirCoordSet(mid, middir1)--<<<<
 	if math.floor(cor2.x+0.5)==math.floor(prev.x+0.5) and math.floor(cor2.z+0.5)==math.floor(prev.z+0.5) then
-		next=advtrains.dirCoordSet(mid, middir2)--dir2 wird überprüft, alles gut.
+		next=advtrains.dirCoordSet(mid, middir2)--dir2 wird Ã¼berprÃ¼ft, alles gut.
 		if midrely2>=1 then
 			next.y=next.y+1
 			--atprint("found midrely2 to be >=1: next is now "..(next and minetest.pos_to_string(next) or "nil"))
@@ -259,4 +259,8 @@ function advtrains.is_protected(pos, name)
 		return false
 	end
 	return minetest.is_protected(pos, name)
+end
+
+function advtrains.ms_to_kmh(speed)
+	return speed * 3.6
 end
