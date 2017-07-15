@@ -115,11 +115,13 @@ function advtrains.hud_train_format(train, flip)
 	local max=train.max_speed or 10
 	local vel=advtrains.abs_ceil(train.velocity)
 	local tvel=advtrains.abs_ceil(train.tarvelocity)
+	local vel_kmh=advtrains.abs_ceil(advtrains.ms_to_kmh(train.velocity))
+	local tvel_kmh=advtrains.abs_ceil(advtrains.ms_to_kmh(train.tarvelocity))
 	local topLine, firstLine, secondLine
 	
 	topLine="  ["..mletter[fct*train.movedir].."]  "..doorstr[(train.door_open or 0) * train.movedir].."  "..(train.brake and "="..( train.brake_hold_state==2 and "^" or "" ).."B=" or "")
-	firstLine=attrans("Speed:").." |"..string.rep("+", vel)..string.rep("_", max-vel)..">"
-	secondLine=attrans("Target:").." |"..string.rep("+", tvel)..string.rep("_", max-tvel)..">"
+	firstLine=attrans("Speed:").." |"..string.rep("+", vel)..string.rep("_", max-vel).."> "..vel_kmh.." km/h"
+	secondLine=attrans("Target:").." |"..string.rep("+", tvel)..string.rep("_", max-tvel).."> "..tvel_kmh.." km/h"
 	
 	return topLine.."\n"..firstLine.."\n"..secondLine
 end
