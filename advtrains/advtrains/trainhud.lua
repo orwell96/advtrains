@@ -10,9 +10,10 @@ local mletter={[1]="F", [-1]="R", [0]="N"}
 local doorstr={[-1]="|<>| >|<", [0]=">|< >|<", [1]=">|< |<>|"}
 
 function advtrains.on_control_change(pc, train, flip)
+   	local maxspeed = train.max_speed or 10
 	if pc.sneak then
 		if pc.up then
-			train.tarvelocity = train.max_speed or 10
+			train.tarvelocity = maxspeed
 		end
 		if pc.down then
 			train.tarvelocity = 0
@@ -40,7 +41,7 @@ function advtrains.on_control_change(pc, train, flip)
 		--shift+use:see wagons.lua
 	else
 		if pc.up then
-			train.tarvelocity = train.tarvelocity + 1
+		   train.tarvelocity = math.min(train.tarvelocity + 1, maxspeed)
 		end
 		if pc.down then
 			if train.velocity>0 then
