@@ -303,8 +303,5 @@ minetest.register_chatcommand("at_sync_ndb",
 			end)
         end,
         privs = {train_operator=true}, -- Require the "privs" privilege to run
-        func = function(name, param)
-			ndb.restore_all()
-        end, -- Called when command is run.
     })
 

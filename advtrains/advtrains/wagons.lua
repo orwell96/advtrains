@@ -159,7 +159,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		   return
 		end
 		
-		if minetest.setting_getbool("creative_mode") then
+		if minetest.settings:get_bool("creative_mode") then
 			if not self:destroy() then return end
 			
 			local inv = puncher:get_inventory()
@@ -285,7 +285,7 @@ function wagon:on_step(dtime)
 		
 		--check infotext
 		local outside=self:train().text_outside or ""
-		if self.object:get_properties().infotext==outside  then
+		if self.object:get_properties().infotext~=outside  then
 			self.object:set_properties({infotext=outside})
 		end
 		
@@ -882,7 +882,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 				local wagon_uid=le:init_new_instance(id, {})
 				
 				advtrains.add_wagon_to_train(le, id)
-				if not minetest.setting_getbool("creative_mode") then
+				if not minetest.settings:get_bool("creative_mode") then
 					itemstack:take_item()
 				end
 				return itemstack

@@ -197,12 +197,12 @@ advtrains.register_wagon("wagon_box", {
 	has_inventory = true,
 	get_inventory_formspec = function(self)
 		return "size[8,11]"..
-			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,6;]"..
-			"list[current_player;main;0,7;8,4;]"..
+			"list[detached:advtrains_wgn_"..self.unique_id..";box;0,0;8,3;]"..
+			"list[current_player;main;0,5;8,4;]"..
 			"listring[]"
 	end,
 	inventory_list_sizes = {
-		box=8*6,
+		box=8*3,
 	},
 }, S("Box Wagon"), "advtrains_wagon_box_inv.png")
 
