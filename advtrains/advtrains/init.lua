@@ -382,5 +382,19 @@ minetest.register_chatcommand("at_empty_seats",
 				reload_saves()
 			end)
         end,
-        privs = {train_operator=true}, -- Require the "privs" privilege to run
-    })
+})
+-- This chat command solves another problem: Trains getting randomly stuck.
+minetest.register_chatcommand("at_reroute",
+	{
+        params = "", 
+        description = "Delete all train routes, force them to recalculate", 
+        privs = {train_operator=true}, -- Only train operator is required, since this is relatively safe.
+        func = function(name, param)
+			return advtrains.pcall(function()
+				atwarn("Train routes will be recalculated now")
+				advtrains.save(false)
+				reload_saves()
+			end)
+        end,
+})
+
