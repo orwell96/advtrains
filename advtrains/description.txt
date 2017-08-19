@@ -1,1 +1,1 @@
-Visible player armor & wielded items.
+advtrains 1.3.8
