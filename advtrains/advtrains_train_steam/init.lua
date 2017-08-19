@@ -35,7 +35,7 @@ advtrains.register_wagon("newlocomotive", {
 	},
 	assign_to_seat_group = {"dstand"},
 	visual_size = {x=1, y=1},
-	wagon_span=1.85,
+	wagon_span=2.3,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	update_animation=function(self, velocity)
 		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
@@ -149,14 +149,14 @@ advtrains.register_wagon("wagon_default", {
 	seats = {
 		{
 			name="1",
-			attach_offset={x=-4, y=8, z=8},
-			view_offset={x=0, y=0, z=0},
+			attach_offset={x=2, y=6, z=8},
+			view_offset={x=0, y=-4, z=0},
 			group="pass",
 		},
 		{
 			name="2",
-			attach_offset={x=4, y=8, z=8},
-			view_offset={x=0, y=0, z=0},
+			attach_offset={x=-1, y=6, z=8},
+			view_offset={x=0, y=-4, z=0},
 			group="pass",
 		},
 		{
@@ -178,20 +178,23 @@ advtrains.register_wagon("wagon_default", {
 			access_to = {},
 		},
 	},
+	
 	assign_to_seat_group = {"pass"},
 	visual_size = {x=1, y=1},
-	wagon_span=3.1,
+	wagon_span=2.634,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 }, S("Passenger Wagon"), "advtrains_wagon_inv.png")
+
+
 advtrains.register_wagon("wagon_box", {
-	mesh="advtrains_wagon.b3d",
+	mesh="advtrains_wagon_box.b3d",
 	textures = {"advtrains_wagon_box.png"},
 	drives_on={default=true},
 	max_speed=10,
 	seats = {},
 	visual_size = {x=1, y=1},
-	wagon_span=1.8,
+	wagon_span=2,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 	has_inventory = true,
