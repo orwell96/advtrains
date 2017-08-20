@@ -139,6 +139,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
 			p_rails[#p_rails+1]=i
 		end
 	end
+
 	if #p_rails==0 then
 		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
 		if minetest.registered_nodes[nnpref.."_"..tr.default] and minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node then
@@ -181,7 +182,7 @@ end
 
 
 function tp.register_track_placer(nnprefix, imgprefix, dispname)
-	minetest.register_craftitem(nnprefix.."_placer",{
+	minetest.register_craftitem(":"..nnprefix.."_placer",{
 		description = dispname,
 		inventory_image = imgprefix.."_placer.png",
 		wield_image = imgprefix.."_placer.png",
@@ -200,7 +201,8 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 						return itemstack, false
 					end
 					if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
-						and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
+					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
+--						minetest.chat_send_all(nnprefix)
 						tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing)
 						if not minetest.settings:get_bool("creative_mode") then
 							itemstack:take_item()
