@@ -71,7 +71,7 @@ advtrains.register_tracks("default", {
 		   end,
 		   advtrains = {
 		      on_train_enter = function(pos, train_id)
-			 train_load(pos, train_id, true)
+			 advtrains.train_load(pos, train_id, true)
 		      end,
 		   },
 		}

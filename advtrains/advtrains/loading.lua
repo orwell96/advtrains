@@ -10,7 +10,7 @@ local function get_far_node(pos)
 	return node
 end
 
-local function train_load(pos, train_id, unload)
+function advtrains.train_load(pos, train_id, unload)
    local train=advtrains.trains[train_id]
    local below = get_far_node({x=pos.x, y=pos.y-1, z=pos.z})
    if not string.match(below.name, "chest") then
