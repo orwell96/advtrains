@@ -1,4 +1,4 @@
-Advanced Trains v1.3.0, by orwell and contributors. Also see readme.
+Advanced Trains v1.3.8, by orwell and contributors. Also see readme.
 Good-looking, realistic trains for minetest.
 
 For crafting recipes, see manual.pdf
