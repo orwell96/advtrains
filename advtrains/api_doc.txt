@@ -1,0 +1,157 @@
+Advanced Trains [advtrains] API documentation
+--------
+To use the API, mods must depend on 'advtrains'.
+All boolean values in definition tables default to 'false' and can be omitted.
+### Wagons
+Wagons are registered using the function
+
+advtrains.register_wagon(name, prototype, description, inventory_image)
+- 'name' is the internal name of the wagon. It is registered inside the 'advtrains:' namespace.
+	Example: A wagon with name="engine_tgv" will be registered as "advtrains:engine_tgv".
+- 'prototype' is the lua entity prototype. The regular definition keys for luaentites apply. Additional required and optional properties see below. DO NOT define 'on_step', 'on_activate', 'on_punch', 'on_rightclick' and 'get_staticdata' since these will be overridden. Use 'custom_*' instead.
+- 'description' is the description of the inventory item that is used to place the wagon.
+- 'inventory_image' is the inventory image of said item.
+
+# Wagon prototype properties
+{
+	... all regular luaentity properties (mesh, textures, collisionbox a.s.o)...
+	drives_on = {default=true},
+	^- used to define the tracktypes (see below) that wagon can drive on. The tracktype identifiers are given as keys, similar to privileges)
+	max_speed = 10,
+	^- optional, default 10: defines the maximum speed this wagon can drive. The maximum speed of a train is determined by the wagon with the lowest max_speed value.
+	seats = {
+	^- contains zero or more seat definitions. A seat is a place where a player can be attached when getting on a wagon.
+		{
+			name="Left front window",
+			^- display name of this seat
+			attach_offset={x=0, y=10, z=0},
+			^- this value is passed to 'set_attach'
+			view_offset={x=0, y=6, z=0},
+			^- player:set_eye_offset is called with this parameter.
+			driving_ctrl_access=false,
+			^- If the seat is a driver stand, and players sitting here should get access to the train's driving control.
+			group="default"
+			^- optional. Defines the seat group. See 'seat_groups' below
+		},
+	},
+	seat_groups = {
+	^- optional. If defined, activates advanced seating behavior. See "seating behavior".
+		default = {
+			name = "Seats"
+			^- name of this seat group, to be shown in get-on menu.
+			access_to = {"foo", "bar"}
+			^- List of seat groups you can access from this seat using the menu when sitting inside the train.
+			require_doors_open = true
+			^- Only allow getting on and off if doors are open.
+		}
+	}
+	assign_to_seat_group = {"default"},
+	^- optional, like seat_groups. When player right_clicks the wagon, player will be assigned to the first free seat group in the list.
+	
+	doors={
+	^- optional. If defined, defines door animation frames. Opposite door has to be closed during animation period.
+	^- Remember, advtrains can't handle doors on both sides opened simultaneously.
+		open={
+			[-1]={frames={x=0, y=20}, time=1}, -- open left doors
+			[1]={frames={x=40, y=60}, time=1}  -- open right doors
+		},
+		close={
+			[-1]={frames={x=20, y=40}, time=1}, -- close left doors
+			[1]={frames={x=60, y=80}, time=1} -- close right doors
+		}
+	},
+	door_entry={ 1.5, -1.5 }
+	^- optional. If defined, defines the locations of the doors on the model as distance from the object center on the path.
+	^- Getting on by walking in then takes effect.
+	^- Positive values mean front, negative ones back. Resulting position is automatically shifted to the right side.
+
+	wagon_span=2,
+	^- How far this wagon extends from its base position. Is the half of the wagon length.
+	^- Used to determine in which distance the other wagons have to be positioned. Will require tweaking.
+	drops = {"default:steelblock 3"}
+	^- List of itemstrings what to drop when the wagon is destroyed
+	
+	has_inventory = false
+	^- If this wagon has an inventory. The inventory is saved with the wagon.
+	^- the following settings are ignored if not.
+	inventory_list_sizes = {
+		box=8*6,
+	},
+	^- List of assignments of type list_name=size.
+	^- For every entry, an inventory list is created with the specified size.
+	get_inventory_formspec = function(self, player_name)
+		return "<a formspec>"
+	end,
+	^- Function that should return the formspec to be displayed when <player> requests to open the wagon's inventory
+	^- Use "list[detached:advtrains_wgn_"..self.unique_id..";<list_name>;<X>,<Y>;<W>,<H>;<Start>]" to display a wagon's inventory list.
+
+	custom_on_step = function(self, dtime) end
+	^- optional: Execute custom code on every step
+	custom_on_activate = function(self, dtime_s) end
+	^- optional: Execute custom code on activate. Staticdata does not need to be saved and restored since all properties written in 'self' are preserved over unloads.
+	update_animation = function(self, velocity) end
+	^- optional: Function that is called whenever the train's velocity changes or every 2 seconds. Used to call 'self.object:update_animation()' if needed. 
+
+}
+
+# Notes on wagons
+
+- Every wagon has the field 'unique_id' which assigns each wagon a random id.
+- All properties written in the lua entity (self) are saved and restored automatically. Minetest's internal staticdata is only used to save the unique_id of the wagon, which serves as a key in an externally saved table.
+- Assuming Z Axis as the axis parallel to the tracks and Y Axis as the one pointing into the sky, wagon models should be dimensioned in a way that:
+	- their origin is centered in X and Z direction
+	- their origin lies 0.5 units above the bottom of the model
+	- the overall extent in X and Y direction is <=3 units
+- wagon_span is then the distance between the model origin and the Z axis extent.
+
+# Seating behavior
+If the advanced seating behavior is active, clicking on a wagon will immediately get you on that wagon depending on the entries in assign_to_seat_group.
+If all seat groups are full, if the doors are closed or if you are not authorized to enter this seat group(e.g. driver stands), will show a warning.
+On a train, right-clicking the wagon will make you get off the train unless:
+- the doors are closed and it requires open doors.
+- you have access to a seat group specified in access_to (you may enter it and it's not full)
+- you are the owner and can access the wagon preferences
+In case there's no possibility, does nothing.
+In case there are multiple possibilities, will show a form.
+
+If you can't enter or leave a train because the doors are closed, holding the Sneak key while right-clicking bypasses the "doors have to be open" enforcement.
+
+### Tracks
+Most modders will be satisfied with the built-in tracks. If cog railways, maglev trains and mine trains are added, it is necessary to understand the definition of tracks. Although the tracks API is there, explaining it would require more effort than me creating the wanted definitions myself. Contact me if you need to register your own rails using my registration functions.
+
+However, it is still possible to register single rails by understanding the node properties of rails.
+minetest.register_node(nodename, {
+	... usual node definition ...
+	groups = {
+		advtrains_track_<tracktype>=1
+		^- this group tells that the node is a track
+		not_blocking_trains=1,
+		^- this group tells that the node should not block trains although it's walkable.
+	},
+	connect1 = 0,
+	connect2 = 8,
+	^- These values tell the direction (horizontal) the rail ends are pointing to. 0 means +Z, then rotation values increase clockwise. For a translation of directions to positions see helpers.lua.
+	rely1=0,
+	rely2=0,
+	^- the Y height of the rail end 1/2. A value of >=1 means that the rail end points to the next y layer at rely-1 
+	railheight=0,
+	^- the height value of this rail that is saved in the path. usually the median of rely1 and rely2.
+
+	can_dig=function(pos)
+		return not advtrains.get_train_at_pos(pos)
+	end,
+	after_dig_node=function(pos)
+		advtrains.ndb.update(pos)
+	end,
+	after_place_node=function(pos)
+		advtrains.ndb.update(pos)
+	end,
+	^- the code in these 3 default minetest API functions is required for advtrains to work, however you can add your own code
+	
+	advtrains = {
+		on_train_enter=function(pos, train_id) end
+		^- called when a train enters the rail
+		on_train_leave=function(pos, train_id) end
+		^- called when a train leaves the rail
+	}
+})
