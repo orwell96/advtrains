@@ -1,5 +1,0 @@
-Driver Stand (left) = Führerstand Links
-Driver Stand (right) = Führerstand Rechts
-Industrial Train Engine = Industrielle Lokomotive
-Industrial tank wagon = Tankwaggon
-Industrial wood wagon = Holztransportwaggon
