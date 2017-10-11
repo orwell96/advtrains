@@ -102,14 +102,16 @@ end
 
 --function to get node. track database is not helpful here.
 function ndb.get_node_or_nil(pos)
-	local node=minetest.get_node_or_nil(pos)
+	-- FIX for bug found on linuxworks server:
+	-- a loaded node might get read before the LBM has updated its state, resulting in wrongly set signals and switches
+	-- -> Using the saved node prioritarily.
+	local node = ndb.get_node_raw(pos)
 	if node then
 		return node
 	else
-		--maybe we have the node in the database...
-		return ndb.get_node_raw(pos)
+		--try reading the node from the map
+		return minetest.get_node_or_nil(pos)
 	end
-	atprint("ndb.get_node_or_nil",pos,"not found")
 end
 function ndb.get_node(pos)
 	local n=ndb.get_node_or_nil(pos)
