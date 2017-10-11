@@ -37,7 +37,9 @@ function advtrains.pcall(fun)
 				advtrains.dumppath(train.path)
 				atwarn("Dumping last debug outputs: ", err)
 				atprint("Train state: index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
-				advtrains.drb_dump(advtrains.atprint_context_tid)
+				if minetest.settings:get_bool("advtrains_enable_debugging") then
+					advtrains.drb_dump(advtrains.atprint_context_tid)
+				end
 			end
 			atwarn("Lua Error occured: ", err)
 			atwarn(debug.traceback())
