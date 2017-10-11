@@ -470,7 +470,7 @@ function advtrains.train_step_a(id, train, dtime)
 		
 		local should_check=false
 		for _,p in ipairs(minetest.get_connected_players()) do
-			should_check=should_check or ((vector.distance(ori_pos, p:getpos())<node_range))
+			should_check=should_check or (ori_pos and ((vector.distance(ori_pos, p:getpos())<node_range)))
 		end
 		if should_check then
 			advtrains.update_trainpart_properties(id)
