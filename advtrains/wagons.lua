@@ -302,7 +302,7 @@ function wagon:on_step(dtime)
 				textures={new_line_tex},
 		 	})
 			self.line_cache=gp.line
-		elseif self.line_cache~=nil then
+		elseif self.line_cache~=nil and gp.line==nil then
 			self.object:set_properties({
 				textures=self.textures,
 		 	})
