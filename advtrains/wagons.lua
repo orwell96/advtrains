@@ -131,6 +131,9 @@ function wagon:init_shared()
 	if self.custom_on_activate then
 		self:custom_on_activate(dtime_s)
 	end
+	-- reset line and infotext cache to update object properties on first call
+	self.line_cache=nil
+	self.infotext_cache=nil
 end
 function wagon:ensure_init()
 	if self.initialized then
@@ -285,18 +288,25 @@ function wagon:on_step(dtime)
 		
 		--check infotext
 		local outside=self:train().text_outside or ""
-		if self.object:get_properties().infotext~=outside  then
+		if self.infotext_cache~=outside  then
 			self.object:set_properties({infotext=outside})
+			self.infotext_cache=outside
 		end
 		
 		local gp=self:train()
 		local fct=self.wagon_flipped and -1 or 1
 		--set line number
-		if self.name == "advtrains:subway_wagon" and gp.line then
-		   self.object:set_properties({
-			 textures={"advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"},
-			 visual_size = text_scale,
-		   })
+		if self.name == "advtrains:subway_wagon" and gp.line and gp.line~=self.line_cache then
+			local new_line_tex="advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"
+			self.object:set_properties({
+				textures={new_line_tex},
+		 	})
+			self.line_cache=gp.line
+		elseif self.line_cache~=nil and gp.line==nil then
+			self.object:set_properties({
+				textures=self.textures,
+		 	})
+			self.line_cache=nil
 		end
 		--door animation
 		if self.doors then
