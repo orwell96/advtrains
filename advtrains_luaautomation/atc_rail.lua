@@ -58,6 +58,10 @@ function r.fire_event(pos, evtdata)
 			train.atc_arrow=atc_arrow
 			return true
 		end,
+		set_line = function(line)
+		   train.line = line
+		   return true
+		end,
 		atc_reset = function(cmd)
 			if not train_id then return false end
 			assertt(cmd, "string")

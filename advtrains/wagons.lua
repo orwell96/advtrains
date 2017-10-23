@@ -291,6 +291,13 @@ function wagon:on_step(dtime)
 		
 		local gp=self:train()
 		local fct=self.wagon_flipped and -1 or 1
+		--set line number
+		if self.name == "advtrains:subway_wagon" and gp.line then
+		   self.object:set_properties({
+			 textures={"advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"},
+			 visual_size = text_scale,
+		   })
+		end
 		--door animation
 		if self.doors then
 			if (self.door_anim_timer or 0)<=0 then
