@@ -223,8 +223,8 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 2b. set node coverage old indices ---
 	
-	train.detector_old_index = math.floor(train.index)
-	train.detector_old_end_index = math.floor(train.end_index)
+	train.detector_old_index = atround(train.index)
+	train.detector_old_end_index = atround(train.end_index)
 	
 	--- 3. handle velocity influences ---
 	local train_moves=(train.velocity~=0)
@@ -240,7 +240,7 @@ function advtrains.train_step_a(id, train, dtime)
 	end
 	
 	--- 3a. this can be useful for debugs/warnings and is used for check_trainpartload ---
-	local t_info, train_pos=sid(id), train.path[math.floor(train.index)]
+	local t_info, train_pos=sid(id), train.path[atround(train.index)]
 	if train_pos then
 		t_info=t_info.." @"..minetest.pos_to_string(train_pos)
 		--atprint("train_pos:",train_pos)
@@ -347,19 +347,19 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 5a. make pos/yaw available for possible recover calls ---
 	if train.max_index_on_track<train.index then --whoops, train went too far. the saved position will be the last one that lies on a track, and savedpos_off_track_index_offset will hold how far to go from here
-		train.savedpos_off_track_index_offset=train.index-train.max_index_on_track
+		train.savedpos_off_track_index_offset=atround(train.index)-train.max_index_on_track
 		train.last_pos=train.path[train.max_index_on_track]
 		train.last_pos_prev=train.path[train.max_index_on_track-1]
 		atprint("train is off-track (front), last positions kept at", train.last_pos, "/", train.last_pos_prev)
 	elseif train.min_index_on_track+1>train.index then --whoops, train went even more far. same behavior
-		train.savedpos_off_track_index_offset=train.index-train.min_index_on_track
+		train.savedpos_off_track_index_offset=atround(train.index)-train.min_index_on_track
 		train.last_pos=train.path[train.min_index_on_track+1]
 		train.last_pos_prev=train.path[train.min_index_on_track]
 		atprint("train is off-track (back), last positions kept at", train.last_pos, "/", train.last_pos_prev)
 	else --regular case
 		train.savedpos_off_track_index_offset=nil
-		train.last_pos=train.path[math.floor(train.index+0.5)]
-		train.last_pos_prev=train.path[math.floor(train.index-0.5)]
+		train.last_pos=train.path[math.floor(train.index+1)]
+		train.last_pos_prev=train.path[math.floor(train.index)]
 	end
 	
 	--- 5b. Remove path items that are no longer used ---
@@ -367,10 +367,10 @@ function advtrains.train_step_a(id, train, dtime)
 	local path_pregen_keep=20
 	local offtrack_keep=4
 	local gen_front_keep= path_pregen_keep
-	local gen_back_keep= math.floor(- train.trainlen - path_pregen_keep)
+	local gen_back_keep= atround(- train.trainlen - path_pregen_keep)
 	
-	local delete_min=math.min(train.max_index_on_track - offtrack_keep, math.floor(train.index)+gen_back_keep)
-	local delete_max=math.max(train.min_index_on_track + offtrack_keep, math.floor(train.index)+gen_front_keep)
+	local delete_min=math.min(train.max_index_on_track - offtrack_keep, atround(train.index)+gen_back_keep)
+	local delete_max=math.max(train.min_index_on_track + offtrack_keep, atround(train.index)+gen_front_keep)
 	
 	if train.path_extent_min<delete_min then
 		--atprint(sid(id),"clearing path min ",train.path_extent_min," to ",delete_min)
@@ -394,7 +394,7 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 6b. call stay_node to register trains in the location table - actual enter_node stuff is done in step b ---
 	
-	local ifn, ibn = math.floor(train.index), math.floor(train.end_index)
+	local ifn, ibn = atround(train.index), atround(train.end_index)
 	local path=train.path
 	
 	for i=ibn, ifn do
@@ -502,7 +502,7 @@ function advtrains.train_step_b(id, train, dtime)
 	--- 6. update node coverage ---
 	
 	-- when paths get cleared, the old indices set above will be up-to-date and represent the state in which the last run of this code was made
-	local ifo, ifn, ibo, ibn = train.detector_old_index, math.floor(train.index), train.detector_old_end_index, math.floor(train.end_index)
+	local ifo, ifn, ibo, ibn = train.detector_old_index, atround(train.index), train.detector_old_end_index, atround(train.end_index)
 	
 	local path=train.path
 	
@@ -716,8 +716,8 @@ function advtrains.split_train_at_wagon(wagon)
 	if not train.path then return end
 	
 	local real_pos_in_train=advtrains.get_real_path_index(train, wagon.pos_in_train)
-	local pos_for_new_train=train.path[math.floor(real_pos_in_train+wagon.wagon_span)]
-	local pos_for_new_train_prev=train.path[math.floor(real_pos_in_train-1+wagon.wagon_span)]
+	local pos_for_new_train=train.path[math.floor(real_pos_in_train+wagon.wagon_span+1)]
+	local pos_for_new_train_prev=train.path[math.floor(real_pos_in_train+wagon.wagon_span)]
 	
 	--before doing anything, check if both are rails. else do not allow
 	if not pos_for_new_train then
@@ -772,8 +772,8 @@ end
 -- check done by iterating paths and checking their direction
 --returns nil when not on the same track at all OR when required path items are not generated. this distinction may not always be needed.
 function advtrains.trains_facing(train1, train2)
-	local sr_pos=train1.path[math.floor(train1.index)]
-	local sr_pos_p=train1.path[math.floor(train1.index)-1]
+	local sr_pos=train1.path[atround(train1.index)]
+	local sr_pos_p=train1.path[atround(train1.index)-1]
 
 	for i=advtrains.minN(train2.path), advtrains.maxN(train2.path) do
 		if vector.equals(sr_pos, train2.path[i]) then
@@ -815,8 +815,8 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 		return 
 	end
 	
-	local frontpos2=train2.path[math.floor(train2.detector_old_index)]
-	local backpos2=train2.path[math.floor(train2.detector_old_end_index)]
+	local frontpos2=train2.path[atround(train2.detector_old_index)]
+	local backpos2=train2.path[atround(train2.detector_old_end_index)]
 	local t2_is_backpos
 	atprint("End positions: ",frontpos2,backpos2)
 	
@@ -942,8 +942,8 @@ function advtrains.invalidate_all_paths(pos)
 		local exec=true
 		if pos and v.path and v.index and v.end_index then
 			--start and end pos of the train
-			local cmp1=v.path[math.floor(v.index)]
-			local cmp2=v.path[math.floor(v.end_index)]
+			local cmp1=v.path[atround(v.index)]
+			local cmp2=v.path[atround(v.end_index)]
 			if vector.distance(pos, cmp1)>inv_radius and vector.distance(pos, cmp2)>inv_radius then
 				exec=false
 			end
@@ -951,7 +951,7 @@ function advtrains.invalidate_all_paths(pos)
 		if exec then
 			--TODO duplicate code in init.lua avt_save()!
 			if v.index then
-				v.restore_add_index=v.index-math.floor(v.index+0.5)
+				v.restore_add_index=v.index-math.floor(v.index+1)
 			end
 			v.path=nil
 			v.path_dist=nil

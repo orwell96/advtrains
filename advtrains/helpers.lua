@@ -48,6 +48,10 @@ function advtrains.minN(list, expectstart)
 	return n+1
 end
 
+function atround(number)
+	return math.floor(number+0.5)
+end
+
 --vertical_transmit:
 --[[
 rely1, rely2 tell to which height the connections are pointed to. 1 means it will go up the next node
@@ -80,7 +84,7 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	end
 	--dir2???
 	local cor2=advtrains.dirCoordSet(mid, middir1)--<<<<
-	if math.floor(cor2.x+0.5)==math.floor(prev.x+0.5) and math.floor(cor2.z+0.5)==math.floor(prev.z+0.5) then
+	if atround(cor2.x)==atround(prev.x) and atround(cor2.z)==atround(prev.z) then
 		next=advtrains.dirCoordSet(mid, middir2)--dir2 wird überprüft, alles gut.
 		if midrely2>=1 then
 			next.y=next.y+1
