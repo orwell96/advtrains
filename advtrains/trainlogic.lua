@@ -595,6 +595,13 @@ function advtrains.train_step_b(id, train, dtime)
 					end
 				end
 			end
+			--- 8c damage other objects ---
+			local objs = minetest.get_objects_inside_radius(rcollpos, 2)
+			for _,obj in ipairs(objs) do
+				if not obj:is_player() and not obj:get_armor_groups().immortal==1 then
+					obj:punch(nil, 1, { full_punch_interval = 1.0, damage_groups = {fleshy = 1000}, }, nil)
+				end
+			end
 		end
 	end
 end
