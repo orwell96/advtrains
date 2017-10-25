@@ -783,7 +783,7 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 		return
 	end
 	
-	atprint("COLLISION: "..sid(id1).." and "..sid(id2).." at ",pos,", t1_is_backpos="..(t1_is_backpos and "true" or "false"))
+	atprint("COLLISION: ",sid(id1)," and ",sid(id2)," at ",pos,", t1_is_backpos=",(t1_is_backpos and "true" or "false"))
 	--TODO:
 	local train1=advtrains.trains[id1]
 	

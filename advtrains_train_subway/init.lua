@@ -104,10 +104,7 @@ minetest.register_craftitem(":advtrains:subway_train", {
 				local node=minetest.get_node_or_nil(pointed_thing.under)
 				if not node then atprint("[advtrains]Ignore at placer position") return itemstack end
 				local nodename=node.name
-				if(not advtrains.is_track_and_drives_on(nodename, prototype.drives_on)) then
-					atprint("no track here, not placing.")
-					return itemstack
-				end
+				
 				if not minetest.check_player_privs(placer, {train_place = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
 					minetest.record_protection_violation(pointed_thing.under, placer:get_player_name())
 					return
@@ -116,7 +113,7 @@ minetest.register_craftitem(":advtrains:subway_train", {
 				local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 				
 				for i=1,3 do
-					local ob=minetest.add_entity(pointed_thing.under, "advtrains:"..sysname)
+					local ob=minetest.add_entity(pointed_thing.under, "advtrains:subway_wagon")
 					if not ob then
 						atprint("couldn't add_entity, aborting")
 					end
@@ -128,7 +125,11 @@ minetest.register_craftitem(":advtrains:subway_train", {
 					
 					advtrains.add_wagon_to_train(le, id)
 				end
+				minetest.after(1,function()
+				advtrains.trains[id].tarvelocity=2
 				advtrains.trains[id].velocity=2
+				advtrains.trains[id].movedir=1
+				end)
 				if not minetest.settings:get_bool("creative_mode") then
 					itemstack:take_item()
 				end
