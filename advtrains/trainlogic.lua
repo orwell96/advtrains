@@ -167,8 +167,7 @@ function advtrains.train_step_a(id, train, dtime)
 			atprint("last_pos", advtrains.round_vector_floor_y(train.last_pos), "not loaded and not in ndb, waiting")
 			return nil
 		elseif node_ok==false then
-			atwarn("Unable to restore train ",id,": No rail at train's position")
-			advtrains.trains[id]=nil
+			atprint("Unable to restore train ",id,": No rail at train's position")
 			return false
 		end
 		
@@ -186,8 +185,7 @@ function advtrains.train_step_a(id, train, dtime)
 			atprint("last_pos_prev", advtrains.round_vector_floor_y(train.last_pos_prev), "not loaded and not in ndb, waiting")
 			return nil
 		elseif prevnode_ok==false then
-			atwarn("Unable to restore train ",id,": No rail at train's position")
-			advtrains.trains[id]=nil
+			atprint("Unable to restore train ",id,": No rail at train's position")
 			return false
 		end
 		
