@@ -430,20 +430,71 @@ end
 advtrains.detector = {}
 advtrains.detector.on_node = {}
 
-function advtrains.detector.enter_node(pos, train_id)
+--Returns true when position is occupied by a train other than train_id, false when occupied by the same train as train_id and nil in case there's no train at all
+function advtrains.detector.occupied(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
 	local pts=minetest.pos_to_string(ppos)
-	advtrains.detector.on_node[pts]=train_id
+	local s=advtrains.detector.on_node[pts]
+	if not s then return nil end
+	if s==train_id then return false end
+	--in case s is a table, it's always occupied by another train
+	return true
+end
+-- If given a train id as second argument, this is considered as 'not there'.
+-- Returns the train id of (one of, nondeterministic) the trains at this position
+function advtrains.detector.get(pos, train_id)
+	local ppos=advtrains.round_vector_floor_y(pos)
+	local pts=minetest.pos_to_string(ppos)
+	local s=advtrains.detector.on_node[pts]
+	if not s then return nil end
+	if type(s)=="table" then 
+		for _,t in ipairs(s) do
+			if t~=train_id then return t end
+		end
+		return nil
+	end
+	return s
+end
+
+function advtrains.detector.enter_node(pos, train_id)
+	advtrains.detector.stay_node(pos, train_id)
+	local ppos=advtrains.round_vector_floor_y(pos)
 	advtrains.detector.call_enter_callback(ppos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
+	local pts=minetest.pos_to_string(ppos)
+	local s=advtrains.detector.on_node[pts]
+	if type(s)=="table" then
+		local i
+		for j,t in ipairs(s) do
+			if t==train_id then i=j end
+		end
+		if not i then return end
+		s=table.remove(s,i)
+		if #s==0 then
+			s=nil
+		elseif #s==1 then
+			s=s[1]
+		end
+		advtrains.detector.on_node[pts]=s
+	else
+		advtrains.detector.on_node[pts]=nil
+	end
 	advtrains.detector.call_leave_callback(ppos, train_id)
 end
 function advtrains.detector.stay_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
 	local pts=minetest.pos_to_string(ppos)
-	advtrains.detector.on_node[pts]=train_id
+	
+	local s=advtrains.detector.on_node[pts]
+	if not s then
+		advtrains.detector.on_node[pts]=train_id
+	elseif type(s)=="string" then
+		advtrains.detector.on_node[pts]={s, train_id}
+	elseif type(s)=="table" then
+		advtrains.detector.on_node[pts]=table.insert(s, train_id)
+	end
 end
 
 

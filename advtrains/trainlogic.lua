@@ -394,15 +394,12 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 6b. call stay_node to register trains in the location table - actual enter_node stuff is done in step b ---
 	
-	local ifn, ibn = atround(train.index), atround(train.end_index)
+	local ifo, ibo = train.detector_old_index, train.detector_old_end_index
 	local path=train.path
 	
-	for i=ibn, ifn do
+	for i=ibo, ifo do
 		if path[i] then
-			local pts=minetest.pos_to_string(path[i])
-			if not (advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id) then
-				advtrains.detector.stay_node(path[i], id)
-			end
+			advtrains.detector.stay_node(path[i], id)
 		end
 	end
 	
@@ -519,13 +516,12 @@ function advtrains.train_step_b(id, train, dtime)
 		if ifn>ifo then
 			for i=ifo+1, ifn do
 				if path[i] then
-					local pts=minetest.pos_to_string(path[i])
-					if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id then
+					if advtrains.detector.occupied(path[i], id) then
 						--if another train has signed up for this position first, it won't be recognized in train_step_b. So do collision here.
-						atprint("Collision detected in enter_node callbacks (front) @",pts,"with",sid(advtrains.detector.on_node[pts]))
-						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], false)
+						atprint("Collision detected in enter_node callbacks (front) @",path[i],"with",sid(advtrains.detector.get(path[i], id)))
+						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.get(path[i], id), false)
 					end
-					atprint("enter_node (front) @index",i,"@",pts,"on_node",sid(advtrains.detector.on_node[pts]))
+					atprint("enter_node (front) @index",i,"@",path[i],"on_node",sid(advtrains.detector.get(path[i], id)))
 					advtrains.detector.enter_node(path[i], id)
 				end
 			end
@@ -540,12 +536,12 @@ function advtrains.train_step_b(id, train, dtime)
 			for i=ibn, ibo-1 do
 				if path[i] then
 					local pts=minetest.pos_to_string(path[i])
-					if advtrains.detector.on_node[pts] and advtrains.detector.on_node[pts]~=id then
+					if advtrains.detector.occupied(path[i], id) then
 						--if another train has signed up for this position first, it won't be recognized in train_step_b. So do collision here.
-						atprint("Collision detected in enter_node callbacks (back) @",pts,"on_node",sid(advtrains.detector.on_node[pts]))
-						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.on_node[pts], true)
+						atprint("Collision detected in enter_node callbacks (back) @",path[i],"with",sid(advtrains.detector.get(path[i], id)))
+						advtrains.collide_and_spawn_couple(id, path[i], advtrains.detector.get(path[i], id), true)
 					end
-					atprint("enter_node (back) @index",i,"@",pts,"with",sid(advtrains.detector.on_node[pts]))
+					atprint("enter_node (back) @index",i,"@",path[i],"on_node",sid(advtrains.detector.get(path[i], id)))
 					advtrains.detector.enter_node(path[i], id)
 				end
 			end
@@ -576,15 +572,14 @@ function advtrains.train_step_b(id, train, dtime)
 				for z=-1,1 do
 					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
 					--- 8a Check collision ---
-					local testpts=minetest.pos_to_string(testpos)
-					if advtrains.detector.on_node[testpts] and advtrains.detector.on_node[testpts]~=id then
+					if advtrains.detector.occupied(testpos, id) then
 						--collides
-						advtrains.collide_and_spawn_couple(id, testpos, advtrains.detector.on_node[testpts], train.movedir==-1)
+						advtrains.collide_and_spawn_couple(id, testpos, advtrains.detector.get(testpos, id), train.movedir==-1)
 					end
 					--- 8b damage players ---
 					if not minetest.settings:get_bool("creative_mode") then
 						local player=advtrains.playersbypts[testpts]
-						if player and train.velocity>3 then
+						if player and not minetest.check_player_privs(player, "creative") and train.velocity>3 then
 							--instantly kill player
 							--drop inventory contents first, to not to spawn bones
 							local player_inv=player:get_inventory()
@@ -716,8 +711,8 @@ function advtrains.split_train_at_wagon(wagon)
 	if not train.path then return end
 	
 	local real_pos_in_train=advtrains.get_real_path_index(train, wagon.pos_in_train)
-	local pos_for_new_train=train.path[math.floor(real_pos_in_train+wagon.wagon_span+1)]
-	local pos_for_new_train_prev=train.path[math.floor(real_pos_in_train+wagon.wagon_span)]
+	local pos_for_new_train=train.path[math.floor(real_pos_in_train+wagon.wagon_span)]
+	local pos_for_new_train_prev=train.path[math.floor(real_pos_in_train+wagon.wagon_span-1)]
 	
 	--before doing anything, check if both are rails. else do not allow
 	if not pos_for_new_train then
@@ -930,8 +925,7 @@ function advtrains.invert_train(train_id)
 end
 
 function advtrains.get_train_at_pos(pos)
-	local ph=minetest.pos_to_string(advtrains.round_vector_floor_y(pos))
-	return advtrains.detector.on_node[ph]
+	return advtrains.detector.get(pos)
 end
 
 function advtrains.invalidate_all_paths(pos)
