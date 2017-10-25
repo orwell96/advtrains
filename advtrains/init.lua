@@ -105,6 +105,8 @@ if minetest.settings:get_bool("advtrains_enable_debugging") then
 		if not context then return end
 		local text=advtrains.print_concat_table({t, ...})
 		advtrains.drb_record(context, text)
+		
+		--atlog("@@",advtrains.atprint_context_tid,t,...)
 	end
 	atdebug=function(t, ...)
 		local text=advtrains.print_concat_table({t, ...})
