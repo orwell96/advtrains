@@ -88,3 +88,53 @@ minetest.register_craft({
 		{'default:steelblock', 'default:steelblock', 'default:steelblock'},
 	},
 })
+
+minetest.register_craftitem(":advtrains:subway_train", {
+		description = "Subway train, will drive forward when placed",
+		inventory_image = "advtrains_subway_wagon_inv.png",
+		wield_image = "advtrains_subway_wagon_inv.png",
+		
+		on_place = function(itemstack, placer, pointed_thing)
+			return advtrains.pcall(function()
+				if not pointed_thing.type == "node" then
+					return
+				end
+				
+
+				local node=minetest.get_node_or_nil(pointed_thing.under)
+				if not node then atprint("[advtrains]Ignore at placer position") return itemstack end
+				local nodename=node.name
+				
+				if not minetest.check_player_privs(placer, {train_place = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
+					minetest.record_protection_violation(pointed_thing.under, placer:get_player_name())
+					return
+				end
+				local conn1=advtrains.get_track_connections(node.name, node.param2)
+				local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
+				
+				for i=1,3 do
+					local ob=minetest.add_entity(pointed_thing.under, "advtrains:subway_wagon")
+					if not ob then
+						atprint("couldn't add_entity, aborting")
+					end
+					local le=ob:get_luaentity()
+					
+					le.owner=placer:get_player_name()
+					
+					local wagon_uid=le:init_new_instance(id, {})
+					
+					advtrains.add_wagon_to_train(le, id)
+				end
+				minetest.after(1,function()
+				advtrains.trains[id].tarvelocity=2
+				advtrains.trains[id].velocity=2
+				advtrains.trains[id].movedir=1
+				end)
+				if not minetest.settings:get_bool("creative_mode") then
+					itemstack:take_item()
+				end
+				return itemstack
+				
+			end)
+		end,
+	})

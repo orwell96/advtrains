@@ -52,7 +52,7 @@ local function create_map_form(d)
 		if x>=minx and x<=maxx then
 			for z,y in pairs(itx) do
 				if z>=minz and z<=maxz then
-					local adn=advtrains.detector.on_node[minetest.pos_to_string({x=x, y=y, z=z})]
+					local adn=advtrains.detector.get({x=x, y=y, z=z})
 					local color="gray"
 					if adn then
 						color="red"

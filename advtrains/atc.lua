@@ -80,15 +80,7 @@ local apn_func=function(pos, node)
 	end
 end
 
-advtrains.register_tracks("default", {
-	nodename_prefix="advtrains:dtrack_atc",
-	texture_prefix="advtrains_dtrack_atc",
-	models_prefix="advtrains_dtrack",
-	models_suffix=".b3d",
-	shared_texture="advtrains_dtrack_shared_atc.png",
-	description=attrans("ATC controller"),
-	formats={},
-	get_additional_definiton = function(def, preset, suffix, rotation)
+advtrains.atc_function = function(def, preset, suffix, rotation)
 		return {
 			after_place_node=apn_func,
 			after_dig_node=function(pos)
@@ -146,9 +138,7 @@ advtrains.register_tracks("default", {
 				end,
 			},
 		}
-	end
-}, advtrains.trackpresets.t_30deg_straightonly)
-
+end
 
 function atc.get_atc_controller_formspec(pos, meta)
 	local mode=tonumber(meta:get_string("mode")) or 1

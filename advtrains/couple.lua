@@ -154,27 +154,33 @@ minetest.register_entity("advtrains:couple", {
 				return
 			end
 			
-			local tp1
-			if not self.train1_is_backpos then
-				tp1=advtrains.get_real_index_position(train1.path, train1.index)
-			else
-				tp1=advtrains.get_real_index_position(train1.path, train1.end_index)
-			end
-			local tp2
-			if not self.train2_is_backpos then
-				tp2=advtrains.get_real_index_position(train2.path, train2.index)
-			else
-				tp2=advtrains.get_real_index_position(train2.path, train2.end_index)
-			end
-			if not tp1 or not tp2 or not (vector.distance(tp1,tp2)<couple_max_dist) then
-				atprint("Couple: train end positions too distanced, destroying (distance is",vector.distance(tp1,tp2),")")
+			if train1.velocity>0 or train2.velocity>0 then
+				if not self.position_set then --ensures that train stands a single time before check fires. Using flag below
+					return
+				end
+				atprint("Couple: train is moving, destroying")
 				self.object:remove()
 				return
-			else
+			end
+			
+			if not self.position_set then
+				local tp1
+				if not self.train1_is_backpos then
+					tp1=advtrains.get_real_index_position(train1.path, train1.index)
+				else
+					tp1=advtrains.get_real_index_position(train1.path, train1.end_index)
+				end
+				local tp2
+				if not self.train2_is_backpos then
+					tp2=advtrains.get_real_index_position(train2.path, train2.index)
+				else
+					tp2=advtrains.get_real_index_position(train2.path, train2.end_index)
+				end
 				local pos_median=advtrains.pos_median(tp1, tp2)
 				if not vector.equals(pos_median, self.object:getpos()) then
 					self.object:setpos(pos_median)
 				end
+				self.position_set=true
 			end
 			atprintbm("couple step", t)
 			advtrains.atprint_context_tid=nil

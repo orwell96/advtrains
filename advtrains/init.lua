@@ -105,6 +105,8 @@ if minetest.settings:get_bool("advtrains_enable_debugging") then
 		if not context then return end
 		local text=advtrains.print_concat_table({t, ...})
 		advtrains.drb_record(context, text)
+		
+		--atlog("@@",advtrains.atprint_context_tid,t,...)
 	end
 	atdebug=function(t, ...)
 		local text=advtrains.print_concat_table({t, ...})
@@ -249,7 +251,7 @@ advtrains.avt_save = function(remove_players_from_wagons)
 		local v=advtrains.merge_tables(train)
 		--then invalidate
 		if v.index then
-			v.restore_add_index=v.index-math.floor(v.index+0.5)
+			v.restore_add_index=v.index-math.floor(v.index+1)
 		end
 		v.path=nil
 		v.path_dist=nil

@@ -24,7 +24,7 @@ function r.fire_event(pos, evtdata)
 	
 	--prepare ingame API for ATC. Regenerate each time since pos needs to be known
 	--If no train, then return false.
-	local train_id=advtrains.detector.on_node[ph]
+	local train_id=advtrains.detector.get(pos)
 	local train, atc_arrow, tvel
 	if train_id then train=advtrains.trains[train_id] end
 	if train then 
