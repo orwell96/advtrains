@@ -1,5 +1,5 @@
 --nodedb.lua
---database of all nodes that have 'save_in_nodedb' field set to true in node definition
+--database of all nodes that have 'save_in_at_nodedb' field set to true in node definition
 
 
 --serialization format:
@@ -140,7 +140,7 @@ end
 function ndb.update(pos, pnode)
 	local node = pnode or minetest.get_node_or_nil(pos)
 	if not node or node.name=="ignore" then return end
-	if minetest.registered_nodes[node.name] and minetest.registered_nodes[node.name].groups.save_in_nodedb then
+	if minetest.registered_nodes[node.name] and minetest.registered_nodes[node.name].groups.save_in_at_nodedb then
 		local nid
 		for tnid, nname in pairs(ndb_nodeids) do
 			if nname==node.name then
@@ -235,7 +235,7 @@ end
 
 minetest.register_lbm({
         name = "advtrains:nodedb_on_load_update",
-        nodenames = {"group:save_in_nodedb"},
+        nodenames = {"group:save_in_at_nodedb"},
         run_at_every_load = true,
         run_on_every_load = true,
         action = ndb.run_lbm,
@@ -255,7 +255,7 @@ ndb.restore_all = function()
 				if node then
 					local ori_ndef=minetest.registered_nodes[node.name]
 					local ndbnode=ndb.get_node_raw(pos)
-					if ori_ndef and ori_ndef.groups.save_in_nodedb then --check if this node has been worldedited, and don't replace then
+					if ori_ndef and ori_ndef.groups.save_in_at_nodedb then --check if this node has been worldedited, and don't replace then
 						if (ndbnode.name~=node.name or ndbnode.param2~=node.param2) then
 							minetest.swap_node(pos, ndbnode)
 							atwarn("Replaced",node.name,"@",pos,"with",ndbnode.name)
