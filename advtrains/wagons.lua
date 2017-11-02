@@ -479,8 +479,8 @@ function wagon:on_step(dtime)
 			   if not self.player_yaw then
 			      self.player_yaw = {}
 			   end
-			   for _,name in ipairs(self.seatp) do
-			      p = minetest.get_player_by_name(name)
+			   for _,name in pairs(self.seatp) do
+			      local p = minetest.get_player_by_name(name)
 			      if not self.turning then
 				 -- save player looking direction offset
 				 self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
