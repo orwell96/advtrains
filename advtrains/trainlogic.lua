@@ -31,6 +31,11 @@ function endstep()
 	end
 end
 
+local function is_mob(obj)
+   return obj.get_luaentity and obj:get_luaentity().name and string.sub(obj:get_luaentity().name,1,string.len("mob"))=="mob"
+end
+
+
 advtrains.train_accel_force=2--per second and divided by number of wagons
 advtrains.train_brake_force=3--per second, not divided by number of wagons
 advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
@@ -598,9 +603,9 @@ function advtrains.train_step_b(id, train, dtime)
 			--- 8c damage other objects ---
 			local objs = minetest.get_objects_inside_radius(rcollpos, 2)
 			for _,obj in ipairs(objs) do
-				if not obj:is_player() and not obj:get_armor_groups().immortal==1 then
-					obj:punch(nil, 1, { full_punch_interval = 1.0, damage_groups = {fleshy = 1000}, }, nil)
-				end
+			   if not obj:is_player() and (not obj:get_armor_groups().immortal==1 or is_mob(obj)) then
+			      obj:punch(obj, 1, { full_punch_interval = 1.0, damage_groups = {fleshy = 1000}, }, nil)
+			   end
 			end
 		end
 	end
