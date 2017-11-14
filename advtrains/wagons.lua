@@ -296,7 +296,7 @@ function wagon:on_step(dtime)
 		local gp=self:train()
 		local fct=self.wagon_flipped and -1 or 1
 		--set line number
-		if self.name == "advtrains:subway_wagon" and gp.line and gp.line~=self.line_cache then
+		if self.name == "advtrains:subway_wagon" and gp.line and gp.line~=self.line_cache then 
 			local new_line_tex="advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"
 			self.object:set_properties({
 				textures={new_line_tex},
@@ -475,6 +475,26 @@ function wagon:on_step(dtime)
 				self.object:setpos(actual_pos)
 			self.object:setvelocity(velocityvec)
 			self.object:setacceleration(accelerationvec)
+			if #self.seats > 0 and self.old_yaw ~= yaw then
+			   if not self.player_yaw then
+			      self.player_yaw = {}
+			   end
+			   for _,name in pairs(self.seatp) do
+			      local p = minetest.get_player_by_name(name)
+			      if p then
+				 if not self.turning then
+				    -- save player looking direction offset
+				    self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
+				 end
+				 -- set player looking direction using calculated offset
+				 p:set_look_horizontal(self.player_yaw[name]+yaw)
+			      end
+			   end
+			   self.turning = true							 
+			elseif self.old_yaw == yaw then
+			   -- train is no longer turning
+			   self.turning = false
+			end
 			self.object:setyaw(yaw)
 			self.updatepct_timer=2
 			if self.update_animation then
