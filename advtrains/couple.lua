@@ -32,6 +32,10 @@ minetest.register_entity("advtrains:discouple", {
 	get_staticdata=function() return "DISCOUPLE" end,
 	on_punch=function(self, player)
 		return advtrains.pcall(function()
+			if not self.wagon or not player or player:get_player_name()=="" then
+				--our new animal damage code seems to generate problems
+				return
+			end
 			--only if player owns at least one wagon next to this
 			local own=player:get_player_name()
 			if self.wagon.owner and self.wagon.owner==own and not self.wagon.lock_couples then
