@@ -152,6 +152,12 @@ advtrains.ap.t_30deg_straightonly={
 	trackworker={
 		["st"]="st",
 	},
+	trackplacer={
+		st=true,
+	},
+	tpsingle={
+		st=true,
+	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={"st"},
@@ -176,6 +182,12 @@ advtrains.ap.t_30deg_straightonly_noplacer={
 	tpdefault="st",
 	trackworker={
 		["st"]="st",
+	},
+	trackplacer={
+		st=true,
+	},
+	tpsingle={
+		st=true,
 	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
@@ -346,6 +358,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 		after_place_node=function(pos)
 			advtrains.ndb.update(pos)
 		end,
+		nnpref = def.nodename_prefix,
 	}, def.common or {})
 	--make trackplacer base def
 	advtrains.trackplacer.register_tracktype(def.nodename_prefix, preset.tpdefault)
