@@ -408,11 +408,19 @@ end
 
 
 function advtrains.is_track_and_drives_on(nodename, drives_on_p)
+	local drives_on = drives_on_p
+	if not drives_on then drives_on = advtrains.all_tracktypes end
+	local hasentry = false
+	for _,_ in pairs(drives_on) do
+		hasentry=true
+	end
+	if not hasentry then drives_on = advtrains.all_tracktypes end
+	
 	if not minetest.registered_nodes[nodename] then
 		return false
 	end
 	local nodedef=minetest.registered_nodes[nodename]
-	for k,v in pairs(drives_on_p) do
+	for k,v in pairs(drives_on) do
 		if nodedef.groups["advtrains_track_"..k] then
 			return true
 		end

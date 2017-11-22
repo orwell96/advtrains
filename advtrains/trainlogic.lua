@@ -576,6 +576,7 @@ function advtrains.train_step_b(id, train, dtime)
 					end
 					--- 8b damage players ---
 					if not minetest.settings:get_bool("creative_mode") then
+						local testpts = minetest.pos_to_string(testpos)
 						local player=advtrains.playersbypts[testpts]
 						if player and not minetest.check_player_privs(player, "creative") and train.velocity>3 then
 							--instantly kill player
@@ -644,7 +645,8 @@ function advtrains.add_wagon_to_train(wagon, train_id, index)
 end
 function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local train=advtrains.trains[train_id]
-	train.drives_on=advtrains.all_tracktypes
+	train.drives_on=advtrains.merge_tables(advtrains.all_tracktypes)
+	--FIX: deep-copy the table!!!
 	train.max_speed=20
 	local rel_pos=0
 	local count_l=0
