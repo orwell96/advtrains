@@ -6,8 +6,11 @@ All boolean values in definition tables default to 'false' and can be omitted.
 Wagons are registered using the function
 
 advtrains.register_wagon(name, prototype, description, inventory_image)
-- 'name' is the internal name of the wagon. It is registered inside the 'advtrains:' namespace.
+- 'name' is the internal name of the wagon. It should follow the mod naming convention, however, this is not enforced.
+	For compatibility reasons, if a mod name is omitted, the wagon will be registered in the advtrains: namespace.
 	Example: A wagon with name="engine_tgv" will be registered as "advtrains:engine_tgv".
+	!IMPORTANT! You must not append a ":" at the start of the name, even if you want to bypass the mod naming convention check. This is because internally the register_wagon function
+	appends a ":" automatically.
 - 'prototype' is the lua entity prototype. The regular definition keys for luaentites apply. Additional required and optional properties see below. DO NOT define 'on_step', 'on_activate', 'on_punch', 'on_rightclick' and 'get_staticdata' since these will be overridden. Use 'custom_*' instead.
 - 'description' is the description of the inventory item that is used to place the wagon.
 - 'inventory_image' is the inventory image of said item.

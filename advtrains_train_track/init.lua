@@ -1,10 +1,3 @@
-advtrains.register_tracks("regular", {
-	nodename_prefix="advtrains:track",
-	texture_prefix="advtrains_track",
-	shared_model="trackplane.b3d",
-	description=attrans("Deprecated Track"),
-	formats={vst1={}, vst2={}},
-}, advtrains.ap.t_45deg)
 
 --flat
 advtrains.register_tracks("default", {

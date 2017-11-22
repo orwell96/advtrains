@@ -857,11 +857,15 @@ function wagon:reattach_all()
 	end
 end
 
-function advtrains.register_wagon(sysname, prototype, desc, inv_img)
+function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
+	local sysname = sysname_p
+	if not string.match(sysname, ":") then
+		sysname = "advtrains:"..sysname_p
+	end
 	setmetatable(prototype, {__index=wagon})
-	minetest.register_entity(":advtrains:"..sysname,prototype)
+	minetest.register_entity(":"..sysname,prototype)
 	
-	minetest.register_craftitem(":advtrains:"..sysname, {
+	minetest.register_craftitem(":"..sysname, {
 		description = desc,
 		inventory_image = inv_img,
 		wield_image = inv_img,
@@ -888,7 +892,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 				local conn1=advtrains.get_track_connections(node.name, node.param2)
 				local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 				
-				local ob=minetest.add_entity(pointed_thing.under, "advtrains:"..sysname)
+				local ob=minetest.add_entity(pointed_thing.under, sysname)
 				if not ob then
 					atprint("couldn't add_entity, aborting")
 				end
