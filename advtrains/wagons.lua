@@ -415,9 +415,11 @@ function wagon:on_step(dtime)
 		--checking for environment collisions(a 3x3 cube around the center)
 		if not gp.recently_collided_with_env then
 			local collides=false
-			for x=-1,1 do
-				for y=0,2 do
-					for z=-1,1 do
+			local exh = self.extent_h or 1
+			local exv = self.extent_v or 2
+			for x=-exh,exh do
+				for y=0,exv do
+					for z=-exh,exh do
 						local node=minetest.get_node_or_nil(vector.add(first_pos, {x=x, y=y, z=z}))
 						if (advtrains.train_collides(node)) then
 							collides=true

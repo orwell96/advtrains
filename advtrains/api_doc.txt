@@ -71,6 +71,13 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	wagon_span=2,
 	^- How far this wagon extends from its base position. Is the half of the wagon length.
 	^- Used to determine in which distance the other wagons have to be positioned. Will require tweaking.
+	extent_h = 1,
+	^- Determines the collision box extent in x/z direction. Defaults to 1 (=3x3)
+	^- The actual bounding box size is (extent_h*2)+1, so 0 means 1x1, 1 means 3x3 and 2 means 5x5
+	extent_v = 2,
+	^- Determines the collision box extent in y direction. Defaults to 2 (=3).
+	^- The actual bounding box size is extent_v+1, so 0 means 1, 1 means 2, 2 means 3 a.s.o.
+	
 	drops = {"default:steelblock 3"}
 	^- List of itemstrings what to drop when the wagon is destroyed
 	

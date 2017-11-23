@@ -498,7 +498,8 @@ function advtrains.train_step_b(id, train, dtime)
 	
 	-- when paths get cleared, the old indices set above will be up-to-date and represent the state in which the last run of this code was made
 	local ifo, ifn, ibo, ibn = train.detector_old_index, atround(train.index), train.detector_old_end_index, atround(train.end_index)
-	
+	--atprint(ifo,">", ifn, "<==>", ibo,">", ibn)
+		
 	local path=train.path
 	
 	if train.enter_node_all then
@@ -557,6 +558,10 @@ function advtrains.train_step_b(id, train, dtime)
 	local train_moves=(train.velocity~=0)
 	
 	if train_moves then
+	
+		--TO BE REMOVED:
+		if not train.extent_h then advtrains.update_trainpart_properties(id, train) end
+		
 		local collpos
 		local coll_grace=1
 		if train.movedir==1 then
@@ -566,8 +571,8 @@ function advtrains.train_step_b(id, train, dtime)
 		end
 		if collpos then
 			local rcollpos=advtrains.round_vector_floor_y(collpos)
-			for x=-1,1 do
-				for z=-1,1 do
+			for x=-train.extent_h,train.extent_h do
+				for z=-train.extent_h,train.extent_h do
 					local testpos=vector.add(rcollpos, {x=x, y=0, z=z})
 					--- 8a Check collision ---
 					if advtrains.detector.occupied(testpos, id) then
@@ -648,6 +653,8 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	train.drives_on=advtrains.merge_tables(advtrains.all_tracktypes)
 	--FIX: deep-copy the table!!!
 	train.max_speed=20
+	train.extent_h = 0;
+	
 	local rel_pos=0
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
@@ -696,6 +703,8 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 				end
 			end
 			train.max_speed=math.min(train.max_speed, wagon.max_speed)
+			train.extent_h = math.max(train.extent_h, wagon.extent_h or 1);
+			
 			if i==1 then
 				train.couple_lock_front=wagon.lock_couples
 			end

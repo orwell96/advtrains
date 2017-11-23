@@ -15,8 +15,8 @@ local couple_max_dist=3
 minetest.register_entity("advtrains:discouple", {
 	visual="sprite",
 	textures = {"advtrains_discouple.png"},
-	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
-	visual_size = {x=1, y=1},
+	collisionbox = {-0.3,-0.3,-0.3, 0.3,0.3,0.3},
+	visual_size = {x=0.7, y=0.7},
 	initial_sprite_basepos = {x=0, y=0},
 	
 	is_discouple=true,
@@ -101,8 +101,8 @@ train2_is_backpos
 minetest.register_entity("advtrains:couple", {
 	visual="sprite",
 	textures = {"advtrains_couple.png"},
-	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
-	visual_size = {x=1, y=1},
+	collisionbox = {-0.3,-0.3,-0.3, 0.3,0.3,0.3},
+	visual_size = {x=0.7, y=0.7},
 	initial_sprite_basepos = {x=0, y=0},
 	
 	is_couple=true,
@@ -114,6 +114,7 @@ minetest.register_entity("advtrains:couple", {
 				self.object:remove()
 				return
 			end
+			self.object:set_armor_groups({immmortal=1})
 		end)
 	end,
 	get_staticdata=function(self) return "COUPLE" end,
