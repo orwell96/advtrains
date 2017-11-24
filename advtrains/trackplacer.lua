@@ -65,16 +65,26 @@ end
 		-> set straight
 ]]
 
-function tp.find_already_connected(pos)--TODO vertical calculations(check node below)
-	local function istrackandbc(pos, conn)
-		local cnode=minetest.get_node(advtrains.dirCoordSet(pos, conn))
-		local bconn=(conn+8)%16
-		if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
-			local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
-			return cconn1==bconn or cconn2==bconn
-		end
-		return false
+local function istrackandbc(pos_p, conn)
+	local tpos = pos_p
+	local cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn))
+	local bconn=(conn+8)%16
+	if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
+		local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
+		return cconn1==bconn or cconn2==bconn
 	end
+	--try the same 1 node below
+	tpos = {x=tpos.x, y=tpos.y-1, z=tpos.z}
+	cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn))
+	bconn=(conn+8)%16
+	if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
+		local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
+		return cconn1==bconn or cconn2==bconn
+	end
+	return false
+end
+
+function tp.find_already_connected(pos)
 	local dnode=minetest.get_node(pos)
 	local dconn1, dconn2=advtrains.get_track_connections(dnode.name, dnode.param2)
 	if istrackandbc(pos, dconn1) and istrackandbc(pos, dconn2) then return dconn1, dconn2
@@ -95,6 +105,14 @@ function tp.rail_and_can_be_bent(originpos, conn)
 	if not nnpref then return false end
 	local tr=tp.tracks[nnpref]
 	if not tr then return false end
+	if not tr.modify[node.name] then 
+		--we actually can use this rail, but only if it already points to the desired direction.
+		local bconn=(conn+8)%16
+		if advtrains.is_track_and_drives_on(node.name, advtrains.all_tracktypes) then
+			local cconn1, cconn2=advtrains.get_track_connections(node.name, node.param2)
+			return cconn1==bconn or cconn2==bconn
+		end
+	end
 	--rail at other end?
 	local adj1, adj2=tp.find_already_connected(pos)
 	if adj1 and adj2 then
@@ -147,9 +165,17 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 	--1. find all rails that are likely to be connected
 	local tr=tp.tracks[nnpref]
 	local p_rails={}
+	local p_railpos={}
 	for i=0,15 do
 		if tp.rail_and_can_be_bent(pos, i, nnpref) then
 			p_rails[#p_rails+1]=i
+			p_railpos[i] = pos
+		else
+			local upos = {x=pos.x, y=pos.y-1, z=pos.z}
+			if tp.rail_and_can_be_bent(upos, i, nnpref) then
+				p_rails[#p_rails+1]=i
+				p_railpos[i] = upos
+			end
 		end
 	end
 	
@@ -160,8 +186,8 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 			for k2, conn2 in ipairs(p_rails) do
 				if k1~=k2 then
 					if (tr.double_conn[conn1.."_"..conn2]) then
-						tp.bend_rail(pos, conn1, nnpref)
-						tp.bend_rail(pos, conn2, nnpref)
+						tp.bend_rail(p_railpos[conn1], conn1, nnpref)
+						tp.bend_rail(p_railpos[conn2], conn2, nnpref)
 						advtrains.ndb.swap_node(pos, tr.double_conn[conn1.."_"..conn2])
 						local nname=tr.double_conn[conn1.."_"..conn2].name
 						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
@@ -184,7 +210,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 			end
 			if sconn1[p_rail] then
 				local using = sconn1[p_rail]
-				tp.bend_rail(pos, p_rail, nnpref)
+				tp.bend_rail(p_railpos[p_rail], p_rail, nnpref)
 				advtrains.ndb.swap_node(pos, using)
 				local nname=using.name
 				if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
@@ -194,7 +220,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 			end
 			if sconn2[p_rail] then
 				local using = sconn2[p_rail]
-				tp.bend_rail(pos, p_rail, nnpref)
+				tp.bend_rail(p_railpos[p_rail], p_rail, nnpref)
 				advtrains.ndb.swap_node(pos, using)
 				local nname=using.name
 				if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
