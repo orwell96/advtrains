@@ -178,7 +178,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 		for ix, p_rail in ipairs(p_rails) do
 			local sconn1 = tr.single_conn_1
 			local sconn2 = tr.single_conn_2
-			if not (advtrains.yawToDirection(yaw, p_rail, (p_rail+8)%16) == p_rail) then
+			if not (advtrains.yawToDirection((math.pi/2) - yaw, p_rail, (p_rail+8)%16) == p_rail) then
 				sconn1 = tr.single_conn_2
 				sconn2 = tr.single_conn_1
 			end
