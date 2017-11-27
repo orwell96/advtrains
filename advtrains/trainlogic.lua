@@ -560,7 +560,7 @@ function advtrains.train_step_b(id, train, dtime)
 	if train_moves then
 	
 		--TO BE REMOVED:
-		if not train.extent_h then advtrains.update_trainpart_properties(id, train) end
+		if not train.extent_h then advtrains.update_trainpart_properties(id) end
 		
 		local collpos
 		local coll_grace=1
