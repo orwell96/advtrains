@@ -99,8 +99,9 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	^- optional: Execute custom code on every step
 	custom_on_activate = function(self, dtime_s) end
 	^- optional: Execute custom code on activate. Staticdata does not need to be saved and restored since all properties written in 'self' are preserved over unloads.
-	update_animation = function(self, velocity) end
-	^- optional: Function that is called whenever the train's velocity changes or every 2 seconds. Used to call 'self.object:update_animation()' if needed. 
+	custom_on_velocity_change = function(self, velocity, old_velocity) end
+	^- optional: Function that is called whenever the train's velocity changes or every 2 seconds. Used to call 'self.object:update_animation()' if needed.
+	^- for compatibility reasons the name 'update_animation' for this function is still supported. 
 
 }
 

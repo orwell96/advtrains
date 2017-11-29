@@ -502,12 +502,16 @@ function wagon:on_step(dtime)
 			self.object:setyaw(yaw)
 			self.updatepct_timer=2
 			if self.update_animation then
-				self:update_animation(gp.velocity)
+				self:update_animation(gp.velocity, self.old_velocity)
+			end
+			if self.custom_on_velocity_change then
+				self:custom_on_velocity_change(gp.velocity, self.old_velocity)
 			end
 		end
 		
 		
 		self.old_velocity_vector=velocityvec
+		self.old_velocity = gp.velocity
 		self.old_acceleration_vector=accelerationvec
 		self.old_yaw=yaw
 		atprintbm("wagon step", t)
