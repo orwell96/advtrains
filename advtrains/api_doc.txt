@@ -57,10 +57,14 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 		open={
 			[-1]={frames={x=0, y=20}, time=1}, -- open left doors
 			[1]={frames={x=40, y=60}, time=1}  -- open right doors
+			sound = <simpleSoundSpec>
+			^- The sound file of the doors opening. If none is specified, nothing is played.
 		},
 		close={
 			[-1]={frames={x=20, y=40}, time=1}, -- close left doors
 			[1]={frames={x=60, y=80}, time=1} -- close right doors
+			sound = <simpleSoundSpec>
+			^- The sound file of the doors closing. If none is specified, nothing is played.
 		}
 	},
 	door_entry={ 1.5, -1.5 }
@@ -77,6 +81,8 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	extent_v = 2,
 	^- Determines the collision box extent in y direction. Defaults to 2 (=3).
 	^- The actual bounding box size is extent_v+1, so 0 means 1, 1 means 2, 2 means 3 a.s.o.
+	horn_sound = <simpleSoundSpec>,
+	^- The sound file of the horn. If none is specified, this wagon can't sound a horn. The specified sound file will be looped.
 	
 	drops = {"default:steelblock 3"}
 	^- List of itemstrings what to drop when the wagon is destroyed

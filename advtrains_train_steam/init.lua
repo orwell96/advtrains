@@ -71,6 +71,7 @@ advtrains.register_wagon("newlocomotive", {
 		})
 	end,
 	drops={"default:steelblock 4"},
+	horn_sound = "advtrains_steam_whistle",
 }, S("Steam Engine"), "advtrains_engine_steam_inv.png")
 
 advtrains.register_wagon("detailed_steam_engine", {
@@ -139,6 +140,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 		})
 	end,
 	drops={"default:steelblock 4"},
+	horn_sound = "advtrains_steam_whistle",
 }, S("Detailed Steam Engine"), "advtrains_detailed_engine_steam_inv.png")
 
 advtrains.register_wagon("wagon_default", {

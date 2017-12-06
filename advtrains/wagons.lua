@@ -270,6 +270,18 @@ function wagon:on_step(dtime)
 				if has_driverstand then
 					--regular driver stand controls
 					advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
+					--sound horn when required
+					if self.horn_sound and pc.aux1 and not pc.sneak and not self.horn_handle then
+						self.horn_handle = minetest.sound_play(self.horn_sound, {
+							object = self.object,
+							gain = 1.0, -- default
+							max_hear_distance = 128, -- default, uses an euclidean metric
+							loop = true,
+						})
+					elseif not pc.aux1 and self.horn_handle then
+						minetest.sound_stop(self.horn_handle)
+						self.horn_handle = nil
+					end
 				else
 					-- If on a passenger seat and doors are open, get off when W or D pressed.
 					local pass = self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
@@ -322,10 +334,12 @@ function wagon:on_step(dtime)
 					-- if changed from 0 to +-1, play open anim. if changed from +-1 to 0, play close.
 					-- if changed from +-1 to -+1, first close and set 0, then it will detect state change again and run open.
 					if self.door_state == 0 then
+						if self.doors.open.sound then minetest.sound_play(self.doors.open.sound, {object = self.object}) end
 						at=self.doors.open[dstate]
 						self.object:set_animation(at.frames, at.speed or 15, at.blend or 0, false)
 						self.door_state = dstate
 					else
+						if self.doors.close.sound then minetest.sound_play(self.doors.close.sound, {object = self.object}) end
 						at=self.doors.close[self.door_state or 1]--in case it has not been set yet
 						self.object:set_animation(at.frames, at.speed or 15, at.blend or 0, false)
 						self.door_state = 0

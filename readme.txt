@@ -24,6 +24,13 @@ Inventory images            : mbb
 Small code contributions    : NaruTrey
 Major code contributions    : gpcf
 Mod Description             : hajo
+Sounds:
+advtrains_crossing_bell     : Codesound
+advtrains_japan_horn        : Codesound
+advtrains_steam_whistle     : googol 
+advtrains_subway_horn       : https://freesound.org/people/Mullumbimby/sounds/385283/
+advtrains_subway_*          : Gabriel (gpcf, gbl08ma)
+
 If I forgot someone please punish me for that.
 
 You can see this mod in action on Linuxworks Next Generation server.

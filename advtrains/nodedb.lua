@@ -262,7 +262,7 @@ ndb.restore_all = function()
 						end
 					else
 						ndb.clear(pos)
-						atwarn("Found ghost node (former",ndbnode.name,") @",pos,"deleting")
+						atwarn("Found ghost node (former",ndbnode and ndbnode.name,") @",pos,"deleting")
 					end
 				end
 			end

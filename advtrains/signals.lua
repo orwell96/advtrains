@@ -225,3 +225,19 @@ minetest.register_node("advtrains:across_on", {
 		end
 	end,
 })
+
+minetest.register_abm(
+	{
+        label = "Sound for Level Crossing",
+        nodenames = {"advtrains:across_on"},
+        interval = 3,
+        chance = 1,
+        action = function(pos, node, active_object_count, active_object_count_wider)
+			minetest.sound_play("advtrains_crossing_bell", {
+				pos = pos,
+				gain = 1.0, -- default
+				max_hear_distance = 16, -- default, uses an euclidean metric
+			})
+        end,
+    }
+)

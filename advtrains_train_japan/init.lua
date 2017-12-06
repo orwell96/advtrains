@@ -72,6 +72,7 @@ advtrains.register_wagon("engine_japan", {
 	is_locomotive=true,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
+	horn_sound = "advtrains_japan_horn",
 }, S("Japanese Train Engine"), "advtrains_engine_japan_inv.png")
 
 advtrains.register_wagon("wagon_japan", {
