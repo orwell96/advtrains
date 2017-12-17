@@ -10,7 +10,8 @@ local function get_far_node(pos)
 	return node
 end
 
-local function train_load(pos, train_id, unload)
+advtrains.train_load = function(pos, train_id, unload)
+   -- Load train train_id from loading track at pos, with items from chest below the track. If unload is set, then the train will get unloaded.
    local train=advtrains.trains[train_id]
    local below = get_far_node({x=pos.x, y=pos.y-1, z=pos.z})
    if not string.match(below.name, "chest") then
@@ -43,4 +44,6 @@ local function train_load(pos, train_id, unload)
    end
 end
 			 
-
+advtrains.train_unload = function(pos, train_id)
+   advtrains.train_load(pos,train_id, true)
+end
