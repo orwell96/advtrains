@@ -77,6 +77,7 @@ advtrains.register_wagon("subway_wagon", {
 	drops={"default:steelblock 4"},
 	horn_sound = "advtrains_subway_horn",
 	custom_on_velocity_change = function(self, velocity, old_velocity)
+		if not velocity or not old_velocity then return end
 		if old_velocity == 0 and velocity > 0 then
 			minetest.sound_play("advtrains_subway_depart", {object = self.object})
 		end
