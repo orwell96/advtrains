@@ -36,8 +36,8 @@ advtrains.all_tracktypes={}
 --definition preparation
 local function conns(c1, c2, r1, r2, rh, rots) return {conn1=c1, conn2=c2, rely1=r1, rely2=r2, railheight=rh} end
 
-local ap={}
-ap.t_30deg_flat={
+advtrains.ap={}
+advtrains.ap.t_30deg_flat={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -94,7 +94,7 @@ ap.t_30deg_flat={
 	slopenodes={},
 	increativeinv={},
 }
-ap.t_30deg_slope={
+advtrains.ap.t_30deg_slope={
 	regstep=1,
 	variant={
 		vst1=conns(8,0,0,0.5,0.25),
@@ -131,7 +131,7 @@ ap.t_30deg_slope={
 	trackworker={},
 	increativeinv={},
 }
-ap.t_30deg_straightonly={
+advtrains.ap.t_30deg_straightonly={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -152,11 +152,17 @@ ap.t_30deg_straightonly={
 	trackworker={
 		["st"]="st",
 	},
+	trackplacer={
+		st=true,
+	},
+	tpsingle={
+		st=true,
+	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={"st"},
 }
-ap.t_30deg_straightonly_noplacer={
+advtrains.ap.t_30deg_straightonly_noplacer={
 	regstep=1,
 	variant={
 		st=conns(0,8),
@@ -177,11 +183,17 @@ ap.t_30deg_straightonly_noplacer={
 	trackworker={
 		["st"]="st",
 	},
+	trackplacer={
+		st=true,
+	},
+	tpsingle={
+		st=true,
+	},
 	slopenodes={},
 	rotation={"", "_30", "_45", "_60"},
 	increativeinv={"st"},
 }
-ap.t_45deg={
+advtrains.ap.t_45deg={
 	regstep=2,
 	variant={
 		st=conns(0,8),
@@ -242,7 +254,7 @@ ap.t_45deg={
 	rotation={"", "_45"},
 	increativeinv={vst1=true, vst2=true}
 }
-advtrains.trackpresets = ap
+advtrains.trackpresets = advtrains.ap
 
 --definition format: ([] optional)
 --[[{
@@ -303,7 +315,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 			groups = {
 				attached_node=1,
 				["advtrains_track_"..tracktype]=1,
-				save_in_nodedb=1,
+				save_in_at_nodedb=1,
 				dig_immediate=2,
 				not_in_creative_inventory=(not in_creative_inv and 1 or nil),
 				not_blocking_trains=1,
@@ -346,6 +358,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 		after_place_node=function(pos)
 			advtrains.ndb.update(pos)
 		end,
+		nnpref = def.nodename_prefix,
 	}, def.common or {})
 	--make trackplacer base def
 	advtrains.trackplacer.register_tracktype(def.nodename_prefix, preset.tpdefault)
@@ -367,7 +380,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 					adef=def.get_additional_definiton(def, preset, suffix, rotation)
 				end
 
-				minetest.register_node(def.nodename_prefix.."_"..suffix..rotation, advtrains.merge_tables(
+				minetest.register_node(":"..def.nodename_prefix.."_"..suffix..rotation, advtrains.merge_tables(
 					common_def, 
 					make_overdef(
 						suffix, rotation,
@@ -395,11 +408,19 @@ end
 
 
 function advtrains.is_track_and_drives_on(nodename, drives_on_p)
+	local drives_on = drives_on_p
+	if not drives_on then drives_on = advtrains.all_tracktypes end
+	local hasentry = false
+	for _,_ in pairs(drives_on) do
+		hasentry=true
+	end
+	if not hasentry then drives_on = advtrains.all_tracktypes end
+	
 	if not minetest.registered_nodes[nodename] then
 		return false
 	end
 	local nodedef=minetest.registered_nodes[nodename]
-	for k,v in pairs(drives_on_p) do
+	for k,v in pairs(drives_on) do
 		if nodedef.groups["advtrains_track_"..k] then
 			return true
 		end
@@ -430,20 +451,71 @@ end
 advtrains.detector = {}
 advtrains.detector.on_node = {}
 
-function advtrains.detector.enter_node(pos, train_id)
+--Returns true when position is occupied by a train other than train_id, false when occupied by the same train as train_id and nil in case there's no train at all
+function advtrains.detector.occupied(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
 	local pts=minetest.pos_to_string(ppos)
-	advtrains.detector.on_node[pts]=train_id
+	local s=advtrains.detector.on_node[pts]
+	if not s then return nil end
+	if s==train_id then return false end
+	--in case s is a table, it's always occupied by another train
+	return true
+end
+-- If given a train id as second argument, this is considered as 'not there'.
+-- Returns the train id of (one of, nondeterministic) the trains at this position
+function advtrains.detector.get(pos, train_id)
+	local ppos=advtrains.round_vector_floor_y(pos)
+	local pts=minetest.pos_to_string(ppos)
+	local s=advtrains.detector.on_node[pts]
+	if not s then return nil end
+	if type(s)=="table" then 
+		for _,t in ipairs(s) do
+			if t~=train_id then return t end
+		end
+		return nil
+	end
+	return s
+end
+
+function advtrains.detector.enter_node(pos, train_id)
+	advtrains.detector.stay_node(pos, train_id)
+	local ppos=advtrains.round_vector_floor_y(pos)
 	advtrains.detector.call_enter_callback(ppos, train_id)
 end
 function advtrains.detector.leave_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
+	local pts=minetest.pos_to_string(ppos)
+	local s=advtrains.detector.on_node[pts]
+	if type(s)=="table" then
+		local i
+		for j,t in ipairs(s) do
+			if t==train_id then i=j end
+		end
+		if not i then return end
+		s=table.remove(s,i)
+		if #s==0 then
+			s=nil
+		elseif #s==1 then
+			s=s[1]
+		end
+		advtrains.detector.on_node[pts]=s
+	else
+		advtrains.detector.on_node[pts]=nil
+	end
 	advtrains.detector.call_leave_callback(ppos, train_id)
 end
 function advtrains.detector.stay_node(pos, train_id)
 	local ppos=advtrains.round_vector_floor_y(pos)
 	local pts=minetest.pos_to_string(ppos)
-	advtrains.detector.on_node[pts]=train_id
+	
+	local s=advtrains.detector.on_node[pts]
+	if not s then
+		advtrains.detector.on_node[pts]=train_id
+	elseif type(s)=="string" then
+		advtrains.detector.on_node[pts]={s, train_id}
+	elseif type(s)=="table" then
+		advtrains.detector.on_node[pts]=table.insert(s, train_id)
+	end
 end
 
 
@@ -471,7 +543,7 @@ end
 --crafted with rail and gravel
 local sl={}
 function sl.register_placer(def, preset)
-	minetest.register_craftitem(def.nodename_prefix.."_slopeplacer",{
+	minetest.register_craftitem(":"..def.nodename_prefix.."_slopeplacer",{
 		description = attrans("@1 Slope", def.description),
 		inventory_image = def.texture_prefix.."_slopeplacer.png",
 		wield_image = def.texture_prefix.."_slopeplacer.png",
@@ -579,151 +651,6 @@ advtrains.slope=sl
 	common={} change something on common rail appearance
 }]]
 
-advtrains.register_tracks("regular", {
-	nodename_prefix="advtrains:track",
-	texture_prefix="advtrains_track",
-	shared_model="trackplane.b3d",
-	description=attrans("Deprecated Track"),
-	formats={vst1={}, vst2={}},
-}, ap.t_45deg)
-
---flat
-advtrains.register_tracks("default", {
-	nodename_prefix="advtrains:dtrack",
-	texture_prefix="advtrains_dtrack",
-	models_prefix="advtrains_dtrack",
-	models_suffix=".b3d",
-	shared_texture="advtrains_dtrack_shared.png",
-	description=attrans("Track"),
-	formats={},
-}, ap.t_30deg_flat)
---slopes
-advtrains.register_tracks("default", {
-	nodename_prefix="advtrains:dtrack",
-	texture_prefix="advtrains_dtrack",
-	models_prefix="advtrains_dtrack",
-	models_suffix=".obj",
-	shared_texture="advtrains_dtrack_shared.png",
-	second_texture="default_gravel.png",
-	description=attrans("Track"),
-	formats={vst1={true, false, true}, vst2={true, false, true}, vst31={true}, vst32={true}, vst33={true}},
-}, ap.t_30deg_slope)
-
---bumpers
-advtrains.register_tracks("default", {
-	nodename_prefix="advtrains:dtrack_bumper",
-	texture_prefix="advtrains_dtrack_bumper",
-	models_prefix="advtrains_dtrack_bumper",
-	models_suffix=".b3d",
-	shared_texture="advtrains_dtrack_rail.png",
-	--bumpers still use the old texture until the models are redone.
-	description=attrans("Bumper"),
-	formats={},
-}, ap.t_30deg_straightonly)
---legacy bumpers
-for _,rot in ipairs({"", "_30", "_45", "_60"}) do
-	minetest.register_alias("advtrains:dtrack_bumper"..rot, "advtrains:dtrack_bumper_st"..rot)
-end
-
-if mesecon then
-	advtrains.register_tracks("default", {
-		nodename_prefix="advtrains:dtrack_detector_off",
-		texture_prefix="advtrains_dtrack_detector",
-		models_prefix="advtrains_dtrack",
-		models_suffix=".b3d",
-		shared_texture="advtrains_dtrack_shared_detector_off.png",
-		description=attrans("Detector Rail"),
-		formats={},
-		get_additional_definiton = function(def, preset, suffix, rotation)
-			return {
-				mesecons = {
-					receptor = {
-						state = mesecon.state.off,
-						rules = advtrains.meseconrules
-					}
-				},
-				advtrains = {
-					on_train_enter=function(pos, train_id)
-						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_on".."_"..suffix..rotation, param2=advtrains.ndb.get_node(pos).param2})
-						mesecon.receptor_on(pos, advtrains.meseconrules)
-					end
-				}
-			}
-		end
-	}, ap.t_30deg_straightonly)
-	advtrains.register_tracks("default", {
-		nodename_prefix="advtrains:dtrack_detector_on",
-		texture_prefix="advtrains_dtrack",
-		models_prefix="advtrains_dtrack",
-		models_suffix=".b3d",
-		shared_texture="advtrains_dtrack_shared_detector_on.png",
-		description="Detector(on)(you hacker you)",
-		formats={},
-		get_additional_definiton = function(def, preset, suffix, rotation)
-			return {
-				mesecons = {
-					receptor = {
-						state = mesecon.state.on,
-						rules = advtrains.meseconrules
-					}
-				},
-				advtrains = {
-					on_train_leave=function(pos, train_id)
-						advtrains.ndb.swap_node(pos, {name="advtrains:dtrack_detector_off".."_"..suffix..rotation, param2=advtrains.ndb.get_node(pos).param2})
-						mesecon.receptor_off(pos, advtrains.meseconrules)
-					end
-				}
-			}
-		end
-	}, ap.t_30deg_straightonly_noplacer)
-end
---TODO legacy
---I know lbms are better for this purpose
-for name,rep in pairs({swl_st="swlst", swr_st="swrst", swl_cr="swlcr", swr_cr="swrcr", }) do
-	minetest.register_abm({
-    --  In the following two fields, also group:groupname will work.
-        nodenames = {"advtrains:track_"..name},
-       interval = 1.0, -- Operation interval in seconds
-       chance = 1, -- Chance of trigger per-node per-interval is 1.0 / this
-       action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:track_"..rep, param2=node.param2}) end,
-    })
-    minetest.register_abm({
-    --  In the following two fields, also group:groupname will work.
-        nodenames = {"advtrains:track_"..name.."_45"},
-       interval = 1.0, -- Operation interval in seconds
-       chance = 1, -- Chance of trigger per-node per-interval is 1.0 / this
-       action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:track_"..rep.."_45", param2=node.param2}) end,
-    })
-end
-
-if advtrains.register_replacement_lbms then
-minetest.register_lbm({
-	name = "advtrains:ramp_replacement_1",
---  In the following two fields, also group:groupname will work.
-	nodenames = {"advtrains:track_vert1"},
-	action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst1", param2=(node.param2+2)%4}) end,
-})
-minetest.register_lbm({
-	name = "advtrains:ramp_replacement_1",
---  --  In the following two fields, also group:groupname will work.
-	nodenames = {"advtrains:track_vert2"},
-	action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_vst2", param2=(node.param2+2)%4}) end,
-})
-	minetest.register_abm({
-		name = "advtrains:st_rep_1",
-	--  In the following two fields, also group:groupname will work.
-		nodenames = {"advtrains:track_st"},
-		interval=1,
-		chance=1,
-		action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_st", param2=node.param2}) end,
-	})
-	minetest.register_lbm({
-		name = "advtrains:st_rep_1",
-	--  --  In the following two fields, also group:groupname will work.
-		nodenames = {"advtrains:track_st_45"},
-		action = function(pos, node, active_object_count, active_object_count_wider) minetest.set_node(pos, {name="advtrains:dtrack_st_45", param2=node.param2}) end,
-	})
-end
 
 
 

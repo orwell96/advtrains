@@ -48,6 +48,10 @@ function advtrains.minN(list, expectstart)
 	return n+1
 end
 
+function atround(number)
+	return math.floor(number+0.5)
+end
+
 --vertical_transmit:
 --[[
 rely1, rely2 tell to which height the connections are pointed to. 1 means it will go up the next node
@@ -80,7 +84,7 @@ function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
 	end
 	--dir2???
 	local cor2=advtrains.dirCoordSet(mid, middir1)--<<<<
-	if math.floor(cor2.x+0.5)==math.floor(prev.x+0.5) and math.floor(cor2.z+0.5)==math.floor(prev.z+0.5) then
+	if atround(cor2.x)==atround(prev.x) and atround(cor2.z)==atround(prev.z) then
 		next=advtrains.dirCoordSet(mid, middir2)--dir2 wird überprüft, alles gut.
 		if midrely2>=1 then
 			next.y=next.y+1
@@ -147,26 +151,58 @@ function advtrains.yawToDirection(yaw, conn1, conn2)
 	if not conn1 or not conn2 then
 		error("given nil to yawToDirection: conn1="..(conn1 or "nil").." conn2="..(conn1 or "nil"))
 	end
-	local yaw1=math.pi*(conn1/4)
-	local yaw2=math.pi*(conn2/4)
-	if advtrains.minAngleDiffRad(yaw, yaw1)<advtrains.minAngleDiffRad(yaw, yaw2) then--change to > if weird behavior
+	local yaw1=math.pi*(conn1/8)
+	local yaw2=math.pi*(conn2/8)
+	local adiff1 = advtrains.minAngleDiffRad(yaw, yaw1)
+	local adiff2 = advtrains.minAngleDiffRad(yaw, yaw2)
+	
+	if math.abs(adiff2)<math.abs(adiff1) then
 		return conn2
 	else
 		return conn1
 	end
 end
 
+function advtrains.yawToAnyDir(yaw)
+	local min_conn, min_diff=0, 10
+	for conn, vec in pairs(advtrains.dir_trans_tbl) do
+		local uvec = vector.normalize(advtrains.dirToCoord(conn))
+		local yaw1 = math.atan2(uvec.z, uvec.x)
+		local diff = advtrains.minAngleDiffRad(yaw, yaw1)
+		if diff < min_diff then
+			min_conn = conn
+			min_diff = diff
+		end
+	end
+	return min_conn
+end
+
 function advtrains.minAngleDiffRad(r1, r2)
+	local pi, pi2 = math.pi, 2*math.pi
+	while r1>pi2 do
+		r1=r1-pi2
+	end
+	while r1<0 do
+		r1=r1+pi2
+	end
+	while r2>pi2 do
+		r2=r2-pi2
+	end
+	while r1<0 do
+		r2=r2+pi2
+	end
 	local try1=r2-r1
-	local try2=(r2+2*math.pi)-r1
-	local try3=r2-(r1+2*math.pi)
-	if math.min(math.abs(try1), math.abs(try2), math.abs(try3))==math.abs(try1) then
+	local try2=r2+pi2-r1
+	local try3=r2-pi2-r1
+	
+	local minabs = math.min(math.abs(try1), math.abs(try2), math.abs(try3))
+	if minabs==math.abs(try1) then
 		return try1
 	end
-	if math.min(math.abs(try1), math.abs(try2), math.abs(try3))==math.abs(try2) then
+	if minabs==math.abs(try2) then
 		return try2
 	end
-	if math.min(math.abs(try1), math.abs(try2), math.abs(try3))==math.abs(try3) then
+	if minabs==math.abs(try3) then
 		return try3
 	end
 end

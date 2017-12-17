@@ -131,6 +131,9 @@ function wagon:init_shared()
 	if self.custom_on_activate then
 		self:custom_on_activate(dtime_s)
 	end
+	-- reset line and infotext cache to update object properties on first call
+	self.line_cache=nil
+	self.infotext_cache=nil
 end
 function wagon:ensure_init()
 	if self.initialized then
@@ -267,6 +270,18 @@ function wagon:on_step(dtime)
 				if has_driverstand then
 					--regular driver stand controls
 					advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
+					--sound horn when required
+					if self.horn_sound and pc.aux1 and not pc.sneak and not self.horn_handle then
+						self.horn_handle = minetest.sound_play(self.horn_sound, {
+							object = self.object,
+							gain = 1.0, -- default
+							max_hear_distance = 128, -- default, uses an euclidean metric
+							loop = true,
+						})
+					elseif not pc.aux1 and self.horn_handle then
+						minetest.sound_stop(self.horn_handle)
+						self.horn_handle = nil
+					end
 				else
 					-- If on a passenger seat and doors are open, get off when W or D pressed.
 					local pass = self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
@@ -285,18 +300,25 @@ function wagon:on_step(dtime)
 		
 		--check infotext
 		local outside=self:train().text_outside or ""
-		if self.object:get_properties().infotext~=outside  then
+		if self.infotext_cache~=outside  then
 			self.object:set_properties({infotext=outside})
+			self.infotext_cache=outside
 		end
 		
 		local gp=self:train()
 		local fct=self.wagon_flipped and -1 or 1
 		--set line number
-		if self.name == "advtrains:subway_wagon" and gp.line then
-		   self.object:set_properties({
-			 textures={"advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"},
-			 visual_size = text_scale,
-		   })
+		if self.name == "advtrains:subway_wagon" and gp.line and gp.line~=self.line_cache then
+			local new_line_tex="advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"
+			self.object:set_properties({
+				textures={new_line_tex},
+		 	})
+			self.line_cache=gp.line
+		elseif self.line_cache~=nil and gp.line==nil then
+			self.object:set_properties({
+				textures=self.textures,
+		 	})
+			self.line_cache=nil
 		end
 		--door animation
 		if self.doors then
@@ -312,10 +334,12 @@ function wagon:on_step(dtime)
 					-- if changed from 0 to +-1, play open anim. if changed from +-1 to 0, play close.
 					-- if changed from +-1 to -+1, first close and set 0, then it will detect state change again and run open.
 					if self.door_state == 0 then
+						if self.doors.open.sound then minetest.sound_play(self.doors.open.sound, {object = self.object}) end
 						at=self.doors.open[dstate]
 						self.object:set_animation(at.frames, at.speed or 15, at.blend or 0, false)
 						self.door_state = dstate
 					else
+						if self.doors.close.sound then minetest.sound_play(self.doors.close.sound, {object = self.object}) end
 						at=self.doors.close[self.door_state or 1]--in case it has not been set yet
 						self.object:set_animation(at.frames, at.speed or 15, at.blend or 0, false)
 						self.door_state = 0
@@ -405,9 +429,11 @@ function wagon:on_step(dtime)
 		--checking for environment collisions(a 3x3 cube around the center)
 		if not gp.recently_collided_with_env then
 			local collides=false
-			for x=-1,1 do
-				for y=0,2 do
-					for z=-1,1 do
+			local exh = self.extent_h or 1
+			local exv = self.extent_v or 2
+			for x=-exh,exh do
+				for y=0,exv do
+					for z=-exh,exh do
 						local node=minetest.get_node_or_nil(vector.add(first_pos, {x=x, y=y, z=z}))
 						if (advtrains.train_collides(node)) then
 							collides=true
@@ -465,15 +491,41 @@ function wagon:on_step(dtime)
 				self.object:setpos(actual_pos)
 			self.object:setvelocity(velocityvec)
 			self.object:setacceleration(accelerationvec)
+			
+			if #self.seats > 0 and self.old_yaw ~= yaw then
+			   if not self.player_yaw then
+			      self.player_yaw = {}
+			   end
+			   for _,name in pairs(self.seatp) do
+			      local p = minetest.get_player_by_name(name)
+			      if p then
+				 if not self.turning then
+				    -- save player looking direction offset
+				    self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
+				 end
+				 -- set player looking direction using calculated offset
+				 p:set_look_horizontal(self.player_yaw[name]+yaw)
+			      end
+			   end
+			   self.turning = true							 
+			elseif self.old_yaw == yaw then
+			   -- train is no longer turning
+			   self.turning = false
+			end
+			
 			self.object:setyaw(yaw)
 			self.updatepct_timer=2
 			if self.update_animation then
-				self:update_animation(gp.velocity)
+				self:update_animation(gp.velocity, self.old_velocity)
+			end
+			if self.custom_on_velocity_change then
+				self:custom_on_velocity_change(gp.velocity, self.old_velocity or 0)
 			end
 		end
 		
 		
 		self.old_velocity_vector=velocityvec
+		self.old_velocity = gp.velocity
 		self.old_acceleration_vector=accelerationvec
 		self.old_yaw=yaw
 		atprintbm("wagon step", t)
@@ -847,11 +899,15 @@ function wagon:reattach_all()
 	end
 end
 
-function advtrains.register_wagon(sysname, prototype, desc, inv_img)
+function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
+	local sysname = sysname_p
+	if not string.match(sysname, ":") then
+		sysname = "advtrains:"..sysname_p
+	end
 	setmetatable(prototype, {__index=wagon})
-	minetest.register_entity(":advtrains:"..sysname,prototype)
+	minetest.register_entity(":"..sysname,prototype)
 	
-	minetest.register_craftitem(":advtrains:"..sysname, {
+	minetest.register_craftitem(":"..sysname, {
 		description = desc,
 		inventory_image = inv_img,
 		wield_image = inv_img,
@@ -878,7 +934,7 @@ function advtrains.register_wagon(sysname, prototype, desc, inv_img)
 				local conn1=advtrains.get_track_connections(node.name, node.param2)
 				local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
 				
-				local ob=minetest.add_entity(pointed_thing.under, "advtrains:"..sysname)
+				local ob=minetest.add_entity(pointed_thing.under, sysname)
 				if not ob then
 					atprint("couldn't add_entity, aborting")
 				end

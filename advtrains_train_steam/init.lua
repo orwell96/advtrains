@@ -37,7 +37,7 @@ advtrains.register_wagon("newlocomotive", {
 	visual_size = {x=1, y=1},
 	wagon_span=2.3,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	update_animation=function(self, velocity)
+	custom_on_velocity_change=function(self, velocity)
 		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
 			self.object:set_animation({x=1,y=80}, advtrains.abs_ceil(velocity)*15, 0, true)
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
@@ -71,6 +71,7 @@ advtrains.register_wagon("newlocomotive", {
 		})
 	end,
 	drops={"default:steelblock 4"},
+	horn_sound = "advtrains_steam_whistle",
 }, S("Steam Engine"), "advtrains_engine_steam_inv.png")
 
 advtrains.register_wagon("detailed_steam_engine", {
@@ -105,7 +106,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 	visual_size = {x=1, y=1},
 	wagon_span=2.05,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
-	update_animation=function(self, velocity)
+	custom_on_velocity_change=function(self, velocity)
 		if self.old_anim_velocity~=advtrains.abs_ceil(velocity) then
 			self.object:set_animation({x=1,y=80}, advtrains.abs_ceil(velocity)*15, 0, true)
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
@@ -139,6 +140,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 		})
 	end,
 	drops={"default:steelblock 4"},
+	horn_sound = "advtrains_steam_whistle",
 }, S("Detailed Steam Engine"), "advtrains_detailed_engine_steam_inv.png")
 
 advtrains.register_wagon("wagon_default", {

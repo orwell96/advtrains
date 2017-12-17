@@ -101,10 +101,12 @@ sid=function(id) if id then return string.sub(id, -6) end end
 
 if minetest.settings:get_bool("advtrains_enable_debugging") then
 	atprint=function(t, ...)
-		local context=advtrains.atprint_context_tid
+		local context=advtrains.atprint_context_tid or ""
 		if not context then return end
 		local text=advtrains.print_concat_table({t, ...})
 		advtrains.drb_record(context, text)
+		
+		--atlog("@@",advtrains.atprint_context_tid,t,...)
 	end
 	atdebug=function(t, ...)
 		local text=advtrains.print_concat_table({t, ...})
@@ -249,7 +251,7 @@ advtrains.avt_save = function(remove_players_from_wagons)
 		local v=advtrains.merge_tables(train)
 		--then invalidate
 		if v.index then
-			v.restore_add_index=v.index-math.floor(v.index+0.5)
+			v.restore_add_index=v.index-math.floor(v.index+1)
 		end
 		v.path=nil
 		v.path_dist=nil
@@ -301,7 +303,7 @@ advtrains.mainloop_runcnt=0
 minetest.register_globalstep(function(dtime_mt)
 	return advtrains.pcall(function()
 		advtrains.mainloop_runcnt=advtrains.mainloop_runcnt+1
-		atprint("Running the main loop, runcnt",advtrains.mainloop_runcnt)
+		--atprint("Running the main loop, runcnt",advtrains.mainloop_runcnt)
 		--call load once. see advtrains.load() comment
 		if not init_load then
 			advtrains.load()

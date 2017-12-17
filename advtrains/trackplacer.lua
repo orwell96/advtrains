@@ -11,12 +11,14 @@ function tp.register_tracktype(nnprefix, n_suffix)
 	tp.tracks[nnprefix]={
 		default=n_suffix,
 		single_conn={},
+		single_conn_1={},
+		single_conn_2={},
 		double_conn={},
 		--keys:conn1_conn2 (example:1_4)
 		--values:{name=x, param2=x}
 		twcycle={},
 		twrotate={},--indexed by suffix, list, tells order of rotations
-		modify={}
+		modify={},
 	}
 end
 function tp.add_double_conn(nnprefix, suffix, rotation, conns)
@@ -32,9 +34,12 @@ function tp.add_single_conn(nnprefix, suffix, rotation, conns)
 	for i=0,3 do
 		tp.tracks[nnprefix].single_conn[((conns.conn1+4*i)%16)]={name=nodename, param2=i}
 		tp.tracks[nnprefix].single_conn[((conns.conn2+4*i)%16)]={name=nodename, param2=i}
+		tp.tracks[nnprefix].single_conn_1[((conns.conn1+4*i)%16)]={name=nodename, param2=i}
+		tp.tracks[nnprefix].single_conn_2[((conns.conn2+4*i)%16)]={name=nodename, param2=i}
 	end
 	tp.tracks[nnprefix].modify[nodename]=true
 end
+
 
 function tp.add_worked(nnprefix, suffix, rotation, cycle_follows)
 	tp.tracks[nnprefix].twcycle[suffix]=cycle_follows
@@ -59,32 +64,54 @@ end
 	3. there's no rail around
 		-> set straight
 ]]
-function tp.find_already_connected(pos)--TODO vertical calculations(check node below)
-	local function istrackandbc(pos, conn)
-		local cnode=minetest.get_node(advtrains.dirCoordSet(pos, conn))
-		local bconn=(conn+8)%16
-		if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
-			local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
-			return cconn1==bconn or cconn2==bconn
-		end
-		return false
+
+local function istrackandbc(pos_p, conn)
+	local tpos = pos_p
+	local cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn))
+	local bconn=(conn+8)%16
+	if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
+		local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
+		return cconn1==bconn or cconn2==bconn
 	end
+	--try the same 1 node below
+	tpos = {x=tpos.x, y=tpos.y-1, z=tpos.z}
+	cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn))
+	bconn=(conn+8)%16
+	if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
+		local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
+		return cconn1==bconn or cconn2==bconn
+	end
+	return false
+end
+
+function tp.find_already_connected(pos)
 	local dnode=minetest.get_node(pos)
 	local dconn1, dconn2=advtrains.get_track_connections(dnode.name, dnode.param2)
-	local t={[true]="true", [false]="false"}
 	if istrackandbc(pos, dconn1) and istrackandbc(pos, dconn2) then return dconn1, dconn2
 	elseif istrackandbc(pos, dconn1) then return dconn1
 	elseif istrackandbc(pos, dconn2) then return dconn2
 	end
 	return nil
 end
-function tp.rail_and_can_be_bent(originpos, conn, nnpref)
+function tp.rail_and_can_be_bent(originpos, conn)
 	local pos=advtrains.dirCoordSet(originpos, conn)
 	local newdir=(conn+8)%16
 	local node=minetest.get_node(pos)
-	local tr=tp.tracks[nnpref]
 	if not advtrains.is_track_and_drives_on(node.name, advtrains.all_tracktypes) then
 		return false
+	end
+	local ndef=minetest.registered_nodes[node.name]
+	local nnpref = ndef and ndef.nnpref
+	if not nnpref then return false end
+	local tr=tp.tracks[nnpref]
+	if not tr then return false end
+	if not tr.modify[node.name] then 
+		--we actually can use this rail, but only if it already points to the desired direction.
+		local bconn=(conn+8)%16
+		if advtrains.is_track_and_drives_on(node.name, advtrains.all_tracktypes) then
+			local cconn1, cconn2=advtrains.get_track_connections(node.name, node.param2)
+			return cconn1==bconn or cconn2==bconn
+		end
 	end
 	--rail at other end?
 	local adj1, adj2=tp.find_already_connected(pos)
@@ -102,11 +129,15 @@ function tp.rail_and_can_be_bent(originpos, conn, nnpref)
 		return false
 	end
 end
-function tp.bend_rail(originpos, conn, nnpref)
+function tp.bend_rail(originpos, conn)
 	local pos=advtrains.dirCoordSet(originpos, conn)
 	local newdir=(conn+8)%16
 	local node=minetest.get_node(pos)
+	local ndef=minetest.registered_nodes[node.name]
+	local nnpref = ndef and ndef.nnpref
+	if not nnpref then return false end
 	local tr=tp.tracks[nnpref]
+	if not tr then return false end
 	--is rail already connected? no need to bend.
 	local conn1, conn2=advtrains.get_track_connections(node.name, node.param2)
 	if newdir==conn1 or newdir==conn2 then
@@ -130,35 +161,33 @@ function tp.bend_rail(originpos, conn, nnpref)
 		return false
 	end
 end
-function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
+function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 	--1. find all rails that are likely to be connected
 	local tr=tp.tracks[nnpref]
 	local p_rails={}
+	local p_railpos={}
 	for i=0,15 do
 		if tp.rail_and_can_be_bent(pos, i, nnpref) then
 			p_rails[#p_rails+1]=i
+			p_railpos[i] = pos
+		else
+			local upos = {x=pos.x, y=pos.y-1, z=pos.z}
+			if tp.rail_and_can_be_bent(upos, i, nnpref) then
+				p_rails[#p_rails+1]=i
+				p_railpos[i] = upos
+			end
 		end
 	end
-	if #p_rails==0 then
-		minetest.set_node(pos, {name=nnpref.."_"..tr.default})
-		if minetest.registered_nodes[nnpref.."_"..tr.default] and minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node then
-			minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node(pos, placer, itemstack, pointed_thing)
-		end
-	elseif #p_rails==1 then
-		tp.bend_rail(pos, p_rails[1], nnpref)
-		advtrains.ndb.swap_node(pos, tr.single_conn[p_rails[1]])
-		local nname=tr.single_conn[p_rails[1]].name
-		if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
-			minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
-		end
-	else
+	
+	-- try double_conn
+	if #p_rails > 1 then
 		--iterate subsets
 		for k1, conn1 in ipairs(p_rails) do
 			for k2, conn2 in ipairs(p_rails) do
 				if k1~=k2 then
 					if (tr.double_conn[conn1.."_"..conn2]) then
-						tp.bend_rail(pos, conn1, nnpref)
-						tp.bend_rail(pos, conn2, nnpref)
+						tp.bend_rail(p_railpos[conn1], conn1, nnpref)
+						tp.bend_rail(p_railpos[conn2], conn2, nnpref)
 						advtrains.ndb.swap_node(pos, tr.double_conn[conn1.."_"..conn2])
 						local nname=tr.double_conn[conn1.."_"..conn2].name
 						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
@@ -169,19 +198,48 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing)
 				end
 			end
 		end
-		--not found
-		tp.bend_rail(pos, p_rails[1], nnpref)
-		advtrains.ndb.swap_node(pos, tr.single_conn[p_rails[1]])
-		local nname=tr.single_conn[p_rails[1]].name
-		if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
-			minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+	end
+	-- try single_conn
+	if #p_rails > 0 then
+		for ix, p_rail in ipairs(p_rails) do
+			local sconn1 = tr.single_conn_1
+			local sconn2 = tr.single_conn_2
+			if not (advtrains.yawToDirection((math.pi/2) - yaw, p_rail, (p_rail+8)%16) == p_rail) then
+				sconn1 = tr.single_conn_2
+				sconn2 = tr.single_conn_1
+			end
+			if sconn1[p_rail] then
+				local using = sconn1[p_rail]
+				tp.bend_rail(p_railpos[p_rail], p_rail, nnpref)
+				advtrains.ndb.swap_node(pos, using)
+				local nname=using.name
+				if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+					minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+				end
+				return
+			end
+			if sconn2[p_rail] then
+				local using = sconn2[p_rail]
+				tp.bend_rail(p_railpos[p_rail], p_rail, nnpref)
+				advtrains.ndb.swap_node(pos, using)
+				local nname=using.name
+				if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+					minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+				end
+				return
+			end
 		end
+	end
+	--use default
+	minetest.set_node(pos, {name=nnpref.."_"..tr.default})
+	if minetest.registered_nodes[nnpref.."_"..tr.default] and minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node then
+		minetest.registered_nodes[nnpref.."_"..tr.default].after_place_node(pos, placer, itemstack, pointed_thing)
 	end
 end
 
 
 function tp.register_track_placer(nnprefix, imgprefix, dispname)
-	minetest.register_craftitem(nnprefix.."_placer",{
+	minetest.register_craftitem(":"..nnprefix.."_placer",{
 		description = dispname,
 		inventory_image = imgprefix.."_placer.png",
 		wield_image = imgprefix.."_placer.png",
@@ -200,8 +258,10 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 						return itemstack, false
 					end
 					if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
-						and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
-						tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing)
+					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
+--						minetest.chat_send_all(nnprefix)
+						local yaw = placer:get_look_horizontal() + (math.pi/2)
+						tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing, yaw)
 						if not minetest.settings:get_bool("creative_mode") then
 							itemstack:take_item()
 						end

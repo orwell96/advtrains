@@ -6,8 +6,11 @@ All boolean values in definition tables default to 'false' and can be omitted.
 Wagons are registered using the function
 
 advtrains.register_wagon(name, prototype, description, inventory_image)
-- 'name' is the internal name of the wagon. It is registered inside the 'advtrains:' namespace.
+- 'name' is the internal name of the wagon. It should follow the mod naming convention, however, this is not enforced.
+	For compatibility reasons, if a mod name is omitted, the wagon will be registered in the advtrains: namespace.
 	Example: A wagon with name="engine_tgv" will be registered as "advtrains:engine_tgv".
+	!IMPORTANT! You must not append a ":" at the start of the name, even if you want to bypass the mod naming convention check. This is because internally the register_wagon function
+	appends a ":" automatically.
 - 'prototype' is the lua entity prototype. The regular definition keys for luaentites apply. Additional required and optional properties see below. DO NOT define 'on_step', 'on_activate', 'on_punch', 'on_rightclick' and 'get_staticdata' since these will be overridden. Use 'custom_*' instead.
 - 'description' is the description of the inventory item that is used to place the wagon.
 - 'inventory_image' is the inventory image of said item.
@@ -54,10 +57,14 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 		open={
 			[-1]={frames={x=0, y=20}, time=1}, -- open left doors
 			[1]={frames={x=40, y=60}, time=1}  -- open right doors
+			sound = <simpleSoundSpec>
+			^- The sound file of the doors opening. If none is specified, nothing is played.
 		},
 		close={
 			[-1]={frames={x=20, y=40}, time=1}, -- close left doors
 			[1]={frames={x=60, y=80}, time=1} -- close right doors
+			sound = <simpleSoundSpec>
+			^- The sound file of the doors closing. If none is specified, nothing is played.
 		}
 	},
 	door_entry={ 1.5, -1.5 }
@@ -68,6 +75,15 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	wagon_span=2,
 	^- How far this wagon extends from its base position. Is the half of the wagon length.
 	^- Used to determine in which distance the other wagons have to be positioned. Will require tweaking.
+	extent_h = 1,
+	^- Determines the collision box extent in x/z direction. Defaults to 1 (=3x3)
+	^- The actual bounding box size is (extent_h*2)+1, so 0 means 1x1, 1 means 3x3 and 2 means 5x5
+	extent_v = 2,
+	^- Determines the collision box extent in y direction. Defaults to 2 (=3).
+	^- The actual bounding box size is extent_v+1, so 0 means 1, 1 means 2, 2 means 3 a.s.o.
+	horn_sound = <simpleSoundSpec>,
+	^- The sound file of the horn. If none is specified, this wagon can't sound a horn. The specified sound file will be looped.
+	
 	drops = {"default:steelblock 3"}
 	^- List of itemstrings what to drop when the wagon is destroyed
 	
@@ -89,8 +105,9 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 	^- optional: Execute custom code on every step
 	custom_on_activate = function(self, dtime_s) end
 	^- optional: Execute custom code on activate. Staticdata does not need to be saved and restored since all properties written in 'self' are preserved over unloads.
-	update_animation = function(self, velocity) end
-	^- optional: Function that is called whenever the train's velocity changes or every 2 seconds. Used to call 'self.object:update_animation()' if needed. 
+	custom_on_velocity_change = function(self, velocity, old_velocity) end
+	^- optional: Function that is called whenever the train's velocity changes or every 2 seconds. Used to call 'self.object:update_animation()' if needed.
+	^- for compatibility reasons the name 'update_animation' for this function is still supported. 
 
 }
 
