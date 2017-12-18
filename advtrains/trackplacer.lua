@@ -71,31 +71,35 @@ end
 
 local function istrackandbc(pos_p, conn)
 	local tpos = pos_p
-	local cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn))
-	local bconn=(conn+8)%16
+	local cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn.c))
 	if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
-		local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
-		return cconn1==bconn or cconn2==bconn
+		local cconns=advtrains.get_track_connections(cnode.name, cnode.param2)
+		return advtrains.conn_matches_to(conn, cconns)
 	end
 	--try the same 1 node below
 	tpos = {x=tpos.x, y=tpos.y-1, z=tpos.z}
-	cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn))
-	bconn=(conn+8)%16
+	cnode=minetest.get_node(advtrains.dirCoordSet(tpos, conn.c))
 	if advtrains.is_track_and_drives_on(cnode.name, advtrains.all_tracktypes) then
-		local cconn1, cconn2=advtrains.get_track_connections(cnode.name, cnode.param2)
-		return cconn1==bconn or cconn2==bconn
+		local cconns=advtrains.get_track_connections(cnode.name, cnode.param2)
+		return advtrains.conn_matches_to(conn, cconns)
 	end
 	return false
 end
 
 function tp.find_already_connected(pos)
 	local dnode=minetest.get_node(pos)
-	local dconn1, dconn2=advtrains.get_track_connections(dnode.name, dnode.param2)
-	if istrackandbc(pos, dconn1) and istrackandbc(pos, dconn2) then return dconn1, dconn2
-	elseif istrackandbc(pos, dconn1) then return dconn1
-	elseif istrackandbc(pos, dconn2) then return dconn2
+	local dconns=advtrains.get_track_connections(dnode.name, dnode.param2)
+	local found_conn
+	for connid, conn in ipairs(dconns) do
+		if istrackandbc(pos, conn) then
+			if found_conn then --we found one in previous iteration
+				return true, true --signal that it's connected
+			else
+				found_conn = conn.c
+			end
+		end
 	end
-	return nil
+	return found_conn
 end
 function tp.rail_and_can_be_bent(originpos, conn)
 	local pos=advtrains.dirCoordSet(originpos, conn)
@@ -105,16 +109,15 @@ function tp.rail_and_can_be_bent(originpos, conn)
 		return false
 	end
 	local ndef=minetest.registered_nodes[node.name]
-	local nnpref = ndef and ndef.nnpref
+	local nnpref = ndef and ndef.at_nnpref
 	if not nnpref then return false end
 	local tr=tp.tracks[nnpref]
 	if not tr then return false end
 	if not tr.modify[node.name] then 
 		--we actually can use this rail, but only if it already points to the desired direction.
-		local bconn=(conn+8)%16
 		if advtrains.is_track_and_drives_on(node.name, advtrains.all_tracktypes) then
-			local cconn1, cconn2=advtrains.get_track_connections(node.name, node.param2)
-			return cconn1==bconn or cconn2==bconn
+			local cconns=advtrains.get_track_connections(node.name, node.param2)
+			return advtrains.conn_matches_to(conn, cconns)
 		end
 	end
 	--rail at other end?
@@ -135,16 +138,16 @@ function tp.rail_and_can_be_bent(originpos, conn)
 end
 function tp.bend_rail(originpos, conn)
 	local pos=advtrains.dirCoordSet(originpos, conn)
-	local newdir=(conn+8)%16
+	local newdir=advtrains.oppd(conn)
 	local node=minetest.get_node(pos)
 	local ndef=minetest.registered_nodes[node.name]
-	local nnpref = ndef and ndef.nnpref
+	local nnpref = ndef and ndef.at_nnpref
 	if not nnpref then return false end
 	local tr=tp.tracks[nnpref]
 	if not tr then return false end
 	--is rail already connected? no need to bend.
-	local conn1, conn2=advtrains.get_track_connections(node.name, node.param2)
-	if newdir==conn1 or newdir==conn2 then
+	local conns=advtrains.get_track_connections(node.name, node.param2)
+	if advtrains.conn_matches_to(conn, conns) then
 		return
 	end
 	--rail at other end?
@@ -309,6 +312,7 @@ minetest.register_craftitem("advtrains:trackworker",{
 			if not name then
 				return
 			end
+			local has_aux1_down = placer:get_player_control().aux1
 			if pointed_thing.type=="node" then
 				local pos=pointed_thing.under
 				if advtrains.is_protected(pos, name) then
@@ -319,6 +323,13 @@ minetest.register_craftitem("advtrains:trackworker",{
 
 				--if not advtrains.is_track_and_drives_on(minetest.get_node(pos).name, advtrains.all_tracktypes) then return end
 				if advtrains.get_train_at_pos(pos) then return end
+				
+				if has_aux1_down then
+					--feature: flip the node by 180°
+					--i've always wanted this!
+					advtrains.ndb.swap_node(pos, {name=node.name, param2=(node.param2+2)%4})
+					return
+				end
 
 				local nnprefix, suffix, rotation=string.match(node.name, "^(.+)_([^_]+)(_[^_]+)$")
 				--atprint(node.name.."\npattern recognizes:"..nodeprefix.." / "..railtype.." / "..rotation)

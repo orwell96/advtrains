@@ -124,8 +124,8 @@ advtrains.atc_function = function(def, preset, suffix, rotation)
 						meta:set_string("formspec", atc.get_atc_controller_formspec(pos, meta))
 						
 						local pts=minetest.pos_to_string(pos)
-						local _, conn1=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
-						atc.controllers[pts]={command=fields.command, arrowconn=conn1}
+						local _, conns=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
+						atc.controllers[pts]={command=fields.command, arrowconn=conns[1].c}
 						if advtrains.detector.on_node[pts] then
 							atc.send_command(pos)
 						end
@@ -145,8 +145,8 @@ function atc.get_atc_controller_formspec(pos, meta)
 	local command=meta:get_string("command")
 	local command_on=meta:get_string("command_on")
 	local channel=meta:get_string("channel")
-	local formspec="size[8,6]"..
-		"dropdown[0,0;3;mode;static,mesecon,digiline;"..mode.."]"
+	local formspec="size[8,6]"
+	--	"dropdown[0,0;3;mode;static,mesecon,digiline;"..mode.."]"
 	if mode<3 then
 		formspec=formspec.."field[0.5,1.5;7,1;command;"..attrans("Command")..";"..minetest.formspec_escape(command).."]"
 		if tonumber(mode)==2 then

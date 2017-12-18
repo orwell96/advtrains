@@ -37,12 +37,12 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 			mesecons = {effector = {
 				rules=advtrains.meseconrules,
 				["action_"..f.as] = function (pos, node)
-					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2}, true)
 				end
 			}},
 			on_rightclick=function(pos, node, player)
 				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
-					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2}, true)
 				end
 			end,
 		})
@@ -72,20 +72,20 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 			mesecons = {effector = {
 				rules=advtrains.meseconrules,
 				["action_"..f.as] = function (pos, node)
-					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2}, true)
 				end
 			}},
 			luaautomation = {
 				getstate = f.ls,
 				setstate = function(pos, node, newstate)
 					if newstate == f.als then
-						advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
+						advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2}, true)
 					end
 				end,
 			},
 			on_rightclick=function(pos, node, player)
 				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
-					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2}, true)
 				end
 			end,
 		})
@@ -121,20 +121,20 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 			mesecons = {effector = {
 				rules = mrules_wallsignal,
 				["action_"..f.as] = function (pos, node)
-					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2}, true)
 				end
 			}},
 			luaautomation = {
 				getstate = f.ls,
 				setstate = function(pos, node, newstate)
 					if newstate == f.als then
-						advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2})
+						advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2}, true)
 					end
 				end,
 			},
 			on_rightclick=function(pos, node, player)
 				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
-					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2})
+					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2}, true)
 				end
 			end,
 		})
@@ -167,20 +167,20 @@ minetest.register_node("advtrains:across_off", {
 	mesecons = {effector = {
 		rules = advtrains.meseconrules,
 		action_on = function (pos, node)
-			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2})
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2}, true)
 		end
 	}},
 	luaautomation = {
 		getstate = "off",
 		setstate = function(pos, node, newstate)
 			if newstate == "on" then
-				advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2})
+				advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2}, true)
 			end
 		end,
 	},
 	on_rightclick=function(pos, node, player)
 		if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
-			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2})
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2}, true)
 		end
 	end,
 })
@@ -208,20 +208,20 @@ minetest.register_node("advtrains:across_on", {
 	mesecons = {effector = {
 		rules = advtrains.meseconrules,
 		action_off = function (pos, node)
-			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2})
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2}, true)
 		end
 	}},
 	luaautomation = {
 		getstate = "on",
 		setstate = function(pos, node, newstate)
 			if newstate == "off" then
-				advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2})
+				advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2}, true)
 			end
 		end,
 	},
 	on_rightclick=function(pos, node, player)
 		if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
-			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2})
+			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2}, true)
 		end
 	end,
 })

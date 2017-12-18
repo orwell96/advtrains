@@ -931,8 +931,13 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 					minetest.record_protection_violation(pointed_thing.under, placer:get_player_name())
 					return
 				end
-				local conn1=advtrains.get_track_connections(node.name, node.param2)
-				local id=advtrains.create_new_train_at(pointed_thing.under, advtrains.dirCoordSet(pointed_thing.under, conn1))
+				local tconns=advtrains.get_track_connections(node.name, node.param2)
+				local yaw = placer:get_look_horizontal() + (math.pi/2)
+				local plconnid = advtrains.yawToClosestConn(yaw, tconns)
+				
+				local prevpos = advtrains.get_adjacent_rail(pointed_thing.under, tconns, plconnid, prototype.drives_on)
+				if not prevpos then return end
+				local id=advtrains.create_new_train_at(pointed_thing.under, prevpos)
 				
 				local ob=minetest.add_entity(pointed_thing.under, sysname)
 				if not ob then

@@ -7,6 +7,9 @@ end
 
 --advtrains
 
+--Constant for maximum connection value/division of the circle
+AT_CMAX = 16
+
 advtrains = {trains={}, wagon_save={}, player_to_train_mapping={}}
 
 --pcall
@@ -99,6 +102,13 @@ atwarn=function(t, ...)
 end
 sid=function(id) if id then return string.sub(id, -6) end end
 
+--TEMP
+atdebug=function(t, ...)
+		local text=advtrains.print_concat_table({t, ...})
+		minetest.log("action", "[advtrains]"..text)
+		minetest.chat_send_all("[advtrains]"..text)
+	end
+
 if minetest.settings:get_bool("advtrains_enable_debugging") then
 	atprint=function(t, ...)
 		local context=advtrains.atprint_context_tid or ""
@@ -135,7 +145,7 @@ advtrains.meseconrules =
  {x=0, y=-2, z=0}}
  
 
- 
+dofile(advtrains.modpath.."/path.lua")
 dofile(advtrains.modpath.."/trainlogic.lua")
 dofile(advtrains.modpath.."/trainhud.lua")
 dofile(advtrains.modpath.."/trackplacer.lua")

@@ -132,9 +132,12 @@ function ndb.get_node_raw(pos)
 end
 
 
-function ndb.swap_node(pos, node)
+function ndb.swap_node(pos, node, no_inval)
 	minetest.swap_node(pos, node)
 	ndb.update(pos, node)
+	if not no_inval then
+		advtrains.invalidate_all_paths(pos)
+	end
 end
 
 function ndb.update(pos, pnode)
@@ -175,30 +178,15 @@ function advtrains.get_rail_info_at(pos, drives_on)
 	local rdp=advtrains.round_vector_floor_y(pos)
 	
 	local node=ndb.get_node_or_nil(rdp)
+	if not node then return end
 	
-	--still no node?
-	--advtrains.trackdb is nil when there's no data available.
-	if not node then
-		if advtrains.trackdb then
-			--try raildb (see trackdb_legacy.lua)
-			local dbe=(advtrains.trackdb[rdp.y] and advtrains.trackdb[rdp.y][rdp.x] and advtrains.trackdb[rdp.y][rdp.x][rdp.z])
-			if dbe then
-				for tt,_ in pairs(drives_on) do
-					if not dbe.tracktype or tt==dbe.tracktype then
-						return true, dbe.conn1, dbe.conn2, dbe.rely1 or 0, dbe.rely2 or 0, dbe.railheight or 0
-					end
-				end
-			end
-		end
-		return nil
-	end
 	local nodename=node.name
 	if(not advtrains.is_track_and_drives_on(nodename, drives_on)) then
 		return false
 	end
-	local conn1, conn2, rely1, rely2, railheight, tracktype=advtrains.get_track_connections(node.name, node.param2)
+	local conns, railheight, tracktype=advtrains.get_track_connections(node.name, node.param2)
 	
-	return true, conn1, conn2, rely1, rely2, railheight
+	return true, conns, railheight
 end
 
 ndb.run_lbm = function(pos, node)

@@ -52,97 +52,6 @@ function atround(number)
 	return math.floor(number+0.5)
 end
 
---vertical_transmit:
---[[
-rely1, rely2 tell to which height the connections are pointed to. 1 means it will go up the next node
-
-]]
-
-function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
-	local mid=advtrains.round_vector_floor_y(midreal)
-	
-	local midnode_ok, middir1, middir2, midrely1, midrely2=advtrains.get_rail_info_at(mid, drives_on)
-	if not midnode_ok then
-		return nil 
-	end
-	
-	local next, chkdir, chkrely, y_offset
-	y_offset=0
-	--atprint(" in order mid1,mid2",middir1,middir2)
-	--try if it is dir1
-	local cor1=advtrains.dirCoordSet(mid, middir2)--<<<<
-	if cor1.x==prev.x and cor1.z==prev.z then--this was previous
-		next=advtrains.dirCoordSet(mid, middir1)
-		if midrely1>=1 then
-			next.y=next.y+1
-			--atprint("found midrely1 to be >=1: next is now "..(next and minetest.pos_to_string(next) or "nil"))
-			y_offset=1
-		end
-		chkdir=middir1
-		chkrely=midrely1
-		--atprint("dir2 applied next pos:",minetest.pos_to_string(next),"(chkdir is ",chkdir,")")
-	end
-	--dir2???
-	local cor2=advtrains.dirCoordSet(mid, middir1)--<<<<
-	if atround(cor2.x)==atround(prev.x) and atround(cor2.z)==atround(prev.z) then
-		next=advtrains.dirCoordSet(mid, middir2)--dir2 wird überprüft, alles gut.
-		if midrely2>=1 then
-			next.y=next.y+1
-			--atprint("found midrely2 to be >=1: next is now "..(next and minetest.pos_to_string(next) or "nil"))
-			y_offset=1
-		end
-		chkdir=middir2
-		chkrely=midrely2
-		--atprint(" dir2 applied next pos:",minetest.pos_to_string(next),"(chkdir is ",chkdir,")")
-	end
-	--atprint("dir applied next pos: "..(next and minetest.pos_to_string(next) or "nil").."(chkdir is "..(chkdir or "nil")..", y-offset "..y_offset..")")
-	--is there a next
-	if not next then
-		--atprint("in conway: no next rail(nil), returning!")
-		return nil
-	end
-	
-	local nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
-	
-	--is it a rail?
-	if(not nextnode_ok) then
-		--atprint("in conway: next "..minetest.pos_to_string(next).." not a rail, trying one node below!")
-		next.y=next.y-1
-		y_offset=y_offset-1
-		
-		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
-		if(not nextnode_ok) then
-			--atprint("in conway: one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
-			return nil
-		end
-	end
-	
-	--is this next rail connecting to the mid?
-	if not ( (((nextdir1+8)%16)==chkdir and nextrely1==chkrely-y_offset) or (((nextdir2+8)%16)==chkdir and nextrely2==chkrely-y_offset) ) then
-		--atprint("in conway: next "..minetest.pos_to_string(next).." not connecting, trying one node below!")
-		next.y=next.y-1
-		y_offset=y_offset-1
-		
-		nextnode_ok, nextdir1, nextdir2, nextrely1, nextrely2, nextrailheight=advtrains.get_rail_info_at(advtrains.round_vector_floor_y(next), drives_on)
-		if(not nextnode_ok) then
-			--atprint("in conway: (at connecting if check again) one below "..minetest.pos_to_string(next).." is not a rail either, returning!")
-			return nil
-		end
-		if not ( (((nextdir1+8)%16)==chkdir and nextrely1==chkrely) or (((nextdir2+8)%16)==chkdir and nextrely2==chkrely) ) then
-			--atprint("in conway: one below "..minetest.pos_to_string(next).." rail not connecting, returning!")
-			--atprint(" in order mid1,2,next1,2,chkdir "..middir1.." "..middir2.." "..nextdir1.." "..nextdir2.." "..chkdir)
-			return nil
-		end
-	end
-	
-	--atprint("conway found rail.")
-	return vector.add(advtrains.round_vector_floor_y(next), {x=0, y=nextrailheight, z=0}), chkdir
-end
---TODO use this
-function advtrains.oppd(dir)
-	return ((dir+8)%16)
-end
-
 function advtrains.round_vector_floor_y(vec)
 	return {x=math.floor(vec.x+0.5), y=math.floor(vec.y), z=math.floor(vec.z+0.5)}
 end
@@ -176,6 +85,20 @@ function advtrains.yawToAnyDir(yaw)
 	end
 	return min_conn
 end
+function advtrains.yawToClosestConn(yaw, conns)
+	local min_connid, min_diff=1, 10
+	for connid, conn in ipairs(conns) do
+		local uvec = vector.normalize(advtrains.dirToCoord(conn.c))
+		local yaw1 = math.atan2(uvec.z, uvec.x)
+		local diff = advtrains.minAngleDiffRad(yaw, yaw1)
+		if diff < min_diff then
+			min_connid = connid
+			min_diff = diff
+		end
+	end
+	return min_connid
+end
+
 
 function advtrains.minAngleDiffRad(r1, r2)
 	local pi, pi2 = math.pi, 2*math.pi
@@ -300,3 +223,95 @@ end
 function advtrains.ms_to_kmh(speed)
 	return speed * 3.6
 end
+
+-- 4 possible inputs:
+-- integer: just do that modulo calculation
+-- table with c set: rotate c
+-- table with tables: rotate each
+-- table with integers: rotate each (probably no use case)
+function advtrains.rotate_conn_by(conn, rotate)
+	if tonumber(conn) then
+		return (conn+rotate)%AT_CMAX
+	elseif conn.c then
+		return { c = (conn.c+rotate)%AT_CMAX, y = conn.y}
+	end
+	local tmp={}
+	for connid, data in ipairs(conn) do
+		tmp[connid]=advtrains.rotate_conn_by(data, rotate)
+	end
+	return tmp
+end
+
+--TODO use this
+function advtrains.oppd(dir)
+	return advtrains.rotate_conn_by(dir, AT_CMAX/2)
+end
+--conn_to_match like rotate_conn_by
+--other_conns have to be a table of conn tables!
+function advtrains.conn_matches_to(conn, other_conns)
+	if tonumber(conn) then
+		for connid, data in ipairs(other_conns) do
+			if advtrains.oppd(conn) == data.c then return connid end
+		end
+		return false
+	elseif conn.c then
+		for connid, data in ipairs(other_conns) do
+			local cmp = advtrains.oppd(conn)
+			if cmp.c == data.c and (cmp.y or 0) == (data.y or 0) then return connid end
+		end
+		return false
+	end
+	local tmp={}
+	for connid, data in ipairs(conn) do
+		local backmatch = advtrains.conn_matches_to(data, other_conns)
+		if backmatch then return backmatch, connid end --returns <connid of other rail> <connid of this rail>
+	end
+	return false
+end
+
+
+-- returns: <adjacent pos>, <conn index of adjacent>, <my conn index>, <railheight of adjacent>
+function advtrains.get_adjacent_rail(this_posnr, this_conns_p, conn_idx, drives_on)
+	local this_pos = advtrains.round_vector_floor_y(this_posnr)
+	local this_conns = this_conns_p
+	if not this_conns then
+		_, this_conns = advtrains.get_rail_info_at(this_pos)
+	end
+	if not conn_idx then
+		for coni, _ in ipairs(this_conns) do
+			local adj_pos, adj_conn_idx, _, nry = advtrains.get_adjacent_rail(this_pos, this_conns, coni)
+			if adj_pos then return adj_pos,adj_conn_idx,coni,nry end
+		end
+		return nil
+	end
+	
+	local conn = this_conns[conn_idx]
+	local conn_y = conn.y or 0
+	local adj_pos = advtrains.dirCoordSet(this_pos, conn.c);
+	
+	while conn_y>=1 do
+		conn_y = conn_y - 1
+		adj_pos.y = adj_pos.y + 1
+	end
+	
+	local nextnode_ok, nextconns, nextrail_y=advtrains.get_rail_info_at(adj_pos, drives_on)
+	if not nextnode_ok then
+		adj_pos.y = adj_pos.y - 1
+		conn_y = conn_y + 1
+		nextnode_ok, nextconns, nextrail_y=advtrains.get_rail_info_at(adj_pos, drives_on)
+		if not nextnode_ok then
+			return nil
+		end
+	end
+	local adj_connid = advtrains.conn_matches_to({c=conn.c, y=conn_y}, nextconns)
+	if adj_connid then
+		return adj_pos, adj_connid, conn_idx, nextrail_y
+	end
+	return nil
+end
+
+local connlku={[2]={2,1}, [3]={2,1,1}, [4]={2,1,4,3}}
+function advtrains.get_matching_conn(conn, nconns)
+	return connlku[nconns][conn]
+end
+
