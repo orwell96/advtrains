@@ -252,29 +252,29 @@ function advtrains.train_step_a(id, train, dtime)
 	if front_off_track and back_off_track then--allow movement in both directions
 		if train.tarvelocity>1 then
 			train.tarvelocity=1
-			atwarn("Train",t_info,"is off track at both ends. Clipping velocity to 1")
+			atprint("Train",t_info,"is off track at both ends. Clipping velocity to 1")
 			pprint=true
 		end
 	elseif front_off_track then--allow movement only backward
 		if train.movedir==1 and train.tarvelocity>0 then
 			train.tarvelocity=0
-			atwarn("Train",t_info,"is off track. Trying to drive further out. Velocity clipped to 0")
+			atprint("Train",t_info,"is off track. Trying to drive further out. Velocity clipped to 0")
 			pprint=true
 		end
 		if train.movedir==-1 and train.tarvelocity>1 then
 			train.tarvelocity=1
-			atwarn("Train",t_info,"is off track. Velocity clipped to 1")
+			atprint("Train",t_info,"is off track. Velocity clipped to 1")
 			pprint=true
 		end
 	elseif back_off_track then--allow movement only forward
 		if train.movedir==-1 and train.tarvelocity>0 then
 			train.tarvelocity=0
-			atwarn("Train",t_info,"is off track. Trying to drive further out. Velocity clipped to 0")
+			atprint("Train",t_info,"is off track. Trying to drive further out. Velocity clipped to 0")
 			pprint=true
 		end
 		if train.movedir==1 and train.tarvelocity>1 then
 			train.tarvelocity=1
-			atwarn("Train",t_info,"is off track. Velocity clipped to 1")
+			atprint("Train",t_info,"is off track. Velocity clipped to 1")
 			pprint=true
 		end
 	end

@@ -300,6 +300,15 @@ function wagon:on_step(dtime)
 		
 		--check infotext
 		local outside=self:train().text_outside or ""
+		
+		local train = self:train()
+		--show off-track information in outside text instead of notifying the whole server about this
+		local front_off_track=train.max_index_on_track and train.index and train.index>train.max_index_on_track
+		local back_off_track=train.min_index_on_track and train.end_index and train.end_index<train.min_index_on_track
+		if front_off_track or back_off_track then
+			outside = outside .."\n!!! Train off track !!!"
+		end
+		
 		if self.infotext_cache~=outside  then
 			self.object:set_properties({infotext=outside})
 			self.infotext_cache=outside

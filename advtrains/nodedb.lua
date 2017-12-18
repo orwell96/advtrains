@@ -233,8 +233,9 @@ minetest.register_lbm({
 
 --used when restoring stuff after a crash
 ndb.restore_all = function()
-	atwarn("Updating the map from the nodedb, this may take a while")
+	--atlog("Updating the map from the nodedb, this may take a while")
 	local cnt=0
+	local dcnt=0
 	for y, ny in pairs(ndb_nodes) do
 		for x, nx in pairs(ny) do
 			for z, _ in pairs(nx) do
@@ -246,17 +247,21 @@ ndb.restore_all = function()
 					if ori_ndef and ori_ndef.groups.save_in_at_nodedb then --check if this node has been worldedited, and don't replace then
 						if (ndbnode.name~=node.name or ndbnode.param2~=node.param2) then
 							minetest.swap_node(pos, ndbnode)
-							atwarn("Replaced",node.name,"@",pos,"with",ndbnode.name)
+							--atlog("Replaced",node.name,"@",pos,"with",ndbnode.name)
+							cnt=cnt+1
 						end
 					else
 						ndb.clear(pos)
-						atwarn("Found ghost node (former",ndbnode and ndbnode.name,") @",pos,"deleting")
+						dcnt=dcnt+1
+						--atlog("Found ghost node (former",ndbnode and ndbnode.name,") @",pos,"deleting")
 					end
 				end
 			end
 		end
 	end
-	atwarn("Updated",cnt,"nodes")
+	local text="Restore node database: Replaced",cnt,"nodes, removed",dcnt,"ghost nodes"
+	atlog(text)
+	return text
 end
     
 minetest.register_on_dignode(function(pos, oldnode, digger)
@@ -287,9 +292,9 @@ minetest.register_chatcommand("at_sync_ndb",
 				if not minetest.check_player_privs(name, {server=true}) and os.time() < ptime+30 then
 					return false, "Please wait at least 30s from the previous execution of /at_restore_ndb!"
 				end
-				ndb.restore_all()
+				local text = ndb.restore_all()
 				ptime=os.time()
-				return true
+				return true, text
 			end)
         end,
         privs = {train_operator=true}, -- Require the "privs" privilege to run
