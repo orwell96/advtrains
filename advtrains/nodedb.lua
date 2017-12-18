@@ -135,9 +135,6 @@ end
 function ndb.swap_node(pos, node, no_inval)
 	minetest.swap_node(pos, node)
 	ndb.update(pos, node)
-	if not no_inval then
-		advtrains.invalidate_all_paths(pos)
-	end
 end
 
 function ndb.update(pos, pnode)

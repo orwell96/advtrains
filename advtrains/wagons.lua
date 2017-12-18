@@ -301,10 +301,10 @@ function wagon:on_step(dtime)
 		--check infotext
 		local outside=self:train().text_outside or ""
 		
-		local train = self:train()
+		local gp=self:train()
 		--show off-track information in outside text instead of notifying the whole server about this
-		local front_off_track=train.max_index_on_track and train.index and train.index>train.max_index_on_track
-		local back_off_track=train.min_index_on_track and train.end_index and train.end_index<train.min_index_on_track
+		local front_off_track=gp.max_index_on_track and gp.index and gp.index>gp.max_index_on_track
+		local back_off_track=gp.min_index_on_track and gp.end_index and gp.end_index<gp.min_index_on_track
 		if front_off_track or back_off_track then
 			outside = outside .."\n!!! Train off track !!!"
 		end
@@ -314,7 +314,6 @@ function wagon:on_step(dtime)
 			self.infotext_cache=outside
 		end
 		
-		local gp=self:train()
 		local fct=self.wagon_flipped and -1 or 1
 		--set line number
 		if self.name == "advtrains:subway_wagon" and gp.line and gp.line~=self.line_cache then

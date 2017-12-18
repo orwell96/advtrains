@@ -433,7 +433,7 @@ function advtrains.train_step_b(id, train, dtime)
 
 	--hacky fix: if train_step_a returned in phase 2, end_index may not be set.
 	--just return
-	if not train.end_index then
+	if not train.index or not train.end_index then
 		return
 	end
 	
