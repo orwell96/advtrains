@@ -14,6 +14,8 @@ function tp.register_tracktype(nnprefix, n_suffix)
 		single_conn_1={},
 		single_conn_2={},
 		double_conn={},
+		double_conn_1={},
+		double_conn_2={},
 		--keys:conn1_conn2 (example:1_4)
 		--values:{name=x, param2=x}
 		twcycle={},
@@ -26,6 +28,8 @@ function tp.add_double_conn(nnprefix, suffix, rotation, conns)
 	for i=0,3 do
 		tp.tracks[nnprefix].double_conn[((conns.conn1+4*i)%16).."_"..((conns.conn2+4*i)%16)]={name=nodename, param2=i}
 		tp.tracks[nnprefix].double_conn[((conns.conn2+4*i)%16).."_"..((conns.conn1+4*i)%16)]={name=nodename, param2=i}
+		tp.tracks[nnprefix].double_conn_1[((conns.conn1+4*i)%16).."_"..((conns.conn2+4*i)%16)]={name=nodename, param2=i}
+		tp.tracks[nnprefix].double_conn_2[((conns.conn2+4*i)%16).."_"..((conns.conn1+4*i)%16)]={name=nodename, param2=i}
 	end
 	tp.tracks[nnprefix].modify[nodename]=true
 end
@@ -185,11 +189,29 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 		for k1, conn1 in ipairs(p_rails) do
 			for k2, conn2 in ipairs(p_rails) do
 				if k1~=k2 then
-					if (tr.double_conn[conn1.."_"..conn2]) then
+					local dconn1 = tr.double_conn_1
+					local dconn2 = tr.double_conn_2
+					if not (advtrains.yawToDirection((math.pi/2) - yaw, k1, k2) == k1) then
+						dconn1 = tr.double_conn_2
+						dconn2 = tr.double_conn_1
+					end
+					if (dconn1[conn1.."_"..conn2]) then
+						local using = dconn1[conn1.."_"..conn2]
 						tp.bend_rail(p_railpos[conn1], conn1, nnpref)
 						tp.bend_rail(p_railpos[conn2], conn2, nnpref)
-						advtrains.ndb.swap_node(pos, tr.double_conn[conn1.."_"..conn2])
-						local nname=tr.double_conn[conn1.."_"..conn2].name
+						advtrains.ndb.swap_node(pos, using)
+						local nname=using.name
+						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+							minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+						end
+						return
+					end
+					if (dconn2[conn1.."_"..conn2]) then
+						local using = dconn2[conn1.."_"..conn2]
+						tp.bend_rail(p_railpos[conn1], conn1, nnpref)
+						tp.bend_rail(p_railpos[conn2], conn2, nnpref)
+						advtrains.ndb.swap_node(pos, using)
+						local nname=using.name
 						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
 							minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
 						end
