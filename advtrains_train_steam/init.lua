@@ -43,6 +43,7 @@ advtrains.register_wagon("newlocomotive", {
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		end
 	end,
+    
 	custom_on_activate = function(self, staticdata_table, dtime_s)
 		minetest.add_particlespawner({
 			amount = 10,
@@ -84,7 +85,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 		{
 			name=S("Driver Stand (left)"),
 			attach_offset={x=-5, y=10, z=-10},
-			view_offset={x=0, y=6, z=0},
+			view_offset={x=9, y=-2, z=-6},
 			driving_ctrl_access=true,
 			group = "dstand",
 		},
@@ -111,6 +112,14 @@ advtrains.register_wagon("detailed_steam_engine", {
 			self.object:set_animation({x=1,y=80}, advtrains.abs_ceil(velocity)*15, 0, true)
 			self.old_anim_velocity=advtrains.abs_ceil(velocity)
 		end
+        if velocity > 0 and not self.sound_loop_handle then
+			self.sound_loop_handle = minetest.sound_play({name="advtrains_steam_loop", gain=2}, {object = self.object, loop=true})
+		elseif velocity==0 then
+			if self.sound_loop_handle then
+				minetest.sound_stop(self.sound_loop_handle)
+				self.sound_loop_handle = nil
+			end
+		end 
 	end,
 	custom_on_activate = function(self, staticdata_table, dtime_s)
 		minetest.add_particlespawner({
@@ -141,6 +150,7 @@ advtrains.register_wagon("detailed_steam_engine", {
 	end,
 	drops={"default:steelblock 4"},
 	horn_sound = "advtrains_steam_whistle",
+
 }, S("Detailed Steam Engine"), "advtrains_detailed_engine_steam_inv.png")
 
 advtrains.register_wagon("wagon_default", {
