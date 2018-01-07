@@ -31,11 +31,20 @@ function endstep()
 	end
 end
 
-advtrains.train_accel_force=2--per second and divided by number of wagons
-advtrains.train_brake_force=3--per second, not divided by number of wagons
-advtrains.train_roll_force=0.5--per second, not divided by number of wagons, acceleration when rolling without brake
-advtrains.train_emerg_force=10--for emergency brakes(when going off track)
-
+--acceleration for lever modes (trainhud.lua), per wagon
+local t_accel_all={
+	[0] = -10,
+	[1] = -3,
+	[2] = -0.5,
+	[4] = 0,
+}
+--acceleration per engine
+local t_accel_eng={
+	[0] = 0,
+	[1] = 0,
+	[2] = 0,
+	[4] = 2,
+}
 
 advtrains.mainloop_trainlogic=function(dtime)
 	--build a table of all players indexed by pts. used by damage and door system.
@@ -226,15 +235,16 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 3. handle velocity influences ---
 	local train_moves=(train.velocity~=0)
+	local tarvel_cap
 	
 	if train.recently_collided_with_env then
-		train.tarvelocity=0
+		tarvel_cap=0
 		if not train_moves then
 			train.recently_collided_with_env=nil--reset status when stopped
 		end
 	end
 	if train.locomotives_in_train==0 then
-		train.tarvelocity=0
+		tarvel_cap=0
 	end
 	
 	--- 3a. this can be useful for debugs/warnings and is used for check_trainpartload ---
@@ -250,86 +260,95 @@ function advtrains.train_step_a(id, train, dtime)
 	local pprint
 	
 	if front_off_track and back_off_track then--allow movement in both directions
-		if train.tarvelocity>1 then
-			train.tarvelocity=1
-			atprint("Train",t_info,"is off track at both ends. Clipping velocity to 1")
-			pprint=true
-		end
+		tarvel_cap=1
 	elseif front_off_track then--allow movement only backward
-		if train.movedir==1 and train.tarvelocity>0 then
-			train.tarvelocity=0
-			atprint("Train",t_info,"is off track. Trying to drive further out. Velocity clipped to 0")
-			pprint=true
+		if train.movedir==1 then
+			tarvel_cap=0
 		end
-		if train.movedir==-1 and train.tarvelocity>1 then
-			train.tarvelocity=1
-			atprint("Train",t_info,"is off track. Velocity clipped to 1")
-			pprint=true
+		if train.movedir==-1 then
+			tarvel_cap=1
 		end
 	elseif back_off_track then--allow movement only forward
-		if train.movedir==-1 and train.tarvelocity>0 then
-			train.tarvelocity=0
-			atprint("Train",t_info,"is off track. Trying to drive further out. Velocity clipped to 0")
-			pprint=true
+		if train.movedir==1 then
+			tarvel_cap=1
 		end
-		if train.movedir==1 and train.tarvelocity>1 then
-			train.tarvelocity=1
-			atprint("Train",t_info,"is off track. Velocity clipped to 1")
-			pprint=true
-		end
-	end
-	if pprint then
-		atprint("max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> index", train.index, "end_index", train.end_index)
-	end
-	
-	--interpret ATC command
-	if train.atc_brake_target and train.atc_brake_target>=train.velocity then
-		train.atc_brake_target=nil
-	end
-	if train.atc_wait_finish then
-		if not train.atc_brake_target and train.velocity==train.tarvelocity then
-			train.atc_wait_finish=nil
-		end
-	end
-	if train.atc_command then
-		if train.atc_delay<=0 and not train.atc_wait_finish then
-			advtrains.atc.execute_atc_command(id, train)
-		else
-			train.atc_delay=train.atc_delay-dtime
+		if train.movedir==-1 then
+			tarvel_cap=0
 		end
 	end
 	
-	--make brake adjust the tarvelocity if necessary
-	if train.brake and (math.ceil(train.velocity)-1)<train.tarvelocity then
-		train.tarvelocity=math.max((math.ceil(train.velocity)-1), 0)
+	--interpret ATC command and apply auto-lever control when not actively controlled
+	local trainvelocity = train.velocity
+	if not train.lever then train.lever=3 end
+	if train.active_control then
+		advtrains.atc.train_reset_command(id)
+	else
+		if train.atc_brake_target and train.atc_brake_target>=trainvelocity then
+			train.atc_brake_target=nil
+		end
+		if train.atc_wait_finish then
+			if not train.atc_brake_target and train.velocity==train.tarvelocity then
+				train.atc_wait_finish=nil
+			end
+		end
+		if train.atc_command then
+			if train.atc_delay<=0 and not train.atc_wait_finish then
+				advtrains.atc.execute_atc_command(id, train)
+			else
+				train.atc_delay=train.atc_delay-dtime
+			end
+		end
+		
+		train.lever = 3
+		if train.tarvelocity>trainvelocity then train.lever=4 end
+		if train.tarvelocity<trainvelocity then
+			if (train.atc_brake_target and train.atc_brake_target<trainvelocity) then
+				train.lever=1
+			else
+				train.lever=2
+			end
+		end
+	end
+	
+	if tarvel_cap and tarvel_cap<train.tarvelocity then
+		train.tarvelocity=tarvel_cap
+	end
+	local tmp_lever = train.lever
+	if tarvel_cap and trainvelocity>tarvel_cap then
+		tmp_lever = 0
 	end
 	
 	--- 3a. actually calculate new velocity ---
-	if train.velocity~=train.tarvelocity then
-		local applydiff=0
-		local mass=#train.trainparts
-		local diff=train.tarvelocity-train.velocity
-		if diff>0 then--accelerating, force will be brought on only by locomotives.
-			--atprint("accelerating with default force")
-			applydiff=(math.min((advtrains.train_accel_force*train.locomotives_in_train*dtime)/mass, math.abs(diff)))
-		else--decelerating
-			if front_off_track or back_off_track or train.recently_collided_with_env then --every wagon has a brake, so not divided by mass.
-				--atprint("braking with emergency force")
-				applydiff= -(math.min((advtrains.train_emerg_force*dtime), math.abs(diff)))
-			elseif train.brake or (train.atc_brake_target and train.atc_brake_target<train.velocity) then
-				--atprint("braking with default force")
-				--no math.min, because it can grow beyond tarvelocity, see up there
-				--dont worry, it will never fall below zero.
-				applydiff= -((advtrains.train_brake_force*dtime))
-			else
-				--atprint("roll")
-				applydiff= -(math.min((advtrains.train_roll_force*dtime), math.abs(diff)))
+	if tmp_lever~=3 then
+		local acc_all = t_accel_all[tmp_lever]
+		local acc_eng = t_accel_eng[tmp_lever]
+		local nwagons = #train.trainparts
+		local accel = acc_all + (acc_eng*train.locomotives_in_train)/nwagons
+		local vdiff = accel*dtime
+		if not train.active_control then
+			local tvdiff = train.tarvelocity - trainvelocity
+			if math.abs(vdiff) > math.abs(tvdiff) then
+				--applying this change would cross tarvelocity
+				vdiff=tvdiff
 			end
 		end
-		train.last_accel=(applydiff*train.movedir)
-		train.velocity=math.min(math.max( train.velocity+applydiff , 0), train.max_speed or 10)
+		if tarvel_cap and trainvelocity<=tarvel_cap and trainvelocity+vdiff>tarvel_cap then
+			vdiff = tarvel_cap - train.velocity
+		end
+		if trainvelocity+vdiff < 0 then
+			vdiff = - trainvelocity
+		end
+		local mspeed = (train.max_speed or 10)
+		if trainvelocity+vdiff > mspeed then
+			vdiff = mspeed - trainvelocity
+		end
+		train.last_accel=(vdiff*train.movedir)
+		train.velocity=train.velocity+vdiff
+		if train.active_control then
+			train.tarvelocity = train.velocity
+		end
 	else
-		train.last_accel=0
+		train.last_accel = 0
 	end
 	
 	--- 4. move train ---

@@ -133,7 +133,7 @@ minetest.register_craftitem(":advtrains:subway_train", {
 				local yaw = placer:get_look_horizontal() + (math.pi/2)
 				local plconnid = advtrains.yawToClosestConn(yaw, tconns)
 				
-				local prevpos = advtrains.get_adjacent_rail(pointed_thing.under, tconns, plconnid, prototype.drives_on)
+				local prevpos = advtrains.get_adjacent_rail(pointed_thing.under, tconns, plconnid, advtrains.all_tracktypes)
 				if not prevpos then return end
 				local id=advtrains.create_new_train_at(pointed_thing.under, prevpos)
 				

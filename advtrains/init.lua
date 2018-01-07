@@ -271,7 +271,7 @@ advtrains.avt_save = function(remove_players_from_wagons)
 		local v=advtrains.save_keys(train, {
 			"last_pos", "last_pos_prev", "movedir", "velocity", "tarvelocity",
 			"trainparts", "savedpos_off_track_index_offset", "recently_collided_with_env",
-			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_state"
+			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open"
 		})
 		--then invalidate
 		if train.index then
