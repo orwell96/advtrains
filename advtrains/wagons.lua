@@ -532,7 +532,7 @@ function wagon:on_step(dtime)
 				self:update_animation(gp.velocity, self.old_velocity)
 			end
 			if self.custom_on_velocity_change then
-				self:custom_on_velocity_change(gp.velocity, self.old_velocity or 0)
+				self:custom_on_velocity_change(gp.velocity, self.old_velocity or 0, dtime)
 			end
 		end
 		

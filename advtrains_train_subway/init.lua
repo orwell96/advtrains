@@ -76,7 +76,7 @@ advtrains.register_wagon("subway_wagon", {
 	is_locomotive=true,
 	drops={"default:steelblock 4"},
 	horn_sound = "advtrains_subway_horn",
-	custom_on_velocity_change = function(self, velocity, old_velocity)
+	custom_on_velocity_change = function(self, velocity, old_velocity, dtime)
 		if not velocity or not old_velocity then return end
 		if old_velocity == 0 and velocity > 0 then
 			minetest.sound_play("advtrains_subway_depart", {object = self.object})
@@ -87,13 +87,17 @@ advtrains.register_wagon("subway_wagon", {
 			minetest.sound_stop(self.sound_arrive_handle)
 			self.sound_arrive_handle = nil
 		end
-		if velocity > 0 and not self.sound_loop_handle then
-			self.sound_loop_handle = minetest.sound_play({name="advtrains_subway_loop", gain=0.3}, {object = self.object, loop=true})
+		if velocity > 0 and (self.sound_loop_tmr or 0)<=0 then
+			self.sound_loop_handle = minetest.sound_play({name="advtrains_subway_loop", gain=0.3}, {object = self.object})
+			self.sound_loop_tmr=3
+		elseif velocity>0 then
+			self.sound_loop_tmr = self.sound_loop_tmr - dtime
 		elseif velocity==0 then
 			if self.sound_loop_handle then
 				minetest.sound_stop(self.sound_loop_handle)
 				self.sound_loop_handle = nil
 			end
+			self.sound_loop_tmr=0
 		end
 	end,
 }, S("Subway Passenger Wagon"), "advtrains_subway_wagon_inv.png")
