@@ -184,6 +184,17 @@ function advtrains.avt_load()
 				advtrains.player_to_train_mapping = tbl.ptmap or {}
 				advtrains.ndb.load_data(tbl.ndb)
 				advtrains.atc.load_data(tbl.atc)
+				--remove wagon_save entries that are not part of a train
+				local todel=advtrains.merge_tables(advtrains.wagon_save)
+				for tid, train in pairs(advtrains.trains) do
+					for _, wid in ipairs(train.trainparts) do
+						todel[wid]=nil
+					end
+				end
+				for wid, _ in pairs(todel) do
+					atwarn("Removing unused wagon", wid, "from wagon_save table.")
+					advtrains.wagon_save[wid]=nil
+				end
 			else
 				--oh no, its the old one...
 				advtrains.trains=tbl
@@ -257,23 +268,15 @@ advtrains.avt_save = function(remove_players_from_wagons)
 	local tmp_trains={}
 	for id, train in pairs(advtrains.trains) do
 		--first, deep_copy the train
-		local v=advtrains.merge_tables(train)
+		local v=advtrains.save_keys(train, {
+			"last_pos", "last_pos_prev", "movedir", "velocity", "tarvelocity",
+			"trainparts", "savedpos_off_track_index_offset", "recently_collided_with_env",
+			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_state"
+		})
 		--then invalidate
-		if v.index then
-			v.restore_add_index=v.index-math.floor(v.index+1)
+		if train.index then
+			v.restore_add_index=train.index-math.floor(train.index+1)
 		end
-		v.path=nil
-		v.path_dist=nil
-		v.index=nil
-		v.end_index=nil
-		v.min_index_on_track=nil
-		v.max_index_on_track=nil
-		v.path_extent_min=nil
-		v.path_extent_max=nil
-		
-		v.detector_old_index=nil
-		v.detector_old_end_index=nil
-		
 		--then save it
 		tmp_trains[id]=v
 	end

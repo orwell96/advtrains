@@ -59,16 +59,18 @@ function wagon:get_staticdata()
 			self.ser_inv=advtrains.serialize_inventory(inv)
 		end
 		--save to table before being unloaded
-		advtrains.wagon_save[self.unique_id]=advtrains.merge_tables(self)
+		advtrains.wagon_save[self.unique_id]=advtrains.save_keys(self, {
+			"seatp", "owner", "ser_inv", "wagon_flipped", "train_id"
+		})
 		advtrains.wagon_save[self.unique_id].entity_name=self.name
-		advtrains.wagon_save[self.unique_id].name=nil
-		advtrains.wagon_save[self.unique_id].object=nil
 		return self.unique_id
 	end)
 end
 --returns: uid of wagon
 function wagon:init_new_instance(train_id, properties)
-	self.unique_id=os.time()..os.clock()
+	local new_id=advtrains.random_id()
+	while advtrains.wagon_save[new_id] do new_id=advtrains.random_id() end--ensure uniqueness
+	self.unique_id=new_id
 	self.train_id=train_id
 	for k,v in pairs(properties) do
 		if k~="name" and k~="object" then
@@ -361,7 +363,7 @@ function wagon:on_step(dtime)
 		
 		--DisCouple
 		if self.pos_in_trainparts and self.pos_in_trainparts>1 then
-			if gp.velocity==0 and not self.lock_couples then
+			if gp.velocity==0 then
 				if not self.discouple or not self.discouple.object:getyaw() then
 					local object=minetest.add_entity(pos, "advtrains:discouple")
 					if object then
@@ -501,24 +503,27 @@ function wagon:on_step(dtime)
 			self.object:setacceleration(accelerationvec)
 			
 			if #self.seats > 0 and self.old_yaw ~= yaw then
-			   if not self.player_yaw then
-			      self.player_yaw = {}
-			   end
-			   for _,name in pairs(self.seatp) do
-			      local p = minetest.get_player_by_name(name)
-			      if p then
-				 if not self.turning then
-				    -- save player looking direction offset
-				    self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
-				 end
-				 -- set player looking direction using calculated offset
-				 p:set_look_horizontal(self.player_yaw[name]+yaw)
-			      end
-			   end
-			   self.turning = true							 
+				if not self.player_yaw then
+					self.player_yaw = {}
+				end
+				if not self.old_yaw then
+					self.old_yaw=yaw
+				end
+				for _,name in pairs(self.seatp) do
+					local p = minetest.get_player_by_name(name)
+					if p then
+						if not self.turning then
+							-- save player looking direction offset
+							self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
+						end
+						-- set player looking direction using calculated offset
+						p:set_look_horizontal(self.player_yaw[name]+yaw)
+					end
+				end
+				self.turning = true							 
 			elseif self.old_yaw == yaw then
-			   -- train is no longer turning
-			   self.turning = false
+				-- train is no longer turning
+				self.turning = false
 			end
 			
 			self.object:setyaw(yaw)

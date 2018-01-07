@@ -150,6 +150,13 @@ function advtrains.merge_tables(a, ...)
 	end
 	return new
 end
+function advtrains.save_keys(tbl, keys)
+	local new={}
+	for _,key in ipairs(keys) do
+		new[key] = tbl[key]
+	end
+	return new
+end
 function advtrains.yaw_from_3_positions(prev, curr, next)
 	local pts=minetest.pos_to_string
 	--atprint("p3 "..pts(prev)..pts(curr)..pts(next))
@@ -313,5 +320,13 @@ end
 local connlku={[2]={2,1}, [3]={2,1,1}, [4]={2,1,4,3}}
 function advtrains.get_matching_conn(conn, nconns)
 	return connlku[nconns][conn]
+end
+
+function advtrains.random_id()
+	local idst=""
+	for i=0,5 do
+		idst=idst..(math.random(0,9))
+	end
+	return idst
 end
 

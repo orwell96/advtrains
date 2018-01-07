@@ -139,7 +139,7 @@ function advtrains.train_step_a(id, train, dtime)
 	if train.min_index_on_track then
 		assert(math.floor(train.min_index_on_track)==train.min_index_on_track)
 	end
-	--- 1. LEGACY STUFF ---
+	--- 1. not exactly legacy. required now because of saving ---
 	if not train.drives_on or not train.max_speed then
 		advtrains.update_trainpart_properties(id)
 	end
@@ -230,7 +230,7 @@ function advtrains.train_step_a(id, train, dtime)
 	if train.recently_collided_with_env then
 		train.tarvelocity=0
 		if not train_moves then
-			train.recently_collided_with_env=false--reset status when stopped
+			train.recently_collided_with_env=nil--reset status when stopped
 		end
 	end
 	if train.locomotives_in_train==0 then
@@ -558,8 +558,8 @@ end
 
 --returns new id
 function advtrains.create_new_train_at(pos, pos_prev)
-	local newtrain_id=os.time()..os.clock()
-	while advtrains.trains[newtrain_id] do newtrain_id=os.time()..os.clock() end--ensure uniqueness(will be unneccessary)
+	local newtrain_id=advtrains.random_id()
+	while advtrains.trains[newtrain_id] do newtrain_id=advtrains.random_id() end--ensure uniqueness
 	
 	advtrains.trains[newtrain_id]={}
 	advtrains.trains[newtrain_id].last_pos=pos
@@ -903,23 +903,28 @@ function advtrains.invalidate_all_paths(pos)
 			end
 		end
 		if exec then
-			--TODO duplicate code in init.lua avt_save()!
-			if v.index then
-				v.restore_add_index=v.index-math.floor(v.index+1)
-			end
-			v.path=nil
-			v.path_dist=nil
-			v.index=nil
-			v.end_index=nil
-			v.min_index_on_track=nil
-			v.max_index_on_track=nil
-			v.path_extent_min=nil
-			v.path_extent_max=nil
-			
-			v.detector_old_index=nil
-			v.detector_old_end_index=nil
+			advtrains.invalidate_path(k)
 		end
 	end
+end
+function advtrains.invalidate_path(id)
+	local v=advtrains.trains[id]
+	if not v then return end
+	--TODO duplicate code in init.lua avt_save()!
+	if v.index then
+		v.restore_add_index=v.index-math.floor(v.index+1)
+	end
+	v.path=nil
+	v.path_dist=nil
+	v.index=nil
+	v.end_index=nil
+	v.min_index_on_track=nil
+	v.max_index_on_track=nil
+	v.path_extent_min=nil
+	v.path_extent_max=nil
+
+	v.detector_old_index=nil
+	v.detector_old_end_index=nil
 end
 
 --not blocking trains group
