@@ -55,7 +55,7 @@ advtrains.register_wagon("subway_wagon", {
 			require_doors_open=true,
 		},
 	},
-	assign_to_seat_group = {"pass","dstand"},
+	assign_to_seat_group = {"dstand", "pass"},
 	doors={
 		open={
 			[-1]={frames={x=0, y=20}, time=1},

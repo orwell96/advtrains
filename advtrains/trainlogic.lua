@@ -36,14 +36,14 @@ local t_accel_all={
 	[0] = -10,
 	[1] = -3,
 	[2] = -0.5,
-	[4] = 0,
+	[4] = 0.5,
 }
 --acceleration per engine
 local t_accel_eng={
 	[0] = 0,
 	[1] = 0,
 	[2] = 0,
-	[4] = 2,
+	[4] = 1.5,
 }
 
 advtrains.mainloop_trainlogic=function(dtime)
@@ -239,6 +239,7 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	if train.recently_collided_with_env then
 		tarvel_cap=0
+		train.active_control=false
 		if not train_moves then
 			train.recently_collided_with_env=nil--reset status when stopped
 		end
@@ -621,6 +622,7 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local count_l=0
 	for i, w_id in ipairs(train.trainparts) do
 		local wagon=nil
+		local shift_dcpl_lock=false
 		for aoid,iwagon in pairs(minetest.luaentities) do
 			if iwagon.is_wagon and iwagon.unique_id==w_id then
 				if wagon then
@@ -654,6 +656,7 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 			end
 			if invert_flipstate then
 				wagon.wagon_flipped = not wagon.wagon_flipped
+				shift_dcpl_lock, wagon.dcpl_lock = wagon.dcpl_lock, shift_dcpl_lock
 			end
 			rel_pos=rel_pos+wagon.wagon_span
 			
@@ -666,13 +669,6 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 			end
 			train.max_speed=math.min(train.max_speed, wagon.max_speed)
 			train.extent_h = math.max(train.extent_h, wagon.extent_h or 1);
-			
-			if i==1 then
-				train.couple_lock_front=wagon.lock_couples
-			end
-			if i==#train.trainparts then
-				train.couple_lock_back=wagon.lock_couples
-			end
 			
 		else
 			atwarn("Did not find save data for wagon",w_id,". The wagon will be deleted.")
@@ -732,6 +728,10 @@ function advtrains.split_train_at_wagon(wagon)
 	newtrain.velocity=train.velocity
 	newtrain.tarvelocity=0
 	newtrain.enter_node_all=true
+	newtrain.couple_lck_back=train.couple_lck_back
+	newtrain.couple_lck_front=false
+	train.couple_lck_back=false
+	
 end
 
 --there are 4 cases:
@@ -798,17 +798,21 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 	
 	atprint("t2_is_backpos="..(t2_is_backpos and "true" or "false"))
 	
-	local t1_has_couple
+	local t1_has_couple, t1_couple_lck
 	if t1_is_backpos then
 		t1_has_couple=train1.couple_eid_back
+		t1_couple_lck=train1.couple_lck_back
 	else
 		t1_has_couple=train1.couple_eid_front
+		t1_couple_lck=train1.couple_lck_front
 	end
-	local t2_has_couple
+	local t2_has_couple, t2_couple_lck
 	if t2_is_backpos then
 		t2_has_couple=train2.couple_eid_back
+		t2_couple_lck=train2.couple_lck_back
 	else
 		t2_has_couple=train2.couple_eid_front
+		t2_couple_lck=train2.couple_lck_front
 	end
 	
 	if t1_has_couple then
@@ -816,6 +820,10 @@ function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
 	end
 	if t2_has_couple then
 		if minetest.object_refs[t2_has_couple] then minetest.object_refs[t2_has_couple]:remove() end
+	end
+	if t1_couple_lck or t2_couple_lck then
+		minetest.add_entity(pos, "advtrains:lockmarker")
+		return
 	end
 	local obj=minetest.add_entity(pos, "advtrains:couple")
 	if not obj then atprint("failed creating object") return end
@@ -854,7 +862,7 @@ function advtrains.do_connect_trains(first_id, second_id, player)
 		return false
 	end
 	
-	if first.couple_lock_back or second.couple_lock_front then
+	if first.couple_lck_back or second.couple_lck_front then
 		-- trains are ordered correctly!
 		if player then
 			minetest.chat_send_player(player:get_player_name(), "Can't couple: couples locked!")
@@ -870,10 +878,15 @@ function advtrains.do_connect_trains(first_id, second_id, player)
 	end
 	--kick it like physics (with mass being #wagons)
 	local new_velocity=((first.velocity*first_wagoncnt)+(second.velocity*second_wagoncnt))/(first_wagoncnt+second_wagoncnt)
+	local tmp_cpl_lck=second.couple_lck_back
 	advtrains.trains[second_id]=nil
 	advtrains.update_trainpart_properties(first_id)
-	advtrains.trains[first_id].velocity=new_velocity
-	advtrains.trains[first_id].tarvelocity=0
+	local train1=advtrains.trains[first_id]
+	train1.velocity=new_velocity
+	train1.tarvelocity=0
+	train1.couple_eid_front=nil
+	train1.couple_eid_back=nil
+	train1.couple_lck_back=tmp_cpl_lck
 	return true
 end
 
@@ -888,6 +901,7 @@ function advtrains.invert_train(train_id)
 	train.path_extent_min, train.path_extent_max = -train.path_extent_max, -train.path_extent_min
 	train.min_index_on_track, train.max_index_on_track = -train.max_index_on_track, -train.min_index_on_track
 	train.detector_old_index, train.detector_old_end_index = -train.detector_old_end_index, -train.detector_old_index
+	train.couple_lck_back, train.couple_lck_front = train.couple_lck_front, train.couple_lck_back 
 	
 	train.velocity=-train.velocity
 	train.tarvelocity=-train.tarvelocity

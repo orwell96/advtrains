@@ -60,7 +60,8 @@ function wagon:get_staticdata()
 		end
 		--save to table before being unloaded
 		advtrains.wagon_save[self.unique_id]=advtrains.save_keys(self, {
-			"seatp", "owner", "ser_inv", "wagon_flipped", "train_id"
+			"seatp", "owner", "ser_inv", "wagon_flipped", "train_id",
+			"dcpl_lock"
 		})
 		advtrains.wagon_save[self.unique_id].entity_name=self.name
 		return self.unique_id
@@ -269,6 +270,10 @@ function wagon:on_step(dtime)
 				if has_driverstand then
 					--regular driver stand controls
 					advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
+					--bordcom
+					if pc.sneak and pc.jump then
+						self:show_bordcom(self.seatp[seatno])
+					end
 					--sound horn when required
 					if self.horn_sound and pc.aux1 and not pc.sneak and not self.horn_handle then
 						self.horn_handle = minetest.sound_play(self.horn_sound, {
@@ -779,7 +784,7 @@ function wagon:show_wagon_properties(pname)
 	checkbox: lock couples
 	button: save
 	]]
-	local form="size[5,"..(numsgr*1.5+7).."]"
+	local form="size[5,"..(numsgr*1.5+3).."]"
 	local at=0
 	if self.seat_groups then
 		for sgr,sgrdef in pairs(self.seat_groups) do
@@ -788,18 +793,196 @@ function wagon:show_wagon_properties(pname)
 			at=at+1
 		end
 	end
-	form=form.."checkbox[0,"..(at*1.5)..";lock_couples;"..attrans("Lock couples")..";"..(self.lock_couples and "true" or "false").."]"
-	if self:train() then --just in case
-		form=form.."field[0.5,"..(1.5+at*1.5)..";4,1;text_outside;"..attrans("Text displayed outside on train")..";"..(self:train().text_outside or "").."]"
-		form=form.."field[0.5,"..(2.5+at*1.5)..";4,1;text_inside;"..attrans("Text displayed inside train")..";"..(self:train().text_inside or "").."]"
-	end
 	form=form.."button_exit[0.5,"..(3+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
-function wagon:show_bordcom(pname)
-	
-	minetest.show_formspec(pname, "advtrains_bordcom_"..self.unique_id, "field[irrel;Not yet implemented;We normally would show the bord computer now.]")
+
+--BordCom
+local function checkcouple(eid)
+	if not eid then return nil end
+	local ent=minetest.object_refs[eid]
+	if not ent or not ent:getyaw() then
+		eid=nil
+		return nil
+	end
+	local le = ent:get_luaentity()
+	if not le or not le.is_couple then
+		eid=nil
+		return nil
+	end
+	return le
 end
+local function checklock(pname, own1, own2)
+	return minetest.check_player_privs(pname, "train_remove") or 
+		((not own1 or own1==pname) or (not own2 or own2==pname))
+end
+function wagon:show_bordcom(pname)
+	if not self:train() then return end
+	local train = self:train()
+	
+	local form = "size[11,9]label[0.5,0;AdvTrains Boardcom v0.1]"
+	form=form.."textarea[0.5,1.5;7,1;text_outside;"..attrans("Text displayed outside on train")..";"..(train.text_outside or "").."]"
+	form=form.."textarea[0.5,3;7,1;text_inside;"..attrans("Text displayed inside train")..";"..(train.text_inside or "").."]"
+	--row 5 : train overview and autocoupling
+	if train.velocity==0 then
+		form=form.."label[0.5,4.5;Train overview /coupling control:]"
+		linhei=5
+		local pre_own, owns_any = nil, minetest.check_player_privs(pname, "train_remove")
+		for i, tpid in ipairs(train.trainparts) do
+			local ent = advtrains.wagon_save[tpid]
+			if ent then
+				local ename = ent.entity_name
+				form = form .. "item_image["..i..","..linhei..";1,1;"..ename.."]"
+				if i~=1 then
+					if not ent.dcpl_lock then
+						form = form .. "image_button["..(i-0.5)..","..(linhei+1)..";1,1;advtrains_discouple.png;dcpl_"..i..";]"
+						if checklock(pname, ent.owner, pre_own) then
+							form = form .. "image_button["..(i-0.5)..","..(linhei+2)..";1,1;advtrains_cpl_unlock.png;dcpl_lck_"..i..";]"
+						end
+					else
+						form = form .. "image_button["..(i-0.5)..","..(linhei+2)..";1,1;advtrains_cpl_lock.png;dcpl_ulck_"..i..";]"
+					end
+				end
+				if i == self.pos_in_trainparts then
+					form = form .. "box["..(i-0.1)..","..(linhei-0.1)..";1,1;green]"
+				end
+				pre_own = ent.owner
+				owns_any = owns_any or (not ent.owner or ent.owner==pname)
+			end
+		end
+		
+		if train.movedir==1 then
+			form = form .. "label["..(#train.trainparts+1)..","..(linhei)..";-->]"
+		else
+			form = form .. "label[0.5,"..(linhei)..";<--]"
+		end
+		--check cpl_eid_front and _back of train
+		local couple_front = checkcouple(train.couple_eid_front)
+		local couple_back = checkcouple(train.couple_eid_back)
+		if couple_front then
+			form = form .. "image_button[0.5,"..(linhei+1)..";1,1;advtrains_couple.png;cpl_f;]"
+		end
+		if couple_back then
+			form = form .. "image_button["..(#train.trainparts+0.5)..","..(linhei+1)..";1,1;advtrains_couple.png;cpl_b;]"
+		end
+		if owns_any then
+			if train.couple_lck_front then
+				form = form .. "image_button[0.5,"..(linhei+2)..";1,1;advtrains_cpl_lock.png;cpl_ulck_f;]"
+			else
+				form = form .. "image_button[0.5,"..(linhei+2)..";1,1;advtrains_cpl_unlock.png;cpl_lck_f;]"
+			end
+			if train.couple_lck_back then
+				form = form .. "image_button["..(#train.trainparts+0.5)..","..(linhei+2)..";1,1;advtrains_cpl_lock.png;cpl_ulck_b;]"
+			else
+				form = form .. "image_button["..(#train.trainparts+0.5)..","..(linhei+2)..";1,1;advtrains_cpl_unlock.png;cpl_lck_b;]"
+			end
+		end
+		
+	else
+		form=form.."label[0.5,4.5;Train overview / coupling control is only shown when the train stands.]"
+	end
+	form = form .. "button[0.5,8;3,1;Save;save]"
+	
+	minetest.show_formspec(pname, "advtrains_bordcom_"..self.unique_id, form)
+end
+function wagon:handle_bordcom_fields(pname, formname, fields)
+	local seatno=self:get_seatno(pname)
+	if not seatno or not self.seat_groups[self.seats[seatno].group].driving_ctrl_access or not minetest.check_player_privs(pname, "train_operator") then
+		return
+	end
+	local train = self:train()
+	if not train then return end
+	if fields.text_outside then
+		if fields.text_outside~="" then
+			train.text_outside=fields.text_outside
+		else
+			train.text_outside=nil
+		end
+	end
+	if fields.text_inside then
+		if fields.text_inside~="" then
+			train.text_inside=fields.text_inside
+		else
+			train.text_inside=nil
+		end
+	end
+	for i, tpid in ipairs(train.trainparts) do
+		if fields["dcpl_"..i] then
+			for _,wagon in pairs(minetest.luaentities) do
+				if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
+					wagon:safe_decouple(pname)
+				end
+			end
+		end
+		if i>1 and fields["dcpl_lck_"..i] then
+			local ent = advtrains.wagon_save[tpid]
+			local pent = advtrains.wagon_save[train.trainparts[i-1]]
+			if ent and pent then
+				if checklock(pname, ent.owner, pent.owner) then
+					for _,wagon in pairs(minetest.luaentities) do
+						if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
+							wagon.dcpl_lock=true
+							wagon:get_staticdata()
+						end
+					end
+				end
+			end
+		end
+		if i>1 and fields["dcpl_ulck_"..i] then
+			local ent = advtrains.wagon_save[tpid]
+			local pent = advtrains.wagon_save[train.trainparts[i-1]]
+			if ent and pent then
+				if checklock(pname, ent.owner, pent.owner) then
+					for _,wagon in pairs(minetest.luaentities) do
+						if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
+							wagon.dcpl_lock=false
+							wagon:get_staticdata()
+						end
+					end
+				end
+			end
+		end
+	end
+	--check cpl_eid_front and _back of train
+	local couple_front = checkcouple(train.couple_eid_front)
+	local couple_back = checkcouple(train.couple_eid_back)
+	
+	if fields.cpl_f and couple_front then
+		couple_front:on_rightclick(pname)
+	end
+	if fields.cpl_b and couple_back then
+		couple_back:on_rightclick(pname)
+	end
+	
+	local function chkownsany()
+		local owns_any = minetest.check_player_privs(pname, "train_remove")
+		for i, tpid in ipairs(train.trainparts) do
+			local ent = advtrains.wagon_save[tpid]
+			if ent then
+				owns_any = owns_any or (not ent.owner or ent.owner==pname)
+			end
+		end
+		return owns_any
+	end
+	if fields.cpl_lck_f and chkownsany() then
+		train.couple_lck_front=true
+	end
+	if fields.cpl_lck_b and chkownsany() then
+		train.couple_lck_back=true
+	end
+	if fields.cpl_ulck_f and chkownsany() then
+		train.couple_lck_front=false
+	end
+	if fields.cpl_ulck_b and chkownsany() then
+		train.couple_lck_back=false
+	end
+	
+	
+	if not fields.quit then
+		self:show_bordcom(pname)
+	end
+end
+
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	return advtrains.pcall(function()
 		local uid=string.match(formname, "^advtrains_geton_(.+)$")
@@ -851,25 +1034,15 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 								wagon.seat_access[sgr] = fcont~="" and fcont or nil
 							end
 						end
-						if fields.lock_couples then
-							wagon.lock_couples = fields.lock_couples == "true"
-						end
-						if fields.text_outside then
-							if fields.text_outside~="" then
-								wagon:train().text_outside=fields.text_outside
-							else
-								wagon:train().text_outside=nil
-							end
-						end
-						if fields.text_inside then
-							if fields.text_inside~="" then
-								wagon:train().text_inside=fields.text_inside
-							else
-								wagon:train().text_inside=nil
-							end
-						end
-						
 					end
+				end
+			end
+		end
+		uid=string.match(formname, "^advtrains_bordcom_(.+)$")
+		if uid then
+			for _,wagon in pairs(minetest.luaentities) do
+				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+					wagon:handle_bordcom_fields(player:get_player_name(), formname, fields)
 				end
 			end
 		end
@@ -930,6 +1103,17 @@ function wagon:reattach_all()
 		end
 	end
 end
+
+function wagon:safe_decouple(pname)
+	if self.dcpl_lock then
+		minetest.chat_send_player(pname, "Couple is locked (ask owner or admin to unlock it)")
+		return false
+	end
+	atprint("wagon:discouple() Splitting train", selftrain_id)
+	advtrains.split_train_at_wagon(self)--found in trainlogic.lua
+	return true
+end
+
 
 function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 	local sysname = sysname_p

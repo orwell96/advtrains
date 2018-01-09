@@ -80,6 +80,10 @@ function advtrains.print_concat_table(a)
 				else
 					str=str.."false"
 				end
+			elseif type(t)=="function" then
+				str=str.."<function>"
+			elseif type(t)=="userdata" then
+				str=str.."<userdata>"
 			else
 				str=str..t
 			end
@@ -90,7 +94,6 @@ function advtrains.print_concat_table(a)
 end
 
 atprint=function() end
-atdebug=function() end
 atlog=function(t, ...)
 	local text=advtrains.print_concat_table({t, ...})
 	minetest.log("action", "[advtrains]"..text)
@@ -102,12 +105,12 @@ atwarn=function(t, ...)
 end
 sid=function(id) if id then return string.sub(id, -6) end end
 
---TEMP
+--ONLY use this function for temporary debugging. for consistent debug prints use atprint
 atdebug=function(t, ...)
-		local text=advtrains.print_concat_table({t, ...})
-		minetest.log("action", "[advtrains]"..text)
-		minetest.chat_send_all("[advtrains]"..text)
-	end
+	local text=advtrains.print_concat_table({t, ...})
+	minetest.log("action", "[advtrains]"..text)
+	minetest.chat_send_all("[advtrains]"..text)
+end
 
 if minetest.settings:get_bool("advtrains_enable_debugging") then
 	atprint=function(t, ...)
@@ -117,11 +120,6 @@ if minetest.settings:get_bool("advtrains_enable_debugging") then
 		advtrains.drb_record(context, text)
 		
 		--atlog("@@",advtrains.atprint_context_tid,t,...)
-	end
-	atdebug=function(t, ...)
-		local text=advtrains.print_concat_table({t, ...})
-		minetest.log("action", "[advtrains]"..text)
-		minetest.chat_send_all("[advtrains]"..text)
 	end
 	dofile(advtrains.modpath.."/debugringbuffer.lua")
 end
@@ -271,7 +269,8 @@ advtrains.avt_save = function(remove_players_from_wagons)
 		local v=advtrains.save_keys(train, {
 			"last_pos", "last_pos_prev", "movedir", "velocity", "tarvelocity",
 			"trainparts", "savedpos_off_track_index_offset", "recently_collided_with_env",
-			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open"
+			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open",
+			"text_outside", "text_inside", "couple_lck_front", "couple_lck_back"
 		})
 		--then invalidate
 		if train.index then

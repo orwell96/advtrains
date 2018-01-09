@@ -32,32 +32,13 @@ minetest.register_entity("advtrains:discouple", {
 	get_staticdata=function() return "DISCOUPLE" end,
 	on_punch=function(self, player)
 		return advtrains.pcall(function()
-			if not self.wagon or not player or player:get_player_name()=="" then
-				--our new animal damage code seems to generate problems
-				return
-			end
-			--only if player owns at least one wagon next to this
-			local own=player:get_player_name()
-			if self.wagon.owner and self.wagon.owner==own and not self.wagon.lock_couples then
-				local train=advtrains.trains[self.wagon.train_id]
-				local nextwgn_id=train.trainparts[self.wagon.pos_in_trainparts-1]
-				for aoi, le in pairs(minetest.luaentities) do
-					if le and le.is_wagon then
-						if le.unique_id==nextwgn_id then
-							if le.owner and le.owner~=own then
-								minetest.chat_send_player(own, attrans("You need to own at least one neighboring wagon to destroy this couple."))
-								return
-							end
-						end
-					end
+			local pname = player:get_player_name()
+			if pname and pname~="" and self.wagon then
+				if self.wagon:safe_decouple(pname) then
+					self.object:remove()
+				else
+					minetest.add_entity(self.object:getpos(), "advtrains:lockmarker")
 				end
-				atprint("Discouple punched. Splitting train", self.wagon.train_id)
-				advtrains.split_train_at_wagon(self.wagon)--found in trainlogic.lua
-				self.object:remove()
-			elseif self.wagon.lock_couples then
-				minetest.chat_send_player(own, "Couples of one of the wagons are locked, can't discouple!")
-			else
-				minetest.chat_send_player(own, attrans("You need to own at least one neighboring wagon to destroy this couple."))
 			end
 		end)
 	end,
@@ -75,13 +56,8 @@ minetest.register_entity("advtrains:discouple", {
 				self.object:remove()
 				return
 			end
-			local velocityvec=self.wagon.object:getvelocity()
-			self.updatepct_timer=(self.updatepct_timer or 0)-dtime
-			if not self.old_velocity_vector or not vector.equals(velocityvec, self.old_velocity_vector) or self.updatepct_timer<=0 then--only send update packet if something changed
-				local flipsign=self.wagon.wagon_flipped and -1 or 1
-				self.object:setpos(vector.add(self.wagon.object:getpos(), {y=0, x=-math.sin(self.wagon.object:getyaw())*self.wagon.wagon_span*flipsign, z=math.cos(self.wagon.object:getyaw())*self.wagon.wagon_span*flipsign}))
-				self.object:setvelocity(velocityvec)
-				self.updatepct_timer=2
+			if self.wagon.old_velocity > 0 or self.wagon.pos_in_trainparts==1 then
+				self.object:remove()
 			end
 			atprintbm("discouple_step", t)
 		end)
@@ -121,6 +97,10 @@ minetest.register_entity("advtrains:couple", {
 	on_rightclick=function(self, clicker)
 		return advtrains.pcall(function()
 			if not self.train_id_1 or not self.train_id_2 then return end
+			
+			local pname=clicker
+			if type(clicker)~="string" then pname=clicker:get_player_name() end
+			if not minetest.check_player_privs(pname, "train_operator") then return end
 			
 			local id1, id2=self.train_id_1, self.train_id_2
 			if self.train1_is_backpos and not self.train2_is_backpos then
@@ -191,5 +171,33 @@ minetest.register_entity("advtrains:couple", {
 			advtrains.atprint_context_tid=nil
 			advtrains.atprint_context_tid_full=nil
 		end)
+	end,
+})
+minetest.register_entity("advtrains:lockmarker", {
+	visual="sprite",
+	textures = {"advtrains_cpl_lock.png"},
+	collisionbox = {-0.3,-0.3,-0.3, 0.3,0.3,0.3},
+	visual_size = {x=0.7, y=0.7},
+	initial_sprite_basepos = {x=0, y=0},
+	
+	is_lockmarker=true,
+	on_activate=function(self, staticdata)
+		return advtrains.pcall(function()
+			if staticdata=="COUPLE" then
+				--couple entities have no right to exist further...
+				atprint("Couple loaded from staticdata, destroying")
+				self.object:remove()
+				return
+			end
+			self.object:set_armor_groups({immmortal=1})
+			self.life=5
+		end)
+	end,
+	get_staticdata=function(self) return "COUPLE" end,
+	on_step=function(self, dtime)
+		self.life=(self.life or 5)-dtime
+		if self.life<0 then
+			self.object:remove()
+		end
 	end,
 }) 
