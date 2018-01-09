@@ -1105,6 +1105,10 @@ function wagon:reattach_all()
 end
 
 function wagon:safe_decouple(pname)
+	if not minetest.check_player_privs(pname, "train_operator") then
+		minetest.chat_send_player(pname, "Missing train_operator privilege")
+		return false
+	end
 	if self.dcpl_lock then
 		minetest.chat_send_player(pname, "Couple is locked (ask owner or admin to unlock it)")
 		return false
