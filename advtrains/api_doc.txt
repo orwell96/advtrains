@@ -31,14 +31,15 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 			^- this value is passed to 'set_attach'
 			view_offset={x=0, y=6, z=0},
 			^- player:set_eye_offset is called with this parameter.
-			driving_ctrl_access=false,
-			^- If the seat is a driver stand, and players sitting here should get access to the train's driving control.
 			group="default"
 			^- optional. Defines the seat group. See 'seat_groups' below
+			-!- Note: driving_ctrl_access field has moved to seat group definition,
+			-!- but is still partwise supported here. If you don't use seat groups yet,
+			-!- you really should change NOW!
 		},
 	},
 	seat_groups = {
-	^- optional. If defined, activates advanced seating behavior. See "seating behavior".
+	^- If defined, activates advanced seating behavior. See "seating behavior".
 		default = {
 			name = "Seats"
 			^- name of this seat group, to be shown in get-on menu.
@@ -46,6 +47,8 @@ advtrains.register_wagon(name, prototype, description, inventory_image)
 			^- List of seat groups you can access from this seat using the menu when sitting inside the train.
 			require_doors_open = true
 			^- Only allow getting on and off if doors are open.
+			driving_ctrl_access=false,
+			^- If the seat is a driver stand, and players sitting here should get access to the train's driving control.
 		}
 	}
 	assign_to_seat_group = {"default"},

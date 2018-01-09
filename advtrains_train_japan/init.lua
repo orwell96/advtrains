@@ -15,7 +15,6 @@ advtrains.register_wagon("engine_japan", {
 			name=S("Driver stand"),
 			attach_offset={x=0, y=8, z=13},
 			view_offset={x=0, y=0, z=0},
-			driving_ctrl_access=true,
 			group="dstand",
 		},
 		{
@@ -48,6 +47,7 @@ advtrains.register_wagon("engine_japan", {
 			name = "Driver Stand",
 			access_to = {"pass"},
 			require_doors_open=true,
+			driving_ctrl_access=true,
 		},
 		pass={
 			name = "Passenger area",

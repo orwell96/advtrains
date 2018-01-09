@@ -163,27 +163,22 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		   minetest.chat_send_player(puncher:get_player_name(), attrans("This wagon is owned by @1, you can't destroy it.", self.owner));
 		   return
 		end
+		if #(self:train().trainparts)>1 then
+		   minetest.chat_send_player(puncher:get_player_name(), attrans("Wagon needs to be decoupled from other wagons in order to destroy it."));
+		   return
+		end
 		
-		if minetest.settings:get_bool("creative_mode") then
-			if not self:destroy() then return end
-			
-			local inv = puncher:get_inventory()
-			if not inv:contains_item("main", self.name) then
-				inv:add_item("main", self.name)
-			end
-		else
-			local pc=puncher:get_player_control()
-			if not pc.sneak then
-				minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, hold Sneak and left-click the wagon."))
-				return
-			end
+		local pc=puncher:get_player_control()
+		if not pc.sneak then
+			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, hold Sneak and left-click the wagon."))
+			return
+		end
 
-			if not self:destroy() then return end
+		if not self:destroy() then return end
 
-			local inv = puncher:get_inventory()
-			for _,item in ipairs(self.drops or {self.name}) do
-				inv:add_item("main", item)
-			end
+		local inv = puncher:get_inventory()
+		for _,item in ipairs(self.drops or {self.name}) do
+			inv:add_item("main", item)
 		end
 	end)
 end
@@ -245,9 +240,6 @@ function wagon:on_step(dtime)
 		if not self.seatpc then
 			self.seatpc={}
 		end
-		
-		--Legacy: remove infotext since it does not work this way anyways
-		self.infotext=nil
 
 		--custom on_step function
 		if self.custom_on_step then
@@ -257,7 +249,12 @@ function wagon:on_step(dtime)
 		--driver control
 		for seatno, seat in ipairs(self.seats) do
 			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-			local has_driverstand=seat.driving_ctrl_access and self.seatp[seatno] and minetest.check_player_privs(self.seatp[seatno], {train_operator=true})
+			local has_driverstand = self.seatp[seatno] and minetest.check_player_privs(self.seatp[seatno], {train_operator=true})
+			if self.seat_groups then
+				has_driverstand = has_driverstand and (seat.driving_ctrl_access or self.seat_groups[seat.group].driving_ctrl_access)
+			else
+				has_driverstand = has_driverstand and (seat.driving_ctrl_access)
+			end
 			if has_driverstand and driver then
 				advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
 			elseif driver then
@@ -589,6 +586,9 @@ function wagon:on_rightclick(clicker)
 				if self.has_inventory and self.get_inventory_formspec then
 					poss[#poss+1]={name=attrans("Show Inventory"), key="inv"}
 				end
+				if self.seat_groups[sgr].driving_ctrl_access and minetest.check_player_privs(pname, "train_operator") then
+					poss[#poss+1]={name=attrans("Bord Computer"), key="bordcom"}
+				end
 				if self.owner==pname then
 					poss[#poss+1]={name=attrans("Wagon properties"), key="prop"}
 				end
@@ -627,18 +627,27 @@ function wagon:on_rightclick(clicker)
 				end
 				
 				local doors_open = self:train().door_open~=0 or clicker:get_player_control().sneak
+				local allow, rsn=false, "unknown reason"
 				for _,sgr in ipairs(self.assign_to_seat_group) do
-					if self:check_seat_group_access(pname, sgr) then
+					allow, rsn = self:check_seat_group_access(pname, sgr)
+					if allow then
 						for seatid, seatdef in ipairs(self.seats) do
-							if seatdef.group==sgr and not self.seatp[seatid] and (not self.seat_groups[sgr].require_doors_open or doors_open) then
-								self:get_on(clicker, seatid)
-								return
+							if seatdef.group==sgr then
+								if (not self.seat_groups[sgr].require_doors_open or doors_open) then
+									if not self.seatp[seatid] then
+										self:get_on(clicker, seatid)
+										return
+									else
+										rsn="Wagon is full."
+									end
+								else
+									rsn="Doors are closed! (try holding sneak key!)"
+								end
 							end
 						end
 					end
 				end
-				minetest.chat_send_player(pname, attrans("Can't get on: wagon full or doors closed!"))
-				minetest.chat_send_player(pname, attrans("Use Sneak+rightclick to bypass closed doors!"))
+				minetest.chat_send_player(pname, attrans("Can't get on: "..rsn))
 			else
 				self:show_get_on_form(pname)
 			end
@@ -787,6 +796,10 @@ function wagon:show_wagon_properties(pname)
 	form=form.."button_exit[0.5,"..(3+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
+function wagon:show_bordcom(pname)
+	
+	minetest.show_formspec(pname, "advtrains_bordcom_"..self.unique_id, "field[irrel;Not yet implemented;We normally would show the bord computer now.]")
+end
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	return advtrains.pcall(function()
 		local uid=string.match(formname, "^advtrains_geton_(.+)$")
@@ -880,6 +893,9 @@ function wagon:seating_from_key_helper(pname, fields, no)
 	if fields.prop and self.owner==pname then
 		self:show_wagon_properties(pname)
 	end
+	if fields.bordcom and self.seat_groups[sgr].driving_ctrl_access and minetest.check_player_privs(pname, "train_operator") then
+		self:show_bordcom(pname)
+	end
 	if fields.dcwarn then
 		minetest.chat_send_player(pname, attrans("Doors are closed! Use Sneak+rightclick to ignore the closed doors and get off!"))
 	end
@@ -888,6 +904,9 @@ function wagon:seating_from_key_helper(pname, fields, no)
 	end
 end
 function wagon:check_seat_group_access(pname, sgr)
+	if self.seat_groups[sgr].driving_ctrl_access and not minetest.check_player_privs(pname, "train_operator") then
+		return false, "Missing train_operator privilege."
+	end
 	if not self.seat_access then
 		return true
 	end
@@ -900,7 +919,7 @@ function wagon:check_seat_group_access(pname, sgr)
 			return true
 		end
 	end
-	return false
+	return false, "Blacklisted by owner."
 end
 function wagon:reattach_all()
 	if not self.seatp then self.seatp={} end
