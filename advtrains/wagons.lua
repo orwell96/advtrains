@@ -784,7 +784,7 @@ function wagon:show_wagon_properties(pname)
 	checkbox: lock couples
 	button: save
 	]]
-	local form="size[5,"..(numsgr*1.5+3).."]"
+	local form="size[5,"..(numsgr*1.5+4).."]"
 	local at=0
 	if self.seat_groups then
 		for sgr,sgrdef in pairs(self.seat_groups) do
@@ -793,7 +793,7 @@ function wagon:show_wagon_properties(pname)
 			at=at+1
 		end
 	end
-	form=form.."button_exit[0.5,"..(3+at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
+	form=form.."button_exit[0.5,"..(at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
 
