@@ -52,7 +52,7 @@ local function ndbset(x,y,z,v)
 end
 
 
-local path=minetest.get_worldpath().."/advtrains_ndb2"
+local path=minetest.get_worldpath()..DIR_DELIM.."advtrains_ndb2"
 --load
 --nodeids get loaded by advtrains init.lua and passed here
 function ndb.load_data(data)
