@@ -24,6 +24,7 @@ local wagon={
 	is_wagon=true,
 	wagon_span=1,--how many index units of space does this wagon consume
 	has_inventory=false,
+	static_save=false,
 }
 
 
