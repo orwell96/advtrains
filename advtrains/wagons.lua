@@ -61,7 +61,7 @@ function wagon:get_staticdata()
 		--save to table before being unloaded
 		advtrains.wagon_save[self.unique_id]=advtrains.save_keys(self, {
 			"seatp", "owner", "ser_inv", "wagon_flipped", "train_id",
-			"dcpl_lock"
+			"dcpl_lock", "seat_access",
 		})
 		advtrains.wagon_save[self.unique_id].entity_name=self.name
 		return self.unique_id
