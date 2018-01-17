@@ -56,7 +56,7 @@ minetest.register_entity("advtrains:discouple", {
 				self.object:remove()
 				return
 			end
-			if self.wagon.old_velocity > 0 or self.wagon.pos_in_trainparts==1 then
+			if (self.wagon.old_velocity and self.wagon.old_velocity > 0) or self.wagon.pos_in_trainparts==1 then
 				self.object:remove()
 			end
 			atprintbm("discouple_step", t)
