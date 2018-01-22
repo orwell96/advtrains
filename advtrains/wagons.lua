@@ -366,15 +366,20 @@ function wagon:on_step(dtime)
 		
 		--DisCouple
 		if self.pos_in_trainparts and self.pos_in_trainparts>1 then
-			if gp.velocity==0 then
+			if gp.velocity==0 and not self.dcpl_lock then
 				if not self.discouple or not self.discouple.object:getyaw() then
-					local object=minetest.add_entity(pos, "advtrains:discouple")
+					atprint(self.unique_id,"trying to spawn discouple")
+					local yaw = self.object:getyaw()
+					local flipsign=self.wagon_flipped and -1 or 1
+					local dcpl_pos = vector.add(pos, {y=0, x=-math.sin(yaw)*self.wagon_span*flipsign, z=math.cos(yaw)*self.wagon_span*flipsign})
+					local object=minetest.add_entity(dcpl_pos, "advtrains:discouple")
 					if object then
 						local le=object:get_luaentity()
 						le.wagon=self
 						--box is hidden when attached, so unuseful.
 						--object:set_attach(self.object, "", {x=0, y=0, z=self.wagon_span*10}, {x=0, y=0, z=0})
 						self.discouple=le
+						atprint(self.unique_id,"success")
 					else
 						atprint("Couldn't spawn DisCouple")
 					end
@@ -382,6 +387,7 @@ function wagon:on_step(dtime)
 			else
 				if self.discouple and self.discouple.object:getyaw() then
 					self.discouple.object:remove()
+					atprint(self.unique_id," removing discouple")
 				end
 			end
 		end
