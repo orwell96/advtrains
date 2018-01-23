@@ -406,9 +406,8 @@ minetest.register_chatcommand("at_reroute",
         privs = {train_operator=true}, -- Only train operator is required, since this is relatively safe.
         func = function(name, param)
 			return advtrains.pcall(function()
-				atwarn("Train routes will be recalculated now")
-				advtrains.save(false)
-				reload_saves()
+				advtrains.invalidate_all_paths()
+				return true, "Successfully invalidated train routes"
 			end)
         end,
 })
