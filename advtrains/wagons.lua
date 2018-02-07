@@ -526,7 +526,7 @@ function wagon:on_step(dtime)
 							self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
 						end
 						-- set player looking direction using calculated offset
-						p:set_look_horizontal(self.player_yaw[name]+yaw)
+						p:set_look_horizontal((self.player_yaw[name] or 0)+yaw)
 					end
 				end
 				self.turning = true							 
