@@ -1084,7 +1084,7 @@ function wagon:seating_from_key_helper(pname, fields, no)
 	end
 end
 function wagon:check_seat_group_access(pname, sgr)
-	if self.seat_groups[sgr].driving_ctrl_access and not minetest.check_player_privs(pname, "train_operator") then
+	if self.seat_groups[sgr].driving_ctrl_access and not (minetest.check_player_privs(pname, "train_operator") or self.owner==pname) then
 		return false, "Missing train_operator privilege."
 	end
 	if not self.seat_access then
