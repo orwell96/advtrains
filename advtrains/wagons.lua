@@ -251,7 +251,7 @@ function wagon:on_step(dtime)
 		--driver control
 		for seatno, seat in ipairs(self.seats) do
 			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-			local has_driverstand = self.seatp[seatno] and minetest.check_player_privs(self.seatp[seatno], {train_operator=true})
+			local has_driverstand = self.seatp[seatno] and (minetest.check_player_privs(self.seatp[seatno], {train_operator=true}) or self.owner==self.seatp[seatno])
 			if self.seat_groups then
 				has_driverstand = has_driverstand and (seat.driving_ctrl_access or self.seat_groups[seat.group].driving_ctrl_access)
 			else
