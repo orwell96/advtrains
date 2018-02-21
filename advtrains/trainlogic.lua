@@ -219,7 +219,7 @@ function advtrains.train_step_a(id, train, dtime)
 		- The next step, mistake is recognized, train leaves some positions. From there, everything works again.
 		To overcome this, we will generate the full required path here so that path_dist is available for get_train_end_index(). 
 		]]
-		advtrains.pathpredict(id, train)
+		advtrains.pathpredict(id, train, 3, -train.trainlen-3)
 	end
 	
 	--- 2a. set train.end_index which is required in different places, IF IT IS NOT SET YET by STMT afterwards. ---
@@ -359,9 +359,36 @@ function advtrains.train_step_a(id, train, dtime)
 	--- 4a. update train.end_index to the new position ---
 	train.end_index=advtrains.get_train_end_index(train)
 	
+	--- 4b calculate how far a path is required ---
+	local path_req_dd = 10 -- path required in driving direction
+	local path_req_ndd = 4 -- path required against driving direction
+	
+	-- when using easyBSS (block signalling), we need to make sure that the whole brake distance is known
+	if advtrains_easybss then
+		local acc_all = t_accel_all[1]
+		local acc_eng = t_accel_eng[1]
+		local nwagons = #train.trainparts
+		local acc = acc_all + (acc_eng*train.locomotives_in_train)/nwagons
+		local vel = train.velocity
+		local brakedst = (vel*vel) / (2*acc)
+		path_req_dd = math.ceil(brakedst+10)
+	end
+	
+	
+	local idx_front=math.max(train.index, train.detector_old_index)
+	local idx_back=math.min(train.end_index, train.detector_old_end_index)
+	local path_req_front, path_req_back
+	if train.movedir == 1 then
+		path_req_front = atround(idx_front + path_req_dd)
+		path_req_back = atround(idx_back - path_req_ndd)
+	else
+		path_req_front = atround(idx_front + path_req_ndd)
+		path_req_back = atround(idx_back - path_req_dd)		
+	end
+	
 	--- 5. extend path as necessary ---
 	--why this is an extra function, see under 3.
-	advtrains.pathpredict(id, train, true)
+	advtrains.pathpredict(id, train, path_req_front, path_req_back)
 	
 	--- 5a. make pos/yaw available for possible recover calls ---
 	if train.max_index_on_track<train.index then --whoops, train went too far. the saved position will be the last one that lies on a track, and savedpos_off_track_index_offset will hold how far to go from here
@@ -382,13 +409,11 @@ function advtrains.train_step_a(id, train, dtime)
 	
 	--- 5b. Remove path items that are no longer used ---
 	-- Necessary since path items are no longer invalidated in save steps
-	local path_pregen_keep=20
+	local del_keep=8
 	local offtrack_keep=4
-	local gen_front_keep= path_pregen_keep
-	local gen_back_keep= atround(- train.trainlen - path_pregen_keep)
 	
-	local delete_min=math.min(train.max_index_on_track - offtrack_keep, atround(train.index)+gen_back_keep)
-	local delete_max=math.max(train.min_index_on_track + offtrack_keep, atround(train.index)+gen_front_keep)
+	local delete_min=math.min(train.max_index_on_track - offtrack_keep, path_req_back - del_keep)
+	local delete_max=math.max(train.min_index_on_track + offtrack_keep, path_req_front + del_keep)
 	
 	if train.path_extent_min<delete_min then
 		--atprint(sid(id),"clearing path min ",train.path_extent_min," to ",delete_min)
@@ -582,6 +607,7 @@ function advtrains.create_new_train_at(pos, pos_prev)
 	while advtrains.trains[newtrain_id] do newtrain_id=advtrains.random_id() end--ensure uniqueness
 	
 	advtrains.trains[newtrain_id]={}
+	advtrains.trains[newtrain_id].id = newtrain_id
 	advtrains.trains[newtrain_id].last_pos=pos
 	advtrains.trains[newtrain_id].last_pos_prev=pos_prev
 	advtrains.trains[newtrain_id].tarvelocity=0

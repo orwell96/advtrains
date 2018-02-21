@@ -28,9 +28,12 @@ function advtrains.dirCoordSet(coord, dir)
 	end
 	return {x=coord.x+x, y=coord.y, z=coord.z+z}
 end
+advtrains.pos_add_dir = advtrains.dirCoordSet
+
 function advtrains.dirToCoord(dir)
 	return advtrains.dirCoordSet({x=0, y=0, z=0}, dir)
 end
+advtrains.dir_to_vector = advtrains.dirToCoord
 
 function advtrains.maxN(list, expectstart)
 	local n=expectstart or 0
@@ -51,6 +54,8 @@ end
 function atround(number)
 	return math.floor(number+0.5)
 end
+atfloor = math.floor
+
 
 function advtrains.round_vector_floor_y(vec)
 	return {x=math.floor(vec.x+0.5), y=math.floor(vec.y), z=math.floor(vec.z+0.5)}
@@ -60,8 +65,8 @@ function advtrains.yawToDirection(yaw, conn1, conn2)
 	if not conn1 or not conn2 then
 		error("given nil to yawToDirection: conn1="..(conn1 or "nil").." conn2="..(conn1 or "nil"))
 	end
-	local yaw1=math.pi*(conn1/8)
-	local yaw2=math.pi*(conn2/8)
+	local yaw1 = advtrains.dir_to_angle(conn1)
+	local yaw2 = advtrains.dir_to_angle(conn2)
 	local adiff1 = advtrains.minAngleDiffRad(yaw, yaw1)
 	local adiff2 = advtrains.minAngleDiffRad(yaw, yaw2)
 	
@@ -75,8 +80,7 @@ end
 function advtrains.yawToAnyDir(yaw)
 	local min_conn, min_diff=0, 10
 	for conn, vec in pairs(advtrains.dir_trans_tbl) do
-		local uvec = vector.normalize(advtrains.dirToCoord(conn))
-		local yaw1 = math.atan2(uvec.z, uvec.x)
+		local yaw1 = advtrains.dir_to_angle(conn)
 		local diff = advtrains.minAngleDiffRad(yaw, yaw1)
 		if diff < min_diff then
 			min_conn = conn
@@ -88,8 +92,7 @@ end
 function advtrains.yawToClosestConn(yaw, conns)
 	local min_connid, min_diff=1, 10
 	for connid, conn in ipairs(conns) do
-		local uvec = vector.normalize(advtrains.dirToCoord(conn.c))
-		local yaw1 = math.atan2(uvec.z, uvec.x)
+		local yaw1 = advtrains.dir_to_angle(conn.c)
 		local diff = advtrains.minAngleDiffRad(yaw, yaw1)
 		if diff < min_diff then
 			min_connid = connid
@@ -97,6 +100,11 @@ function advtrains.yawToClosestConn(yaw, conns)
 		end
 	end
 	return min_connid
+end
+
+function advtrains.dir_to_angle(dir)
+	local uvec = vector.normalize(advtrains.dirToCoord())
+	local yaw1 = math.atan2(uvec.z, -uvec.x)
 end
 
 

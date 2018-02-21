@@ -181,6 +181,10 @@ function advtrains.avt_load()
 			if tbl.version then
 				--congrats, we have the new save format.
 				advtrains.trains = tbl.trains
+				--Save the train id into the train table to avoid having to pass id around
+				for id, train in pairs(advtrains.trains) do
+					train.id = id
+				end
 				advtrains.wagon_save = tbl.wagon_save
 				advtrains.player_to_train_mapping = tbl.ptmap or {}
 				advtrains.ndb.load_data(tbl.ndb)
