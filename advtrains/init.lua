@@ -141,7 +141,8 @@ advtrains.meseconrules =
  {x=0,  y=1,  z=-1},
  {x=0,  y=-1, z=-1},
  {x=0, y=-2, z=0}}
- 
+
+advtrains.fpath=minetest.get_worldpath().."/advtrains"
 
 dofile(advtrains.modpath.."/path.lua")
 dofile(advtrains.modpath.."/trainlogic.lua")
@@ -160,13 +161,14 @@ dofile(advtrains.modpath.."/misc_nodes.lua")
 dofile(advtrains.modpath.."/crafting.lua")
 dofile(advtrains.modpath.."/craft_items.lua")
 
+dofile(advtrains.modpath.."/log.lua")
+
 if minetest.global_exists("digtron") then
 	dofile(advtrains.modpath.."/digtron.lua")
 end
 
 --load/save
 
-advtrains.fpath=minetest.get_worldpath().."/advtrains"
 
 function advtrains.avt_load()
 	local file, err = io.open(advtrains.fpath, "r")

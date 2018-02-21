@@ -6,3 +6,7 @@ advtrains_disable_collisions (Disable train collisions) bool false
 #    This has no effect on the user experience, except decreased performance. Debug outputs are saved in a ring buffer to be printed when an error occurs.
 #    You probably want to leave this setting set to false.
 advtrains_enable_debugging (Enable debugging) bool false
+#    Enable the logging of certain events related to advtrains
+#    Logs are saved in the world directory as advtrains.log
+#    This setting is useful for multiplayer servers
+advtrains_enable_logging (Enable logging) bool false

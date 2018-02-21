@@ -256,7 +256,7 @@ ndb.restore_all = function()
 			end
 		end
 	end
-	local text="Restore node database: Replaced",cnt,"nodes, removed",dcnt,"ghost nodes"
+	local text="Restore node database: Replaced"..cnt.."nodes, removed"..dcnt.."ghost nodes."
 	atlog(text)
 	return text
 end

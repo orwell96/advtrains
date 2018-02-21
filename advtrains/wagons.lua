@@ -1087,6 +1087,9 @@ function wagon:check_seat_group_access(pname, sgr)
 	if self.seat_groups[sgr].driving_ctrl_access and not (minetest.check_player_privs(pname, "train_operator") or self.owner==pname) then
 		return false, "Missing train_operator privilege."
 	end
+	if self.seat_groups[sgr].driving_ctrl_access then
+		advtrains.log("Drive", pname, self.object:getpos(), self:train().text_outside)
+	end
 	if not self.seat_access then
 		return true
 	end
@@ -1120,7 +1123,8 @@ function wagon:safe_decouple(pname)
 		minetest.chat_send_player(pname, "Couple is locked (ask owner or admin to unlock it)")
 		return false
 	end
-	atprint("wagon:discouple() Splitting train", selftrain_id)
+	atprint("wagon:discouple() Splitting train", self.train_id)
+	advtrains.log("Discouple", pname, self.object:getpos(), self:train().text_outside)
 	advtrains.split_train_at_wagon(self)--found in trainlogic.lua
 	return true
 end

@@ -311,6 +311,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 					ndef.on_rightclick = function(pos, node, player)
 						if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
 							switchfunc(pos, node)
+							advtrains.log("Switch", player:get_player_name(), pos)
 						end
 					end
 					if var.switchmc then
