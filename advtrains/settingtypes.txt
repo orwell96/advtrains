@@ -10,3 +10,8 @@ advtrains_enable_debugging (Enable debugging) bool false
 #    Logs are saved in the world directory as advtrains.log
 #    This setting is useful for multiplayer servers
 advtrains_enable_logging (Enable logging) bool false
+#    If this is active, any player can do the following things inside (and only inside) an area that is explicitly protected by him
+#    (checked using a dummy player called "*dummy*" (which is not an allowed player name)):
+#    - build tracks and near tracks without the track_builder privilege
+#    - operate turnouts and signals without the railway_operator privilege
+advtrains_allow_build_to_owner (Allow building/operating to privilegeless area owner) bool false

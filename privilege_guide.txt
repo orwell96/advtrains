@@ -1,0 +1,33 @@
+
+### Advtrains Privilege Guide
+All privileges are automatically granted to singleplayer, but for
+multiplayer servers this might be interesting.
+There are 3 groups of privileges introduced by advtrains:
+
+## Trains
+For a player to build his own trains and driving them, the player needs
+the 'train_operator' privilege. This privilege no longer allows him to
+control any train, only the ones that he owns or that he is whitelisted on.
+The owner of a wagon can write a whitelist which players are allowed to
+operate his wagon using the wagon properties dialog.
+Players having the 'train_admin' privilege can always drive, build and
+destroy any train.
+
+## Tracks*
+The area 1 node around and 4 nodes up from each track node is protected.
+Players that don't have the 'track_builder' privilege can not build or
+dig (or modify) anything inside this area.
+If any player tries to modify anything that is in the area of a track
+node and this track node is protected from him, he also can not do this.
+(that said, while checking protection, the area around a track is
+treated as the track node itself)
+
+## Turnouts and Signals*
+Players without the 'railway_operator' privilege can not operate signals
+and turnouts.
+
+* If the configuration option 'advtrains_allow_build_to_owner' is set,
+an exception applies to players missing the required privileges when
+they are in a protected area that they have access to. Whether the
+area is protected from others is checked by checking for protection
+against a dummy player called '*dummy*'

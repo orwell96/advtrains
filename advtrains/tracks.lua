@@ -269,6 +269,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 					
 					groups = {
 						attached_node=1,
+						advtrains_track=1,
 						["advtrains_track_"..tracktype]=1,
 						save_in_at_nodedb=1,
 						dig_immediate=2,
@@ -309,7 +310,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 						end
 					end
 					ndef.on_rightclick = function(pos, node, player)
-						if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+						if advtrains.check_turnout_signal_protection(pos, player:get_player_name()) then
 							switchfunc(pos, node)
 							advtrains.log("Switch", player:get_player_name(), pos)
 						end

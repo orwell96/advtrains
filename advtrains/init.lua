@@ -151,6 +151,7 @@ dofile(advtrains.modpath.."/trackplacer.lua")
 dofile(advtrains.modpath.."/tracks.lua")
 dofile(advtrains.modpath.."/atc.lua")
 dofile(advtrains.modpath.."/wagons.lua")
+dofile(advtrains.modpath.."/protection.lua")
 
 dofile(advtrains.modpath.."/trackdb_legacy.lua")
 dofile(advtrains.modpath.."/nodedb.lua")
@@ -272,7 +273,7 @@ advtrains.avt_save = function(remove_players_from_wagons)
 			"last_pos", "last_pos_prev", "movedir", "velocity", "tarvelocity",
 			"trainparts", "savedpos_off_track_index_offset", "recently_collided_with_env",
 			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open",
-			"text_outside", "text_inside", "couple_lck_front", "couple_lck_back"
+			"text_outside", "text_inside", "couple_lck_front", "couple_lck_back", "line"
 		})
 		--then invalidate
 		if train.index then

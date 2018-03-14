@@ -41,7 +41,7 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 				end
 			}},
 			on_rightclick=function(pos, node, player)
-				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+				if advtrains.check_turnout_signal_protection(pos, player:get_player_name()) then
 					advtrains.ndb.swap_node(pos, {name = "advtrains:retrosignal_"..f.as..rotation, param2 = node.param2}, true)
 				end
 			end,
@@ -84,7 +84,7 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 				end,
 			},
 			on_rightclick=function(pos, node, player)
-				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+				if advtrains.check_turnout_signal_protection(pos, player:get_player_name()) then
 					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_"..f.as..rotation, param2 = node.param2}, true)
 				end
 			end,
@@ -133,7 +133,7 @@ for r,f in pairs({on={as="off", ls="green", als="red"}, off={as="on", ls="red", 
 				end,
 			},
 			on_rightclick=function(pos, node, player)
-				if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+				if advtrains.check_turnout_signal_protection(pos, player:get_player_name()) then
 					advtrains.ndb.swap_node(pos, {name = "advtrains:signal_wall_"..loc.."_"..f.as, param2 = node.param2}, true)
 				end
 			end,
@@ -179,7 +179,7 @@ minetest.register_node("advtrains:across_off", {
 		end,
 	},
 	on_rightclick=function(pos, node, player)
-		if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+		if advtrains.check_turnout_signal_protection(pos, player:get_player_name()) then
 			advtrains.ndb.swap_node(pos, {name = "advtrains:across_on", param2 = node.param2}, true)
 		end
 	end,
@@ -220,7 +220,7 @@ minetest.register_node("advtrains:across_on", {
 		end,
 	},
 	on_rightclick=function(pos, node, player)
-		if minetest.check_player_privs(player:get_player_name(), {train_operator=true}) then
+		if advtrains.check_turnout_signal_protection(pos, player:get_player_name()) then
 			advtrains.ndb.swap_node(pos, {name = "advtrains:across_off", param2 = node.param2}, true)
 		end
 	end,

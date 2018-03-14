@@ -1,19 +1,5 @@
 --atan2 counts angles clockwise, minetest does counterclockwise
 
-minetest.register_privilege("train_place", {
-	description = "Player can place trains on tracks not owned by player",
-	give_to_singleplayer= false,
-});
-minetest.register_privilege("train_remove", {
-	description = "Player can remove trains not owned by player",
-	give_to_singleplayer= false,
-});
-minetest.register_privilege("train_operator", {
-	description = "Player may operate trains and switch signals. Given by default. Revoke to prevent players from griefing automated subway systems.",
-	give_to_singleplayer= true,
-	default= true,
-});
-
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
 	--physical = true,
@@ -161,7 +147,7 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		if not puncher or not puncher:is_player() then
 			return
 		end
-		if self.owner and puncher:get_player_name()~=self.owner and (not minetest.check_player_privs(puncher, {train_remove = true })) then
+		if self.owner and puncher:get_player_name()~=self.owner and (not minetest.check_player_privs(puncher, {train_admin = true })) then
 		   minetest.chat_send_player(puncher:get_player_name(), attrans("This wagon is owned by @1, you can't destroy it.", self.owner));
 		   return
 		end
@@ -250,8 +236,9 @@ function wagon:on_step(dtime)
 
 		--driver control
 		for seatno, seat in ipairs(self.seats) do
-			local driver=self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
-			local has_driverstand = self.seatp[seatno] and (minetest.check_player_privs(self.seatp[seatno], {train_operator=true}) or self.owner==self.seatp[seatno])
+			local pname=self.seatp[seatno]
+			local driver=pname and minetest.get_player_by_name(pname)
+			local has_driverstand = pname and advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist)
 			if self.seat_groups then
 				has_driverstand = has_driverstand and (seat.driving_ctrl_access or self.seat_groups[seat.group].driving_ctrl_access)
 			else
@@ -577,13 +564,6 @@ function wagon:on_rightclick(clicker)
 		if not clicker or not clicker:is_player() then
 			return
 		end
-		if clicker:get_player_control().aux1 then
-			--advtrains.dumppath(self:train().path)
-			--minetest.chat_send_all("at index "..(self:train().index or "nil"))
-			--advtrains.invert_train(self.train_id)
-			atprint(dump(self))
-			return
-		end	
 		local pname=clicker:get_player_name()
 		local no=self:get_seatno(pname)
 		if no then
@@ -598,7 +578,7 @@ function wagon:on_rightclick(clicker)
 				if self.has_inventory and self.get_inventory_formspec then
 					poss[#poss+1]={name=attrans("Show Inventory"), key="inv"}
 				end
-				if self.seat_groups[sgr].driving_ctrl_access and minetest.check_player_privs(pname, "train_operator") then
+				if self.seat_groups[sgr].driving_ctrl_access and advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist) then
 					poss[#poss+1]={name=attrans("Bord Computer"), key="bordcom"}
 				end
 				if self.owner==pname then
@@ -779,28 +759,15 @@ function wagon:show_get_on_form(pname)
 	minetest.show_formspec(pname, "advtrains_geton_"..self.unique_id, form)
 end
 function wagon:show_wagon_properties(pname)
-	local numsgr=0
-	if self.seat_groups then
-		numsgr=#self.seat_groups
-	end
-	if not self.seat_access then
-		self.seat_access={}
-	end
 	--[[
-	fields: seat access: empty: everyone
-	checkbox: lock couples
+	fields: 
+	field: driving/couple whitelist
 	button: save
 	]]
-	local form="size[5,"..(numsgr*1.5+4).."]"
-	local at=0
-	if self.seat_groups then
-		for sgr,sgrdef in pairs(self.seat_groups) do
-			local text = attrans("Access to @1",sgrdef.name)
-			form=form.."field[0.5,"..(0.5+at*1.5)..";4,1;sgr_"..sgr..";"..text..";"..(self.seat_access[sgr] or "").."]"
-			at=at+1
-		end
-	end
-	form=form.."button_exit[0.5,"..(at*1.5)..";4,1;save;"..attrans("Save wagon properties").."]"
+	local form="size[5,5]"
+	form = form .. "field[0.5,1;4,1;whitelist;Allow these players to drive your wagon:;"..(self.whitelist or "").."]"
+	--seat groups access lists were here
+	form=form.."button_exit[0.5,3;4,1;save;"..attrans("Save wagon properties").."]"
 	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
 end
 
@@ -819,9 +786,9 @@ local function checkcouple(eid)
 	end
 	return le
 end
-local function checklock(pname, own1, own2)
-	return minetest.check_player_privs(pname, "train_remove") or 
-		((not own1 or own1==pname) or (not own2 or own2==pname))
+local function checklock(pname, own1, own2, wl1, wl2)
+	return advtrains.check_driving_couple_protection(pname, own1, wl1)
+		or advtrains.check_driving_couple_protection(pname, own2, wl2)
 end
 function wagon:show_bordcom(pname)
 	if not self:train() then return end
@@ -834,7 +801,7 @@ function wagon:show_bordcom(pname)
 	if train.velocity==0 then
 		form=form.."label[0.5,4.5;Train overview /coupling control:]"
 		linhei=5
-		local pre_own, owns_any = nil, minetest.check_player_privs(pname, "train_remove")
+		local pre_own, pre_wl, owns_any = nil, nil, minetest.check_player_privs(pname, "train_admin")
 		for i, tpid in ipairs(train.trainparts) do
 			local ent = advtrains.wagon_save[tpid]
 			if ent then
@@ -843,7 +810,7 @@ function wagon:show_bordcom(pname)
 				if i~=1 then
 					if not ent.dcpl_lock then
 						form = form .. "image_button["..(i-0.5)..","..(linhei+1)..";1,1;advtrains_discouple.png;dcpl_"..i..";]"
-						if checklock(pname, ent.owner, pre_own) then
+						if checklock(pname, ent.owner, pre_own, ent.whitelist, pre_wl) then
 							form = form .. "image_button["..(i-0.5)..","..(linhei+2)..";1,1;advtrains_cpl_unlock.png;dcpl_lck_"..i..";]"
 						end
 					else
@@ -854,6 +821,7 @@ function wagon:show_bordcom(pname)
 					form = form .. "box["..(i-0.1)..","..(linhei-0.1)..";1,1;green]"
 				end
 				pre_own = ent.owner
+				pre_wl = ent.whitelist
 				owns_any = owns_any or (not ent.owner or ent.owner==pname)
 			end
 		end
@@ -894,7 +862,7 @@ function wagon:show_bordcom(pname)
 end
 function wagon:handle_bordcom_fields(pname, formname, fields)
 	local seatno=self:get_seatno(pname)
-	if not seatno or not self.seat_groups[self.seats[seatno].group].driving_ctrl_access or not minetest.check_player_privs(pname, "train_operator") then
+	if not seatno or not self.seat_groups[self.seats[seatno].group].driving_ctrl_access or not advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist) then
 		return
 	end
 	local train = self:train()
@@ -925,7 +893,7 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 			local ent = advtrains.wagon_save[tpid]
 			local pent = advtrains.wagon_save[train.trainparts[i-1]]
 			if ent and pent then
-				if checklock(pname, ent.owner, pent.owner) then
+				if checklock(pname, ent.owner, pent.owner, ent.whitelist, pent.whitelist) then
 					for _,wagon in pairs(minetest.luaentities) do
 						if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
 							wagon.dcpl_lock=true
@@ -939,7 +907,7 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 			local ent = advtrains.wagon_save[tpid]
 			local pent = advtrains.wagon_save[train.trainparts[i-1]]
 			if ent and pent then
-				if checklock(pname, ent.owner, pent.owner) then
+				if checklock(pname, ent.owner, pent.owner, ent.whitelist, pent.whitelist) then
 					for _,wagon in pairs(minetest.luaentities) do
 						if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
 							wagon.dcpl_lock=false
@@ -962,11 +930,11 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 	end
 	
 	local function chkownsany()
-		local owns_any = minetest.check_player_privs(pname, "train_remove")
+		local owns_any = minetest.check_player_privs(pname, "train_admin")
 		for i, tpid in ipairs(train.trainparts) do
 			local ent = advtrains.wagon_save[tpid]
 			if ent then
-				owns_any = owns_any or (not ent.owner or ent.owner==pname)
+				owns_any = owns_any or advtrains.check_driving_couple_protection(pname, ent.owner, ent.whitelist)
 			end
 		end
 		return owns_any
@@ -1031,14 +999,13 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			for _,wagon in pairs(minetest.luaentities) do
 				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
 					local pname=player:get_player_name()
-					if pname~=wagon.owner then
+					if pname~=wagon.owner and not minetest.check_player_privs(pname, {train_admin = true}) then
 						return true
 					end
 					if fields.save or not fields.quit then
 						for sgr,sgrdef in pairs(wagon.seat_groups) do
-							if fields["sgr_"..sgr] then
-								local fcont = fields["sgr_"..sgr]
-								wagon.seat_access[sgr] = fcont~="" and fcont or nil
+							if fields.whitelist then
+								wagon.whitelist = fields.whitelist
 							end
 						end
 					end
@@ -1073,7 +1040,7 @@ function wagon:seating_from_key_helper(pname, fields, no)
 	if fields.prop and self.owner==pname then
 		self:show_wagon_properties(pname)
 	end
-	if fields.bordcom and self.seat_groups[sgr].driving_ctrl_access and minetest.check_player_privs(pname, "train_operator") then
+	if fields.bordcom and self.seat_groups[sgr].driving_ctrl_access and advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist) then
 		self:show_bordcom(pname)
 	end
 	if fields.dcwarn then
@@ -1084,25 +1051,13 @@ function wagon:seating_from_key_helper(pname, fields, no)
 	end
 end
 function wagon:check_seat_group_access(pname, sgr)
-	if self.seat_groups[sgr].driving_ctrl_access and not (minetest.check_player_privs(pname, "train_operator") or self.owner==pname) then
-		return false, "Missing train_operator privilege."
+	if self.seat_groups[sgr].driving_ctrl_access and not (advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist)) then
+		return false, "Not allowed to access a driver stand!"
 	end
 	if self.seat_groups[sgr].driving_ctrl_access then
 		advtrains.log("Drive", pname, self.object:getpos(), self:train().text_outside)
 	end
-	if not self.seat_access then
-		return true
-	end
-	local sae=self.seat_access[sgr]
-	if not sae or sae=="" then
-		return true
-	end
-	for name in string.gmatch(sae, "%S+") do
-		if name==pname then
-			return true
-		end
-	end
-	return false, "Blacklisted by owner."
+	return true
 end
 function wagon:reattach_all()
 	if not self.seatp then self.seatp={} end
@@ -1158,9 +1113,12 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 					atprint("no track here, not placing.")
 					return itemstack
 				end
-				if not minetest.check_player_privs(placer, {train_place = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
-					minetest.record_protection_violation(pointed_thing.under, placer:get_player_name())
-					return
+				if not minetest.check_player_privs(placer, {train_operator = true }) then
+					minetest.chat_send_player(placer:get_player_name(), "You don't have the train_operator privilege.")
+					return itemstack
+				end
+				if not minetest.check_player_privs(placer, {train_admin = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
+					return itemstack
 				end
 				local tconns=advtrains.get_track_connections(node.name, node.param2)
 				local yaw = placer:get_look_horizontal() + (math.pi/2)
@@ -1190,10 +1148,5 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 		end,
 	})
 end
-
---[[
-	wagons can define update_animation(self, velocity) if they have a speed-dependent animation
-	this function will be called when the velocity vector changes or every 2 seconds.
-]]
 
 
