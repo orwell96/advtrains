@@ -1,11 +1,35 @@
---atan2 counts angles clockwise, minetest does counterclockwise
+-- wagon.lua
+-- Holds all logic related to wagons
+-- From now on, wagons are, just like trains, just entries in a table
+-- All data that is static is stored in the entity prototype (self).
+--   A copy of the entity prototype is always available inside minetest.registered_luaentities
+-- All dynamic data is stored in the (new) wagons table
+-- An entity is ONLY spawned by update_trainpart_properties when it finds it useful.
+-- Only data that are only important to the entity itself are stored in the luaentity
+
+advtrains.wagons = {}
+
+--
+function advtrains.create_wagon(type, train_id, owner)
+	local new_id=advtrains.random_id()
+	while advtrains.wagons[new_id] do new_id=advtrains.random_id() end
+	local wgn = {}
+	wgn.type = type
+	wgn.seatp = {}
+	wgn.owner = owner
+	wgn.id = new_id
+	wgn.train_id = train_id
+	advtrains.wagons[new_id] = wgn
+	return new_id
+end
+
 
 local wagon={
 	collisionbox = {-0.5,-0.5,-0.5, 0.5,0.5,0.5},
 	--physical = true,
 	visual = "mesh",
 	mesh = "wagon.b3d",
-	visual_size = {x=3, y=3},
+	visual_size = {x=1, y=1},
 	textures = {"black.png"},
 	is_wagon=true,
 	wagon_span=1,--how many index units of space does this wagon consume
@@ -18,14 +42,7 @@ function wagon:train()
 	return advtrains.trains[self.train_id]
 end
 
---[[about 'initalized':
-	when initialized is false, the entity hasn't got any data yet and should wait for these to be set before doing anything
-	when loading an existing object (with staticdata), it will be set
-	when instanciating a new object via add_entity, it is not set at the time on_activate is called.
-	then, wagon:initialize() will be called
-	
-	wagon will save only uid in staticdata, no serialized table
-]]
+
 function wagon:on_activate(sd_uid, dtime_s)
 	if sd_uid~="" then
 		--destroy when loaded from static block.
@@ -33,68 +50,17 @@ function wagon:on_activate(sd_uid, dtime_s)
 		return
 	end
 	self.object:set_armor_groups({immortal=1})
-	self.entity_name=self.name
 end
 
-function wagon:get_staticdata()
-	return advtrains.pcall(function()
-		if not self:ensure_init() then return end
-		atprint("[wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: saving to wagon_save")
-		--serialize inventory, if it has one
-		if self.has_inventory then
-			local inv=minetest.get_inventory({type="detached", name="advtrains_wgn_"..self.unique_id})
-			self.ser_inv=advtrains.serialize_inventory(inv)
-		end
-		--save to table before being unloaded
-		advtrains.wagon_save[self.unique_id]=advtrains.save_keys(self, {
-			"seatp", "owner", "ser_inv", "wagon_flipped", "train_id",
-			"dcpl_lock", "seat_access",
-		})
-		advtrains.wagon_save[self.unique_id].entity_name=self.name
-		return self.unique_id
-	end)
-end
---returns: uid of wagon
-function wagon:init_new_instance(train_id, properties)
-	local new_id=advtrains.random_id()
-	while advtrains.wagon_save[new_id] do new_id=advtrains.random_id() end--ensure uniqueness
-	self.unique_id=new_id
-	self.train_id=train_id
-	for k,v in pairs(properties) do
-		if k~="name" and k~="object" then
-			self[k]=v
-		end
-	end
-	self:init_shared()
-	self.initialized=true
-	atprint("init_new_instance "..self.unique_id.." ("..self.train_id..")")
-	return self.unique_id
-end
-function wagon:init_from_wagon_save(uid)
-	if not advtrains.wagon_save[uid] then
-		self.object:remove()
-		return
-	end
-	self.unique_id=uid
-	for k,v in pairs(advtrains.wagon_save[uid]) do
-		if k~="name" and k~="object" then
-			self[k]=v
-		end
-	end
-	if not self.train_id or not self:train() then
-		self.object:remove()
-		return
-	end
-	self:init_shared()
-	self.initialized=true
-	minetest.after(0.2, function() self:reattach_all() end)
-	atprint("init_from_wagon_save "..self.unique_id.." ("..self.train_id..")")
-end
-function wagon:init_shared()
+function wagon:set_id(wid)
+	self.id = wid
+	self.initialized = true
+	
+	local data = advtrains.wagons[self.id]
+	
 	if self.has_inventory then
-		local uid_noptr=self.unique_id..""
 		--to be used later
-		local inv=minetest.create_detached_inventory("advtrains_wgn_"..self.unique_id, {
+		local inv=minetest.create_detached_inventory("advtrains_wgn_"..self.id, {
 			allow_move = function(inv, from_list, from_index, to_list, to_index, count, player)
 				return count
 			end,
@@ -106,7 +72,7 @@ function wagon:init_shared()
 			end
 		})
 		if self.ser_inv then
-			advtrains.deserialize_inventory(self.ser_inv, inv)
+			advtrains.deserialize_inventory(data.ser_inv, inv)
 		end
 		if self.inventory_list_sizes then
 			for lst, siz in pairs(self.inventory_list_sizes) do
@@ -114,17 +80,19 @@ function wagon:init_shared()
 			end
 		end
 	end
-	if self.doors then
-		self.door_anim_timer=0
-		self.door_state=0
-	end
+	self.door_anim_timer=0
+	self.door_state=0
+	
+	minetest.after(0.2, function() self:reattach_all() end)
+	
 	if self.custom_on_activate then
 		self:custom_on_activate(dtime_s)
 	end
-	-- reset line and infotext cache to update object properties on first call
-	self.line_cache=nil
-	self.infotext_cache=nil
+
+function wagon:get_staticdata()
+	return "STATIC"
 end
+
 function wagon:ensure_init()
 	if self.initialized then
 		if self.noninitticks then self.noninitticks=nil end
@@ -140,15 +108,22 @@ function wagon:ensure_init()
 	return false
 end
 
+function wagon:train()
+	return advtrains.trains[self.train_id]
+end
+
 -- Remove the wagon
 function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direction)
 	return advtrains.pcall(function()
 		if not self:ensure_init() then return end
+		
+		local data = advtrains.wagons[self.id]
+	
 		if not puncher or not puncher:is_player() then
 			return
 		end
-		if self.owner and puncher:get_player_name()~=self.owner and (not minetest.check_player_privs(puncher, {train_admin = true })) then
-		   minetest.chat_send_player(puncher:get_player_name(), attrans("This wagon is owned by @1, you can't destroy it.", self.owner));
+		if data.owner and puncher:get_player_name()~=data.owner and (not minetest.check_player_privs(puncher, {train_admin = true })) then
+		   minetest.chat_send_player(puncher:get_player_name(), attrans("This wagon is owned by @1, you can't destroy it.", data.owner));
 		   return
 		end
 		if #(self:train().trainparts)>1 then
@@ -160,6 +135,12 @@ function wagon:on_punch(puncher, time_from_last_punch, tool_capabilities, direct
 		if not pc.sneak then
 			minetest.chat_send_player(puncher:get_player_name(), attrans("Warning: If you destroy this wagon, you only get some steel back! If you are sure, hold Sneak and left-click the wagon."))
 			return
+		end
+		
+		if self.custom_may_destroy then
+			if not self.custom_may_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction) then
+				return
+			end
 		end
 
 		if not self:destroy() then return end
@@ -176,27 +157,24 @@ function wagon:destroy()
 	-- single left-click shows warning
 	-- shift leftclick destroys
 	-- not when a driver is inside
+	local data = advtrains.wagons[self.id]
 	
-	for _,_ in pairs(self.seatp) do
-		return
-	end
-	
-	if self.custom_may_destroy then
-		if not self.custom_may_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction) then
-			return
-		end
-	end
 	if self.custom_on_destroy then
-		self.custom_on_destroy(self, puncher, time_from_last_punch, tool_capabilities, direction)
+		self.custom_on_destroy(self)
 	end
 	
-	atprint("[wagon "..((self.unique_id and self.unique_id~="" and self.unique_id) or "no-id").."]: destroying")
+	for seat,_ in pairs(data.seatp) do
+		self:get_off(seat)
+	end
+	
+	atprint("[wagon ", self.id, "]: destroying")
 	
 	self.object:remove()
-
-	table.remove(self:train().trainparts, self.pos_in_trainparts)
+	
+	if self.train_id and self:train() then
+	table.remove(self:train().trainparts, data.pos_in_trainparts)
 	advtrains.update_trainpart_properties(self.train_id)
-	advtrains.wagon_save[self.unique_id]=nil
+	advtrains.wagons[self.id]=nil
 	if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
 	return true
 end
@@ -208,22 +186,21 @@ function wagon:on_step(dtime)
 		
 		local t=os.clock()
 		local pos = self.object:getpos()
+		local data = advtrains.wagons[self.id]
 		
 		if not pos then
 			atprint("["..self.unique_id.."][fatal] missing position (object:getpos() returned nil)")
 			return
 		end
-
-		self.entity_name=self.name
 		
 		--is my train still here
 		if not self.train_id or not self:train() then
 			atprint("[wagon "..self.unique_id.."] missing train_id, destroying")
-			self.object:remove()
+			self:destroy()
 			return
 		end
-		if not self.seatp then
-			self.seatp={}
+		if not data.seatp then
+			data.seatp={}
 		end
 		if not self.seatpc then
 			self.seatpc={}
@@ -236,16 +213,16 @@ function wagon:on_step(dtime)
 
 		--driver control
 		for seatno, seat in ipairs(self.seats) do
-			local pname=self.seatp[seatno]
+			local pname=data.seatp[seatno]
 			local driver=pname and minetest.get_player_by_name(pname)
-			local has_driverstand = pname and advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist)
+			local has_driverstand = pname and advtrains.check_driving_couple_protection(pname, data.owner, data.whitelist)
 			if self.seat_groups then
 				has_driverstand = has_driverstand and (seat.driving_ctrl_access or self.seat_groups[seat.group].driving_ctrl_access)
 			else
 				has_driverstand = has_driverstand and (seat.driving_ctrl_access)
 			end
 			if has_driverstand and driver then
-				advtrains.update_driver_hud(driver:get_player_name(), self:train(), self.wagon_flipped)
+				advtrains.update_driver_hud(driver:get_player_name(), self:train(), data.wagon_flipped)
 			elseif driver then
 				--only show the inside text
 				local inside=self:train().text_inside or ""
@@ -257,7 +234,7 @@ function wagon:on_step(dtime)
 				
 				if has_driverstand then
 					--regular driver stand controls
-					advtrains.on_control_change(pc, self:train(), self.wagon_flipped)
+					advtrains.on_control_change(pc, self:train(), data.wagon_flipped)
 					--bordcom
 					if pc.sneak and pc.jump then
 						self:show_bordcom(self.seatp[seatno])
@@ -276,7 +253,7 @@ function wagon:on_step(dtime)
 					end
 				else
 					-- If on a passenger seat and doors are open, get off when W or D pressed.
-					local pass = self.seatp[seatno] and minetest.get_player_by_name(self.seatp[seatno])
+					local pass = data.seatp[seatno] and minetest.get_player_by_name(data.seatp[seatno])
 					if pass and self:train().door_open~=0 then
 					local pc=pass:get_player_control()
 						if pc.up or pc.down then
@@ -293,11 +270,9 @@ function wagon:on_step(dtime)
 		--check infotext
 		local outside=self:train().text_outside or ""
 		
-		local gp=self:train()
+		local train=self:train()
 		--show off-track information in outside text instead of notifying the whole server about this
-		local front_off_track=gp.max_index_on_track and gp.index and gp.index>gp.max_index_on_track
-		local back_off_track=gp.min_index_on_track and gp.end_index and gp.end_index<gp.min_index_on_track
-		if front_off_track or back_off_track then
+		if train.index < train.path_trk_b or train.index > train.path_trk_f then
 			outside = outside .."\n!!! Train off track !!!"
 		end
 		
@@ -306,14 +281,14 @@ function wagon:on_step(dtime)
 			self.infotext_cache=outside
 		end
 		
-		local fct=self.wagon_flipped and -1 or 1
+		local fct=data.wagon_flipped and -1 or 1
 		--set line number
-		if self.name == "advtrains:subway_wagon" and gp.line and gp.line~=self.line_cache then
+		if self.name == "advtrains:subway_wagon" and train.line and train.line~=self.line_cache then
 			local new_line_tex="advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"
 			self.object:set_properties({
 				textures={new_line_tex},
 		 	})
-			self.line_cache=gp.line
+			self.line_cache=train.line
 		elseif self.line_cache~=nil and gp.line==nil then
 			self.object:set_properties({
 				textures=self.textures,
@@ -323,7 +298,7 @@ function wagon:on_step(dtime)
 		--door animation
 		if self.doors then
 			if (self.door_anim_timer or 0)<=0 then
-				local dstate = (gp.door_open or 0) * fct
+				local dstate = (train.door_open or 0) * fct
 				if dstate ~= self.door_state then
 					local at
 					--meaning of the train.door_open field:
@@ -352,12 +327,12 @@ function wagon:on_step(dtime)
 		end
 		
 		--DisCouple
-		if self.pos_in_trainparts and self.pos_in_trainparts>1 then
-			if gp.velocity==0 and not self.dcpl_lock then
+		if data.pos_in_trainparts and data.pos_in_trainparts>1 then
+			if train.velocity==0 and not data.dcpl_lock then
 				if not self.discouple or not self.discouple.object:getyaw() then
 					atprint(self.unique_id,"trying to spawn discouple")
 					local yaw = self.object:getyaw()
-					local flipsign=self.wagon_flipped and -1 or 1
+					local flipsign=data.wagon_flipped and -1 or 1
 					local dcpl_pos = vector.add(pos, {y=0, x=-math.sin(yaw)*self.wagon_span*flipsign, z=math.cos(yaw)*self.wagon_span*flipsign})
 					local object=minetest.add_entity(dcpl_pos, "advtrains:discouple")
 					if object then
@@ -374,23 +349,23 @@ function wagon:on_step(dtime)
 			else
 				if self.discouple and self.discouple.object:getyaw() then
 					self.discouple.object:remove()
-					atprint(self.unique_id," removing discouple")
+					atprint(self.id," removing discouple")
 				end
 			end
 		end
 		--for path to be available. if not, skip step
-		if not gp.path then
+		if not train.path then
 			self.object:setvelocity({x=0, y=0, z=0})
 			return
 		end
-		if not self.pos_in_train then
-			--why ever. but better continue next step...
-			advtrains.update_trainpart_properties(self.train_id)
+		if not data.pos_in_train then
 			return
 		end
 		
-		local index=advtrains.get_real_path_index(self:train(), self.pos_in_train)
-		--atprint("trainindex "..gp.index.." wagonindex "..index)
+		-- Calculate new position, yaw and direction vector
+		local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
+		local pos, yaw, npos, npos2 = advtrains.path_get_interpolated(train, index)
+		local vdir = vector.normalize(vector.subtract(npos2, npos))
 		
 		--automatic get_on
 		--needs to know index and path
@@ -398,9 +373,8 @@ function wagon:on_step(dtime)
 			--using the mapping created by the trainlogic globalstep
 			for i, ino in ipairs(self.door_entry) do
 				--fct is the flipstate flag from door animation above
-				local aci = index + ino*fct
-				local ix1=gp.path[math.floor(aci)]
-				local ix2=gp.path[math.floor(aci+1)]
+				local aci = advtrains.path_get_index_by_offset(train, index, ino*fct)
+				local ix1, ix2 = advtrains.path_get_adjacent(train, aci)
 				-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
 				-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
 				local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
@@ -423,15 +397,6 @@ function wagon:on_step(dtime)
 			end
 		end
 		
-		--position recalculation
-		local first_pos=gp.path[math.floor(index)]
-		local second_pos=gp.path[math.floor(index)+1]
-		if not first_pos or not second_pos then
-			--atprint(" object "..self.unique_id.." path end reached!")
-			self.object:setvelocity({x=0,y=0,z=0})
-			return
-		end
-		
 		--checking for environment collisions(a 3x3 cube around the center)
 		if not gp.recently_collided_with_env then
 			local collides=false
@@ -440,7 +405,7 @@ function wagon:on_step(dtime)
 			for x=-exh,exh do
 				for y=0,exv do
 					for z=-exh,exh do
-						local node=minetest.get_node_or_nil(vector.add(first_pos, {x=x, y=y, z=z}))
+						local node=minetest.get_node_or_nil(vector.add(npos, {x=x, y=y, z=z}))
 						if (advtrains.train_collides(node)) then
 							collides=true
 						end
@@ -466,24 +431,12 @@ function wagon:on_step(dtime)
 		end
 		
 		--FIX: use index of the wagon, not of the train.
-		local velocity=(gp.velocity*gp.movedir)/(gp.path_dist[math.floor(index)] or 1)
-		local acceleration=(gp.last_accel or 0)/(gp.path_dist[math.floor(index)] or 1)
-		local factor=index-math.floor(index)
-		local actual_pos={x=first_pos.x-(first_pos.x-second_pos.x)*factor, y=first_pos.y-(first_pos.y-second_pos.y)*factor, z=first_pos.z-(first_pos.z-second_pos.z)*factor,}
-		local velocityvec={x=(first_pos.x-second_pos.x)*velocity*-1, z=(first_pos.z-second_pos.z)*velocity*-1, y=(first_pos.y-second_pos.y)*velocity*-1}
-		local accelerationvec={x=(first_pos.x-second_pos.x)*acceleration*-1, z=(first_pos.z-second_pos.z)*acceleration*-1, y=(first_pos.y-second_pos.y)*acceleration*-1}
+		local velocity = (gp.velocity*gp.movedir)
+		local acceleration = (gp.last_accel or 0)
+		local velocityvec = vector.multiply(vdir, velocity)
+		local accelerationvec = vector.multiply(vdir, acceleration)
 		
-		--some additional positions to determine orientation
-		local aposfwd=gp.path[math.floor(index+2)]
-		local aposbwd=gp.path[math.floor(index-1)]
-		
-		local yaw
-		if aposfwd and aposbwd then
-			yaw=advtrains.get_wagon_yaw(aposfwd, second_pos, first_pos, aposbwd, factor)+math.pi--TODO remove when cleaning up
-		else
-			yaw=math.atan2((first_pos.x-second_pos.x), (second_pos.z-first_pos.z))
-		end
-		if self.wagon_flipped then
+		if data.wagon_flipped then
 			yaw=yaw+math.pi
 		end
 		
@@ -494,7 +447,7 @@ function wagon:on_step(dtime)
 				or not vector.equals(accelerationvec, self.old_acceleration_vector)
 				or self.old_yaw~=yaw
 				or self.updatepct_timer<=0 then--only send update packet if something changed
-				self.object:setpos(actual_pos)
+			self.object:setpos(pos)
 			self.object:setvelocity(velocityvec)
 			self.object:setacceleration(accelerationvec)
 			
@@ -505,7 +458,7 @@ function wagon:on_step(dtime)
 				if not self.old_yaw then
 					self.old_yaw=yaw
 				end
-				for _,name in pairs(self.seatp) do
+				for _,name in pairs(data.seatp) do
 					local p = minetest.get_player_by_name(name)
 					if p then
 						if not self.turning then
@@ -541,29 +494,15 @@ function wagon:on_step(dtime)
 	end)
 end
 
-function advtrains.get_real_path_index(train, pit)
-	local pos_in_train_left=pit
-	local index=train.index
-	if pos_in_train_left>(index-math.floor(index))*(train.path_dist[math.floor(index)] or 1) then
-		pos_in_train_left=pos_in_train_left - (index-math.floor(index))*(train.path_dist[math.floor(index)] or 1)
-		index=math.floor(index)
-		while pos_in_train_left>(train.path_dist[index-1] or 1) do
-			pos_in_train_left=pos_in_train_left - (train.path_dist[index-1] or 1)
-			index=index-1
-		end
-		index=index-(pos_in_train_left/(train.path_dist[index-1] or 1))
-	else
-		index=index-(pos_in_train_left/(train.path_dist[math.floor(index-1)] or 1))
-	end
-	return index
-end
-
 function wagon:on_rightclick(clicker)
 	return advtrains.pcall(function()
 		if not self:ensure_init() then return end
 		if not clicker or not clicker:is_player() then
 			return
 		end
+		
+		local data = advtrains.wagons[self.id]
+		
 		local pname=clicker:get_player_name()
 		local no=self:get_seatno(pname)
 		if no then
@@ -578,10 +517,10 @@ function wagon:on_rightclick(clicker)
 				if self.has_inventory and self.get_inventory_formspec then
 					poss[#poss+1]={name=attrans("Show Inventory"), key="inv"}
 				end
-				if self.seat_groups[sgr].driving_ctrl_access and advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist) then
+				if self.seat_groups[sgr].driving_ctrl_access and advtrains.check_driving_couple_protection(pname, data.owner, data.whitelist) then
 					poss[#poss+1]={name=attrans("Bord Computer"), key="bordcom"}
 				end
-				if self.owner==pname then
+				if data.owner==pname then
 					poss[#poss+1]={name=attrans("Wagon properties"), key="prop"}
 				end
 				if not self.seat_groups[sgr].require_doors_open or self:train().door_open~=0 then
@@ -626,7 +565,7 @@ function wagon:on_rightclick(clicker)
 						for seatid, seatdef in ipairs(self.seats) do
 							if seatdef.group==sgr then
 								if (not self.seat_groups[sgr].require_doors_open or doors_open) then
-									if not self.seatp[seatid] then
+									if not data.seatp[seatid] then
 										self:get_on(clicker, seatid)
 										return
 									else
@@ -648,7 +587,10 @@ function wagon:on_rightclick(clicker)
 end
 
 function wagon:get_on(clicker, seatno)
-	if not self.seatp then self.seatp={}end
+	
+	local data = advtrains.wagons[self.id]
+		
+	if not data.seatp then data.seatp={}end
 	if not self.seatpc then self.seatpc={}end--player controls in driver stands
 	
 	if not self.seats[seatno] then return end
@@ -657,14 +599,14 @@ function wagon:get_on(clicker, seatno)
 		atprint("get_on: clearing oldno",seatno)
 		advtrains.player_to_train_mapping[clicker:get_player_name()]=nil
 		advtrains.clear_driver_hud(clicker:get_player_name())
-		self.seatp[oldno]=nil
+		data.seatp[oldno]=nil
 	end
-	if self.seatp[seatno] and self.seatp[seatno]~=clicker:get_player_name() then
-		atprint("get_on: throwing off",self.seatp[seatno],"from seat",seatno)
+	if data.seatp[seatno] and data.seatp[seatno]~=clicker:get_player_name() then
+		atprint("get_on: throwing off",data.seatp[seatno],"from seat",seatno)
 		self:get_off(seatno)
 	end
 	atprint("get_on: attaching",clicker:get_player_name())
-	self.seatp[seatno] = clicker:get_player_name()
+	data.seatp[seatno] = clicker:get_player_name()
 	self.seatpc[seatno] = clicker:get_player_control_bits()
 	advtrains.player_to_train_mapping[clicker:get_player_name()]=self.train_id
 	clicker:set_attach(self.object, "", self.seats[seatno].attach_offset, {x=0,y=0,z=0})
@@ -677,7 +619,10 @@ function wagon:get_off_plr(pname)
 	end
 end
 function wagon:get_seatno(pname)
-	for no, cont in pairs(self.seatp) do
+	
+	local data = advtrains.wagons[self.id]
+	
+	for no, cont in pairs(data.seatp) do
 		if cont==pname then
 			return no
 		end
@@ -685,30 +630,31 @@ function wagon:get_seatno(pname)
 	return nil
 end
 function wagon:get_off(seatno)
-	if not self.seatp[seatno] then return end
-	local pname = self.seatp[seatno]
+	
+	local data = advtrains.wagons[self.id]
+	
+	if not data.seatp[seatno] then return end
+	local pname = data.seatp[seatno]
 	local clicker = minetest.get_player_by_name(pname)
 	advtrains.player_to_train_mapping[pname]=nil
 	advtrains.clear_driver_hud(pname)
-	self.seatp[seatno]=nil
+	data.seatp[seatno]=nil
 	self.seatpc[seatno]=nil
 	if clicker then
 		atprint("get_off: detaching",clicker:get_player_name())
 		clicker:set_detach()
 		clicker:set_eye_offset({x=0,y=0,z=0}, {x=0,y=0,z=0})
-		local gp=self:train()
+		local train=self:train()
 		--code as in step - automatic get on
-		if self.door_entry and gp.door_open and gp.door_open~=0 and gp.velocity==0 and gp.index and gp.path then
-			local index=advtrains.get_real_path_index(gp, self.pos_in_train)
-			--using the mapping created by the trainlogic globalstep
+		if self.door_entry and train.door_open and train.door_open~=0 and train.velocity==0 and train.index and train.path then
+			local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
 			for i, ino in ipairs(self.door_entry) do
-				local aci = index + ino*(self.wagon_flipped and -1 or 1)
-				local ix1=gp.path[math.floor(aci)]
-				local ix2=gp.path[math.floor(aci+1)]
+				--fct is the flipstate flag from door animation above
+				local aci = advtrains.path_get_index_by_offset(train, index, ino*fct)
+				local ix1, ix2 = advtrains.path_get_adjacent(train, aci)
 				-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
 				-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
-				-- multiplied by 2 here, to place off on platform, y of add is 1.
-				local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open}
+				local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
 				local oadd = { x = (ix2.z-ix1.z)*gp.door_open*2, y = 1, z = (ix1.x-ix2.x)*gp.door_open*2}
 				local platpos=vector.round(vector.add(ix1, add))
 				local offpos=vector.round(vector.add(ix1, oadd))
@@ -736,6 +682,8 @@ function wagon:get_off(seatno)
 end
 function wagon:show_get_on_form(pname)
 	if not self.initialized then return end
+	
+	local data = advtrains.wagons[self.id]
 	if #self.seats==0 then
 		if self.has_inventory and self.get_inventory_formspec then
 			minetest.show_formspec(pname, "advtrains_inv_"..self.unique_id, self:get_inventory_formspec(pname))
@@ -745,7 +693,7 @@ function wagon:show_get_on_form(pname)
 	local form, comma="size[5,8]label[0.5,0.5;"..attrans("Select seat:").."]textlist[0.5,1;4,6;seat;", ""
 	for seatno, seattbl in ipairs(self.seats) do
 		local addtext, colorcode="", ""
-		if self.seatp and self.seatp[seatno] then
+		if data.seatp and data.seatp[seatno] then
 			colorcode="#FF0000"
 			addtext=" ("..self.seatp[seatno]..")"
 		end
@@ -764,11 +712,12 @@ function wagon:show_wagon_properties(pname)
 	field: driving/couple whitelist
 	button: save
 	]]
+	local data = advtrains.wagons[self.id]
 	local form="size[5,5]"
-	form = form .. "field[0.5,1;4,1;whitelist;Allow these players to drive your wagon:;"..(self.whitelist or "").."]"
+	form = form .. "field[0.5,1;4,1;whitelist;Allow these players to drive your wagon:;"..(data.whitelist or "").."]"
 	--seat groups access lists were here
 	form=form.."button_exit[0.5,3;4,1;save;"..attrans("Save wagon properties").."]"
-	minetest.show_formspec(pname, "advtrains_prop_"..self.unique_id, form)
+	minetest.show_formspec(pname, "advtrains_prop_"..self.id, form)
 end
 
 --BordCom
@@ -793,6 +742,7 @@ end
 function wagon:show_bordcom(pname)
 	if not self:train() then return end
 	local train = self:train()
+	local data = advtrains.wagons[self.id]
 	
 	local form = "size[11,9]label[0.5,0;AdvTrains Boardcom v0.1]"
 	form=form.."textarea[0.5,1.5;7,1;text_outside;"..attrans("Text displayed outside on train")..";"..(train.text_outside or "").."]"
@@ -817,7 +767,7 @@ function wagon:show_bordcom(pname)
 						form = form .. "image_button["..(i-0.5)..","..(linhei+2)..";1,1;advtrains_cpl_lock.png;dcpl_ulck_"..i..";]"
 					end
 				end
-				if i == self.pos_in_trainparts then
+				if i == data.pos_in_trainparts then
 					form = form .. "box["..(i-0.1)..","..(linhei-0.1)..";1,1;green]"
 				end
 				pre_own = ent.owner
@@ -861,6 +811,8 @@ function wagon:show_bordcom(pname)
 	minetest.show_formspec(pname, "advtrains_bordcom_"..self.unique_id, form)
 end
 function wagon:handle_bordcom_fields(pname, formname, fields)
+	local data = advtrains.wagons[self.id]
+	
 	local seatno=self:get_seatno(pname)
 	if not seatno or not self.seat_groups[self.seats[seatno].group].driving_ctrl_access or not advtrains.check_driving_couple_protection(pname, self.owner, self.whitelist) then
 		return
@@ -885,35 +837,25 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 		if fields["dcpl_"..i] then
 			for _,wagon in pairs(minetest.luaentities) do
 				if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
-					wagon:safe_decouple(pname)
+					wagon:safe_decouple(pname)												-- TODO: Move this into external function (don't search entity?)
 				end
 			end
 		end
 		if i>1 and fields["dcpl_lck_"..i] then
-			local ent = advtrains.wagon_save[tpid]
-			local pent = advtrains.wagon_save[train.trainparts[i-1]]
+			local ent = advtrains.wagons[tpid]
+			local pent = advtrains.wagons[train.trainparts[i-1]]
 			if ent and pent then
 				if checklock(pname, ent.owner, pent.owner, ent.whitelist, pent.whitelist) then
-					for _,wagon in pairs(minetest.luaentities) do
-						if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
-							wagon.dcpl_lock=true
-							wagon:get_staticdata()
-						end
-					end
+					ent.dcpl_lock = true
 				end
 			end
 		end
 		if i>1 and fields["dcpl_ulck_"..i] then
-			local ent = advtrains.wagon_save[tpid]
-			local pent = advtrains.wagon_save[train.trainparts[i-1]]
+			local ent = advtrains.wagons[tpid]
+			local pent = advtrains.wagons[train.trainparts[i-1]]
 			if ent and pent then
 				if checklock(pname, ent.owner, pent.owner, ent.whitelist, pent.whitelist) then
-					for _,wagon in pairs(minetest.luaentities) do
-						if wagon.is_wagon and wagon.initialized and wagon.unique_id==tpid then
-							wagon.dcpl_lock=false
-							wagon:get_staticdata()
-						end
-					end
+					ent.dcpl_lock = false
 				end
 			end
 		end
@@ -932,7 +874,7 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 	local function chkownsany()
 		local owns_any = minetest.check_player_privs(pname, "train_admin")
 		for i, tpid in ipairs(train.trainparts) do
-			local ent = advtrains.wagon_save[tpid]
+			local ent = advtrains.wagons[tpid]
 			if ent then
 				owns_any = owns_any or advtrains.check_driving_couple_protection(pname, ent.owner, ent.whitelist)
 			end
@@ -963,14 +905,15 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		local uid=string.match(formname, "^advtrains_geton_(.+)$")
 		if uid then
 			for _,wagon in pairs(minetest.luaentities) do
-				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+				if wagon.is_wagon and wagon.initialized and wagon.id==uid then
+					local data = advtrains.wagons[wagon.id]
 					if fields.inv then
 						if wagon.has_inventory and wagon.get_inventory_formspec then
 							minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..uid, wagon:get_inventory_formspec(player:get_player_name()))
 						end
 					elseif fields.seat then
 						local val=minetest.explode_textlist_event(fields.seat)
-						if val and val.type~="INV" and not wagon.seatp[player:get_player_name()] then
+						if val and val.type~="INV" and not data.seatp[player:get_player_name()] then
 						--get on
 							wagon:get_on(player, val.index)
 							--will work with the new close_formspec functionality. close exactly this formspec.
@@ -983,7 +926,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		uid=string.match(formname, "^advtrains_seating_(.+)$")
 		if uid then
 			for _,wagon in pairs(minetest.luaentities) do
-				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
+				if wagon.is_wagon and wagon.initialized and wagon.id==uid then
 					local pname=player:get_player_name()
 					local no=wagon:get_seatno(pname)
 					if no then
@@ -996,19 +939,14 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		end
 		uid=string.match(formname, "^advtrains_prop_(.+)$")
 		if uid then
-			for _,wagon in pairs(minetest.luaentities) do
-				if wagon.is_wagon and wagon.initialized and wagon.unique_id==uid then
-					local pname=player:get_player_name()
-					if pname~=wagon.owner and not minetest.check_player_privs(pname, {train_admin = true}) then
-						return true
-					end
-					if fields.save or not fields.quit then
-						for sgr,sgrdef in pairs(wagon.seat_groups) do
-							if fields.whitelist then
-								wagon.whitelist = fields.whitelist
-							end
-						end
-					end
+			local pname=player:get_player_name()
+			local data = advtrains.wagons[uid]
+			if pname~=data.owner and not minetest.check_player_privs(pname, {train_admin = true}) then
+				return true
+			end
+			if fields.save or not fields.quit then
+				if fields.whitelist then
+					data.whitelist = fields.whitelist
 				end
 			end
 		end
@@ -1023,11 +961,12 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	end)
 end)
 function wagon:seating_from_key_helper(pname, fields, no)
+	local data = advtrains.wagons[wagon.id]
 	local sgr=self.seats[no].group
 	for _,access in ipairs(self.seat_groups[sgr].access_to) do
 		if fields["sgr_"..access] and self:check_seat_group_access(pname, access) then
 			for seatid, seatdef in ipairs(self.seats) do
-				if seatdef.group==access and not self.seatp[seatid] then
+				if seatdef.group==access and not data.seatp[seatid] then
 					self:get_on(minetest.get_player_by_name(pname), seatid)
 					return
 				end
@@ -1035,7 +974,7 @@ function wagon:seating_from_key_helper(pname, fields, no)
 		end
 	end
 	if fields.inv and self.has_inventory and self.get_inventory_formspec then
-		minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..self.unique_id, wagon:get_inventory_formspec(player:get_player_name()))
+		minetest.show_formspec(player:get_player_name(), "advtrains_inv_"..self.id, self:get_inventory_formspec(player:get_player_name()))
 	end
 	if fields.prop and self.owner==pname then
 		self:show_wagon_properties(pname)
@@ -1060,8 +999,9 @@ function wagon:check_seat_group_access(pname, sgr)
 	return true
 end
 function wagon:reattach_all()
-	if not self.seatp then self.seatp={} end
-	for seatno, pname in pairs(self.seatp) do
+	local data = advtrains.wagons[wagon.id]
+	if not data.seatp then data.seatp={} end
+	for seatno, pname in pairs(data.seatp) do
 		local p=minetest.get_player_by_name(pname)
 		if p then
 			self:get_on(p ,seatno)
@@ -1074,7 +1014,8 @@ function wagon:safe_decouple(pname)
 		minetest.chat_send_player(pname, "Missing train_operator privilege")
 		return false
 	end
-	if self.dcpl_lock then
+	local data = advtrains.wagons[wagon.id]
+	if data.dcpl_lock then
 		minetest.chat_send_player(pname, "Couple is locked (ask owner or admin to unlock it)")
 		return false
 	end
@@ -1085,7 +1026,7 @@ function wagon:safe_decouple(pname)
 end
 
 
-function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
+function advtrains.register_wagon(sysname_p, prototype, desc, inv_img, nincreative)
 	local sysname = sysname_p
 	if not string.match(sysname, ":") then
 		sysname = "advtrains:"..sysname_p
@@ -1099,12 +1040,14 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 		wield_image = inv_img,
 		stack_max = 1,
 		
+		groups = { not_in_creative_inventory = nincreative and 0 or 1}
+		
 		on_place = function(itemstack, placer, pointed_thing)
 			return advtrains.pcall(function()
 				if not pointed_thing.type == "node" then
 					return
 				end
-				
+				local pname = placer:get_player_name()
 
 				local node=minetest.get_node_or_nil(pointed_thing.under)
 				if not node then atprint("[advtrains]Ignore at placer position") return itemstack end
@@ -1114,7 +1057,7 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 					return itemstack
 				end
 				if not minetest.check_player_privs(placer, {train_operator = true }) then
-					minetest.chat_send_player(placer:get_player_name(), "You don't have the train_operator privilege.")
+					minetest.chat_send_player(pname, "You don't have the train_operator privilege.")
 					return itemstack
 				end
 				if not minetest.check_player_privs(placer, {train_admin = true }) and minetest.is_protected(pointed_thing.under, placer:get_player_name()) then
@@ -1125,21 +1068,17 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 				local plconnid = advtrains.yawToClosestConn(yaw, tconns)
 				
 				local prevpos = advtrains.get_adjacent_rail(pointed_thing.under, tconns, plconnid, prototype.drives_on)
-				if not prevpos then return end
-				local id=advtrains.create_new_train_at(pointed_thing.under, prevpos)
-				
-				local ob=minetest.add_entity(pointed_thing.under, sysname)
-				if not ob then
-					atprint("couldn't add_entity, aborting")
+				if not prevpos then
+					minetest.chat_send_player(pname, "The track you are trying to place the wagon on is not long enough!")
+					return
 				end
-				local le=ob:get_luaentity()
+				local id=advtrains.create_new_train_at(pointed_thing.under, plconnid)
 				
-				le.owner=placer:get_player_name()
+				local wid = advtrains.create_wagon(type, id, pname)
 				
-				local wagon_uid=le:init_new_instance(id, {})
+				advtrains.add_wagon_to_train(wid, id)
 				
-				advtrains.add_wagon_to_train(le, id)
-				if not minetest.settings:get_bool("creative_mode") then
+				if not advtrains.is_creative(pname) then
 					itemstack:take_item()
 				end
 				return itemstack
@@ -1149,4 +1088,21 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img)
 	})
 end
 
+-- Placeholder wagon. Will be spawned whenever a mod is missing
+advtrains.register_wagon("advtrains:wagon_placeholder", {
+	visual="sprite",
+	textures = {"advtrains_wheel.png"},
+	collisionbox = {-0.3,-0.3,-0.3, 0.3,0.3,0.3},
+	visual_size = {x=0.7, y=0.7},
+	initial_sprite_basepos = {x=0, y=0},
+	drives_on = advtrains.all_tracktypes,
+	max_speed = 5,
+	seats = {
+	},
+	seat_groups = {
+	},
+	assign_to_seat_group = {},
+	wagon_span=1,
+	drops={},
+}, "Wagon placeholder", "advtrains_subway_wagon_inv.png", true)
 

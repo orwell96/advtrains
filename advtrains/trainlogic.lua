@@ -624,19 +624,17 @@ function advtrains.get_train_end_index(train)
 	return advtrains.get_real_path_index(train, train.trainlen or 2)--this function can be found inside wagons.lua since it's more related to wagons. we just set trainlen as pos_in_train
 end
 
-function advtrains.add_wagon_to_train(wagon, train_id, index)
+function advtrains.add_wagon_to_train(wagon_id, train_id, index)
 	local train=advtrains.trains[train_id]
 	if index then
-		table.insert(train.trainparts, index, wagon.unique_id)
+		table.insert(train.trainparts, index, wagon_id)
 	else
-		table.insert(train.trainparts, wagon.unique_id)
+		table.insert(train.trainparts, wagon_id)
 	end
-	--this is not the usual case!!!
-	--we may set initialized because the wagon has no chance to step()
-	wagon.initialized=true
-	--TODO is this art or can we throw it away?
 	advtrains.update_trainpart_properties(train_id)
 end
+
+-- this function sets wagon's pos_in_train(parts) properties and train's max_speed and drives_on (and more)
 function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	local train=advtrains.trains[train_id]
 	train.drives_on=advtrains.merge_tables(advtrains.all_tracktypes)
@@ -646,43 +644,29 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 	
 	local rel_pos=0
 	local count_l=0
+	local shift_dcpl_lock=false
 	for i, w_id in ipairs(train.trainparts) do
-		local wagon=nil
-		local shift_dcpl_lock=false
-		for aoid,iwagon in pairs(minetest.luaentities) do
-			if iwagon.is_wagon and iwagon.unique_id==w_id then
-				if wagon then
-					--duplicate
-					atprint("update_trainpart_properties: Removing duplicate wagon with id="..aoid)
-					iwagon.object:remove()
-				else
-					wagon=iwagon
-				end
+		
+		local data = advtrains.wagons[w_id]
+		
+		-- 1st: update wagon data (pos_in_train a.s.o)
+		if data then
+			local wagon = minetest.registered_luaentites[data.type]
+			if not wagon then
+				atwarn("Wagon '",data.type,"' couldn't be found. Please check that all required modules are loaded!")
+				wagon = minetest.registered_luaentites["advtrains:wagon_placeholder"]
 			end
-		end
-		if not wagon then
-			if advtrains.wagon_save[w_id] then
-				--spawn a new and initialize it with the properties from wagon_save
-				wagon=minetest.add_entity(train.last_pos, advtrains.wagon_save[w_id].entity_name):get_luaentity()
-				if not wagon then
-					minetest.chat_send_all("[advtrains] Warning: Wagon "..advtrains.wagon_save[w_id].entity_name.." does not exist. Make sure all required modules are loaded!")
-				else
-					wagon:init_from_wagon_save(w_id)
-				end
-			end
-		end
-		if wagon then
+			
 			rel_pos=rel_pos+wagon.wagon_span
-			wagon.train_id=train_id
-			wagon.pos_in_train=rel_pos
-			wagon.pos_in_trainparts=i
-			wagon.old_velocity_vector=nil
+			data.train_id=train_id
+			data.pos_in_train=rel_pos
+			data.pos_in_trainparts=i
 			if wagon.is_locomotive then
 				count_l=count_l+1
 			end
 			if invert_flipstate then
-				wagon.wagon_flipped = not wagon.wagon_flipped
-				shift_dcpl_lock, wagon.dcpl_lock = wagon.dcpl_lock, shift_dcpl_lock
+				data.wagon_flipped = not data.wagon_flipped
+				shift_dcpl_lock, data.dcpl_lock = data.dcpl_lock, shift_dcpl_lock
 			end
 			rel_pos=rel_pos+wagon.wagon_span
 			
@@ -695,16 +679,38 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 			end
 			train.max_speed=math.min(train.max_speed, wagon.max_speed)
 			train.extent_h = math.max(train.extent_h, wagon.extent_h or 1);
-			
-		else
-			atwarn("Did not find save data for wagon",w_id,". The wagon will be deleted.")
-			--what the hell...
-			table.remove(train.trainparts, pit)
 		end
 	end
-	train.trainlen=rel_pos
-	train.locomotives_in_train=count_l
 end
+
+-- This function checks whether entities need to be spawned for certain wagons, and spawns them.
+function advtrains.spawn_wagons(train_id)
+	local train=advtrains.trains[train_id]
+	
+	for i, w_id in ipairs(train.trainparts) do
+		local data = advtrains.wagons[w_id]
+		if data then
+			if not data.object or not data.object:getyaw() then
+				-- eventually need to spawn new object. check if position is loaded.
+				local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
+				local pos   = advtrains.path_get(train, atfloor(index))
+				
+				if minetest.get_node_or_nil(pos) then
+					local wt = data.type
+					if not minetest.registered_luaentities[wt] then
+						atprint("Unable to load",w_id,"of type",wt,", using placeholder")
+						wt="advtrains:wagon_placeholder"
+					end
+					wagon=minetest.add_entity(pos, wt):get_luaentity()
+					wagon:set_id(w_id)
+				end
+			end
+		end
+		
+		
+	end
+end
+		
 
 function advtrains.split_train_at_wagon(wagon)
 	--get train

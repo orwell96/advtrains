@@ -235,6 +235,16 @@ function advtrains.is_protected(pos, name)
 	return minetest.is_protected(pos, name)
 end
 
+function advtrains.is_creative(name)
+	if not name then
+		error("advtrains.is_creative() called without name parameter!")
+	end
+	if minetest.check_player_privs(name, {creative=true}) then
+		return true
+	end
+	return minetest.settings:get_bool("creative_mode")
+end
+
 function advtrains.ms_to_kmh(speed)
 	return speed * 3.6
 end

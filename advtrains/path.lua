@@ -188,13 +188,14 @@ function advtrains.path_get(train, index)
 end
 
 -- interpolated position to fractional index given, and angle based on path_dir
--- returns: pos, angle(yaw)
+-- returns: pos, angle(yaw), p_floor, p_ceil
 function advtrains.path_get_interpolated(train, index)
 	local i_floor = atfloor(index)
 	local i_ceil = i_floor + 1
 	local frac = index - i_floor
 	local p_floor,  = advtrains.path_get(train, i_floor)
 	local p_ceil = advtrains.path_get(train, i_ceil)
+	-- Note: minimal code duplication to path_get_adjacent, for performance
 	
 	local d_floor = train.path_dir[i_floor]
 	local d_ceil = train.path_dir[i_ceil]
@@ -203,10 +204,20 @@ function advtrains.path_get_interpolated(train, index)
 	
 	local ang = advtrains.minAngleDiffRad(a_floor, a_ceil)
 	
-	return vector.add(p_floor, vector.multiply(vector.subtract(p_ceil, p_floor), frac), (a_floor + frac * ang)%(2*math.pi) -- TODO does this behave correctly?
+	return vector.add(p_floor, vector.multiply(vector.subtract(npos2, npos), frac), (a_floor + frac * ang)%(2*math.pi), p_floor, p_ceil -- TODO does this behave correctly?
+end
+-- returns the 2 path positions directly adjacent to index and the fraction on how to interpolate between them
+-- returns: pos_floor, pos_ceil, fraction
+function advtrains.path_get_adjacent(train, index)
+	local i_floor = atfloor(index)
+	local i_ceil = i_floor + 1
+	local frac = index - i_floor
+	local p_floor,  = advtrains.path_get(train, i_floor)
+	local p_ceil = advtrains.path_get(train, i_ceil)
+	return p_floor, p_ceil, frac
 end
 
-function advtrains.path_get_by_offset(train, index, offset)
+function advtrains.path_get_index_by_offset(train, index, offset)
 	local pos_in_train_left=pit
 	local index=train.index
 	if pos_in_train_left>(index-math.floor(index))*(train.path_dist[math.floor(index)] or 1) then
