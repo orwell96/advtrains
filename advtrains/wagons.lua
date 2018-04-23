@@ -10,7 +10,7 @@
 advtrains.wagons = {}
 
 --
-function advtrains.create_wagon(type, train_id, owner)
+function advtrains.create_wagon(type, owner)
 	local new_id=advtrains.random_id()
 	while advtrains.wagons[new_id] do new_id=advtrains.random_id() end
 	local wgn = {}
@@ -18,7 +18,7 @@ function advtrains.create_wagon(type, train_id, owner)
 	wgn.seatp = {}
 	wgn.owner = owner
 	wgn.id = new_id
-	wgn.train_id = train_id
+	---wgn.train_id = train_id   --- will get this via update_trainpart_properties
 	advtrains.wagons[new_id] = wgn
 	return new_id
 end
@@ -39,7 +39,8 @@ local wagon={
 
 
 function wagon:train()
-	return advtrains.trains[self.train_id]
+	local data = advtrains.wagons[self.id]
+	return advtrains.trains[data.train_id]
 end
 
 
@@ -272,7 +273,7 @@ function wagon:on_step(dtime)
 		
 		local train=self:train()
 		--show off-track information in outside text instead of notifying the whole server about this
-		if train.index < train.path_trk_b or train.index > train.path_trk_f then
+		if not train.dirty and train.end_index < train.path_trk_b or train.index > train.path_trk_f then
 			outside = outside .."\n!!! Train off track !!!"
 		end
 		
@@ -1021,10 +1022,18 @@ function wagon:safe_decouple(pname)
 	end
 	atprint("wagon:discouple() Splitting train", self.train_id)
 	advtrains.log("Discouple", pname, self.object:getpos(), self:train().text_outside)
-	advtrains.split_train_at_wagon(self)--found in trainlogic.lua
+	advtrains.split_train_at_wagon(self.id)--found in trainlogic.lua
 	return true
 end
 
+function advtrains.get_wagon_prototype(data)
+	local wt = data.type
+	if not minetest.registered_luaentities[wt] then
+		atprint("Unable to load wagon type",wt,", using placeholder")
+		wt="advtrains:wagon_placeholder"
+	end
+	return wt, minetest.registered_luaentities[wt]
+end
 
 function advtrains.register_wagon(sysname_p, prototype, desc, inv_img, nincreative)
 	local sysname = sysname_p
@@ -1072,11 +1081,10 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img, nincreati
 					minetest.chat_send_player(pname, "The track you are trying to place the wagon on is not long enough!")
 					return
 				end
-				local id=advtrains.create_new_train_at(pointed_thing.under, plconnid)
 				
-				local wid = advtrains.create_wagon(type, id, pname)
+				local wid = advtrains.create_wagon(type, pname)
 				
-				advtrains.add_wagon_to_train(wid, id)
+				local id=advtrains.create_new_train_at(pointed_thing.under, plconnid, 0, {wid})
 				
 				if not advtrains.is_creative(pname) then
 					itemstack:take_item()

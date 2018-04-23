@@ -20,34 +20,39 @@ end
 --contents: {command="...", arrowconn=0-15 where arrow points}
 
 --general
+function atc.train_set_command(train_id, command, arrow)
+	atc.train_reset_command(train_id)
+	advtrains.trains[train_id].atc_arrow = arrow
+	advtrains.trains[train_id].atc_command = command
+end
 
 function atc.send_command(pos, par_tid)
 	local pts=minetest.pos_to_string(pos)
 	if atc.controllers[pts] then
 		--atprint("Called send_command at "..pts)
-		local train_id = par_tid or advtrains.detector.get(pos)
+		local train_id = par_tid or advtrains.detector.get(pos) -- TODO: succesively replace those detector calls!
 		if train_id then
 			if advtrains.trains[train_id] then
 				--atprint("send_command inside if: "..sid(train_id))
-				atc.train_reset_command(train_id)
-				local arrowconn=atc.controllers[pts].arrowconn
-				local train=advtrains.trains[train_id]
-				for index, ppos in pairs(train.path) do
-					if vector.equals(advtrains.round_vector_floor_y(ppos), pos) then
-						advtrains.trains[train_id].atc_arrow =
-								vector.equals(
-										advtrains.dirCoordSet(pos, arrowconn),
-										advtrains.round_vector_floor_y(train.path[index+train.movedir])
-								)
-						advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-						atprint("Sending ATC Command: ", atc.controllers[pts].command)
-						return true
-					end
+				if atc.controllers[pts].arrowconn then
+					atlog("ATC controller at",pts,": This controller had an arrowconn of", atc.controllers[pts].arrowconn, "set. Since this field is now deprecated, it was removed.")
+					atc.controllers[pts].arrowconn = nil
 				end
-				atwarn("ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
-				advtrains.trains[train_id].atc_arrow=true
-				advtrains.trains[train_id].atc_command=atc.controllers[pts].command
-				atprint("Sending ATC Command: ", atc.controllers[pts].command)
+				
+				local train = advtrains.trains[train_id]
+				local index = advtrains.path_lookup(train, pos)
+				
+				local iconnid = 1
+				if index then
+					iconnid = train.path_cn[index]
+				else
+					atwarn("ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
+				end
+				
+				atc.train_set_command(train_id, atc.controllers[pts].command, iconnid==1)
+				atprint("Sending ATC Command to", train_id, ":", atc.controllers[pts].command, "iconnid=",iconnid)
+				return true
+				
 			else
 				atwarn("ATC rail at", pos, ": Sending command failed: The train",train_id,"does not exist. This seems to be a bug.")
 			end
@@ -125,7 +130,7 @@ advtrains.atc_function = function(def, preset, suffix, rotation)
 						
 						local pts=minetest.pos_to_string(pos)
 						local _, conns=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
-						atc.controllers[pts]={command=fields.command, arrowconn=conns[1].c}
+						atc.controllers[pts]={command=fields.command}
 						if advtrains.detector.get(pos) then
 							atc.send_command(pos)
 						end
@@ -168,8 +173,11 @@ local matchptn={
 		train.tarvelocity=tonumber(match)
 		return #match+1
 	end,
-	["B([0-9]+)"]=function(id, train, match)
-		if train.velocity>tonumber(match) then
+	["B([0-9B]+)"]=function(id, train, match)
+		if match=="B" then
+			train.atc_brake_target = -1 -- this means emergency brake. TODO don't forget to implement in train step!
+			train.tarvelocity = 0
+		elseif train.velocity>tonumber(match) then
 			train.atc_brake_target=tonumber(match)
 			if train.tarvelocity>train.atc_brake_target then
 				train.tarvelocity=train.atc_brake_target

@@ -183,6 +183,13 @@ function advtrains.path_get(train, index)
 		train.path_dist[train.path_ext_b] = vector.distance(pos, adj_pos)
 	end
 	
+	if index < train.path_req_b then
+		train.path_req_b = index
+	end
+	if index > train.path_req_f then
+		train.path_req_f = index
+	end
+	
 	return train.path[index], (index<=train.path_trk_f and index>=train.path_trk_b)
 	
 end
@@ -232,4 +239,35 @@ function advtrains.path_get_index_by_offset(train, index, offset)
 		index=index-(pos_in_train_left/(train.path_dist[math.floor(index-1)] or 1))
 	end
 	return index
+end
+
+local PATH_CLEAR_KEEP = 2
+
+function advtrains.path_clear_unused(train)
+	for i = train.path_ext_b, train.path_req_b - PATH_CLEAR_KEEP do
+		train.path[i] = nil
+		train.path_dist[i] = nil
+		train.path_cp[i] = nil
+		train.path_cn[i] = nil
+		train.path_dir[i] = nil
+	end
+	for i = train.path_req_f + PATH_CLEAR_KEEP, train.path_ext_f do
+		train.path[i] = nil
+		train.path_dist[i-1] = nil
+		train.path_cp[i] = nil
+		train.path_cn[i] = nil
+		train.path_dir[i+1] = nil
+	end
+	train.path_req_f = math.ceil(train.index)
+	train.path_req_b = math.floor(train.end_index or train.index)
+end
+
+function advtrains.path_lookup(train, pos)
+	local cp = advtrains.round_vector_floor_y(pos)
+	for i = train.path_ext_b, train.path_ext_f do
+		if vector.equals(advtrains.round_vector_floor_y(train.path[i]), cp) then
+			return i
+		end
+	end
+	return nil
 end

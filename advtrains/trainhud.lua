@@ -67,14 +67,14 @@ function advtrains.on_control_change(pc, train, flip)
 			if train.door_open ~= 0 then
 				train.door_open = 0
 			else
-				train.door_open = -train.movedir
+				train.door_open = -1
 			end
 		end
 		if pc.right then
 			if train.door_open ~= 0 then
 				train.door_open = 0
 			else
-				train.door_open = train.movedir
+				train.door_open = 1
 			end
 		end
 		train.active_control = act
@@ -176,7 +176,7 @@ function advtrains.hud_train_format(train, flip)
 	
 	local topLine, firstLine, secondLine
 	
-	topLine="  ["..mletter[fct*train.movedir].."]  {"..levers.."} "..doorstr[(train.door_open or 0) * train.movedir]
+	topLine="  ["..mletter[fct].."]  {"..levers.."} "..doorstr[(train.door_open or 0) * fct]
 	firstLine=attrans("Speed:").." |"..string.rep("+", vel)..string.rep("_", max-vel).."> "..vel_kmh.." km/h"
 	secondLine=attrans("Target:").." |"..string.rep("+", tvel)..string.rep("_", max-tvel).."> "..tvel_kmh.." km/h"
 	
