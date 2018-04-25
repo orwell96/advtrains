@@ -1,3 +1,7 @@
+
+local lot = os.clock()
+minetest.log("action", "[advtrains] Loading...")
+
 -- Boilerplate to support localized strings if intllib mod is installed.
 if minetest.get_modpath("intllib") then
     attrans = intllib.Getter()
@@ -10,7 +14,7 @@ end
 --Constant for maximum connection value/division of the circle
 AT_CMAX = 16
 
-advtrains = {trains={}, wagon_save={}, player_to_train_mapping={}}
+advtrains = {trains={}, player_to_train_mapping={}}
 
 --pcall
 local no_action=false
@@ -34,24 +38,16 @@ end
 function advtrains.pcall(fun)
 	if no_action then return end
 	
-	local succ, return1, return2, return3, return4=xpcall(fun, function(err)
-			if advtrains.atprint_context_tid then
-				local train=advtrains.trains[advtrains.atprint_context_tid_full]
-				advtrains.dumppath(train.path)
-				atwarn("Dumping last debug outputs: ", err)
-				atprint("Train state: index",train.index,"end_index", train.end_index,"| max_iot", train.max_index_on_track, "min_iot", train.min_index_on_track, "<> pe_min", train.path_extent_min,"pe_max", train.path_extent_max)
-				if minetest.settings:get_bool("advtrains_enable_debugging") then
-					advtrains.drb_dump(advtrains.atprint_context_tid)
-				end
-			end
-			atwarn("Lua Error occured: ", err)
-			atwarn(debug.traceback())
-		end)
-	if not succ then
-		reload_saves()
-	else
-		return return1, return2, return3, return4
-	end
+	--local succ, return1, return2, return3, return4=xpcall(fun, function(err)
+	--		atwarn("Lua Error occured: ", err)
+	--		atwarn(debug.traceback())
+	--	end)
+	--if not succ then
+	--	reload_saves()
+	--else
+	--	return return1, return2, return3, return4
+	--end
+	return fun()
 end
 
 
@@ -149,6 +145,7 @@ dofile(advtrains.modpath.."/trainlogic.lua")
 dofile(advtrains.modpath.."/trainhud.lua")
 dofile(advtrains.modpath.."/trackplacer.lua")
 dofile(advtrains.modpath.."/tracks.lua")
+dofile(advtrains.modpath.."/occupation.lua")
 dofile(advtrains.modpath.."/atc.lua")
 dofile(advtrains.modpath.."/wagons.lua")
 dofile(advtrains.modpath.."/protection.lua")
@@ -279,10 +276,6 @@ advtrains.avt_save = function(remove_players_from_wagons)
 			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open",
 			"text_outside", "text_inside", "couple_lck_front", "couple_lck_back", "line"
 		})
-		--then invalidate
-		if train.index then
-			v.restore_add_index=train.index-math.floor(train.index+1)
-		end
 		--then save it
 		tmp_trains[id]=v
 	end
@@ -291,7 +284,7 @@ advtrains.avt_save = function(remove_players_from_wagons)
 	-- 1 - Initial new save format.
 	local save_tbl={
 		trains = tmp_trains,
-		wagon_save = advtrains.wagon_save,
+		wagon_save = advtrains.wagons,
 		ptmap = advtrains.player_to_train_mapping,
 		atc = advtrains.atc.save_data(),
 		ndb = advtrains.ndb.save_data(),
@@ -348,7 +341,7 @@ minetest.register_globalstep(function(dtime_mt)
 		if save_timer<=0 then
 			local t=os.clock()
 			--save
-			advtrains.save()
+			--advtrains.save()
 			save_timer=save_interval
 			atprintbm("saving", t)
 		end
@@ -387,7 +380,7 @@ function advtrains.save(remove_players_from_wagons)
 	end
 	atprint("[save_all]Saved advtrains save files")
 end
-minetest.register_on_shutdown(advtrains.save)
+--minetest.register_on_shutdown(advtrains.save)
 
 -- This chat command provides a solution to the problem known on the LinuxWorks server
 -- There are many players that joined a single time, got on a train and then left forever
@@ -419,3 +412,5 @@ minetest.register_chatcommand("at_reroute",
         end,
 })
 
+local tot=(os.clock()-lot)*1000
+minetest.log("action", "[advtrains] Loaded in "..tot.."ms")

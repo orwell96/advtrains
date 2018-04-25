@@ -64,7 +64,7 @@ Composition of a step:
 4. we iterate our change lists and determine what to do
 
 ]]--
-local o
+local o = {}
 
 o.restore_required = true
 
@@ -74,6 +74,8 @@ local seqnum = 0
 local occ = {}
 local occ_chg = {}
 
+local addchg, handle_chg
+
 
 local function occget(p)
 	local t = occ[p.y]
@@ -81,10 +83,11 @@ local function occget(p)
 		occ[p.y] = {}
 		t = occ[p.y]
 	end
+	local s = t
 	t = t[p.x]
 	if not t then
-		t[p.x] = {}
-		t = t[p.x]
+		s[p.x] = {}
+		t = s[p.x]
 	end
 	return t[p.z]
 end
@@ -94,15 +97,17 @@ local function occgetcreate(p)
 		occ[p.y] = {}
 		t = occ[p.y]
 	end
+	local s = t
 	t = t[p.x]
 	if not t then
-		t[p.x] = {}
-		t = t[p.x]
+		s[p.x] = {}
+		t = s[p.x]
 	end
+	s = t
 	t = t[p.z]
 	if not t then
-		t[p.z] = {}
-		t = t[p.z]
+		s[p.z] = {}
+		t = s[p.z]
 	end
 	return t
 end
@@ -119,7 +124,7 @@ end
 function o.init_occupation(train_id, pos, oid)
 	local t = occgetcreate(pos)
 	local i = 1
-	while t[i]
+	while t[i] do
 		if t[i]==train_id then
 			break
 		end
@@ -132,7 +137,7 @@ end
 function o.set_occupation(train_id, pos, oid)
 	local t = occgetcreate(pos)
 	local i = 1
-	while t[i]
+	while t[i] do
 		if t[i]==train_id then
 			break
 		end
@@ -171,7 +176,7 @@ function o.clear_occupation(train_id, pos)
 	end
 end
 
-local function addchg(pos, train_id, old, new)
+function addchg(pos, train_id, old, new)
 	occ_chg[#occ_chg + 1] = {
 		pos = pos,
 		train_id = train_id,
@@ -196,7 +201,7 @@ function o.end_step()
 	seqnum = seqnum + 1
 end
 
-local function handle_chg(t, pos, train_id, old, new)
+function handle_chg(t, pos, train_id, old, new)
 	-- Handling the actual "change" is only necessary on_train_enter (change to 1) and on_train_leave (change from 1)
 	if new==1 then
 		o.call_enter_callback(pos, train_id)

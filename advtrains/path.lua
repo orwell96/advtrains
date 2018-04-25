@@ -113,8 +113,8 @@ function advtrains.path_create(train, pos, connid, rel_index)
 	train.path_dist = {}
 	
 	train.path_dir = {
-		[ 0] = conns[connid],
-		[-1] = conns[mconnid]
+		[1] = conns[connid].c,
+		[0] = advtrains.oppd(conns[mconnid].c)
 	}
 	
 	train.path_ext_f=0
@@ -123,31 +123,49 @@ function advtrains.path_create(train, pos, connid, rel_index)
 	train.path_trk_b=0
 	train.path_req_f=0
 	train.path_req_b=0
+	atdebug("path_create",train)
 	
+end
+
+function advtrains.path_invalidate(train)
+	train.path = nil
+	train.path_dist = nil
+	train.path_cp = nil
+	train.path_cn = nil
+	train.path_dir = nil
+	train.path_ext_f=0
+	train.path_ext_b=0
+	train.path_trk_f=0
+	train.path_trk_b=0
+	train.path_req_f=0
+	train.path_req_b=0
 end
 
 -- Function to get path entry at a position. This function will automatically calculate more of the path when required.
 -- returns: pos, on_track
 function advtrains.path_get(train, index)
+	if not train.path then
+		error("For train "..train.id..": path_get called but there's no path set yet!")
+	end
 	if index ~= atfloor(index) then
 		error("For train "..train.id..": Called path_get() but index="..index.." is not a round number")
 	end
 	while index > train.path_ext_f do
 		local pos = train.path[train.path_ext_f]
 		local connid = train.path_cn[train.path_ext_f]
-		local node_ok, this_conns, adj_pos, adj_connid, conn_idx, nextrail_y
+		local node_ok, this_conns, adj_pos, adj_connid, conn_idx, nextrail_y, next_conns
 		if train.path_ext_f == train.path_trk_f then
-			node_ok, this_conns = advtrains.get_rail_info_at(this_pos)
+			node_ok, this_conns = advtrains.get_rail_info_at(pos)
 			if not node_ok then error("For train "..train.id..": Path item "..train.path_ext_f.." on-track but not a valid node!") end
-			adj_pos, adj_connid, conn_idx, nextrail_y = advtrains.get_adjacent_rail(pos, this_conns, connid, train.drives_on)
+			adj_pos, adj_connid, conn_idx, nextrail_y, next_conns = advtrains.get_adjacent_rail(pos, this_conns, connid, train.drives_on)
 		end
 		train.path_ext_f = train.path_ext_f + 1
 		if adj_pos then
 			adj_pos.y = adj_pos.y + nextrail_y
 			train.path_cp[train.path_ext_f] = adj_connid
-			local mconnid = advtrains.get_matching_conn(adj_connid)
+			local mconnid = advtrains.get_matching_conn(adj_connid, #next_conns)
 			train.path_cn[train.path_ext_f] = mconnid
-			train.path_dir[train.path_ext_f] = this_conns[mconnid]
+			train.path_dir[train.path_ext_f+1] = this_conns[mconnid].c
 			train.path_trk_f = train.path_ext_f
 		else
 			-- off-track fallback behavior
@@ -160,19 +178,21 @@ function advtrains.path_get(train, index)
 	while index < train.path_ext_b do
 		local pos = train.path[train.path_ext_b]
 		local connid = train.path_cp[train.path_ext_b]
-		local node_ok, this_conns, adj_pos, adj_connid, conn_idx, nextrail_y
+		local node_ok, this_conns, adj_pos, adj_connid, conn_idx, nextrail_y, next_conns
 		if train.path_ext_b == train.path_trk_b then
-			node_ok, this_conns = advtrains.get_rail_info_at(this_pos)
+			node_ok, this_conns = advtrains.get_rail_info_at(pos)
 			if not node_ok then error("For train "..train.id..": Path item "..train.path_ext_f.." on-track but not a valid node!") end
-			adj_pos, adj_connid, conn_idx, nextrail_y = advtrains.get_adjacent_rail(pos, this_conns, connid, train.drives_on)
+			adj_pos, adj_connid, conn_idx, nextrail_y, next_conns = advtrains.get_adjacent_rail(pos, this_conns, connid, train.drives_on)
 		end
 		train.path_ext_b = train.path_ext_b - 1
 		if adj_pos then
 			adj_pos.y = adj_pos.y + nextrail_y
-			train.path_cp[train.path_ext_b] = adj_connid
-			local mconnid = advtrains.get_matching_conn(adj_connid)
-			train.path_cn[train.path_ext_b] = mconnid
-			train.path_dir[train.path_ext_b] = advtrains.oppd(this_conns[mconnid]) --we need to rotate this here so that it points in positive path direction
+			train.path_cn[train.path_ext_b] = adj_connid
+			local mconnid = advtrains.get_matching_conn(adj_connid, #next_conns)
+			train.path_cp[train.path_ext_b] = mconnid
+			
+			train.path_dir[train.path_ext_b] = advtrains.oppd(this_conns[mconnid].c)
+			
 			train.path_trk_b = train.path_ext_b
 		else
 			-- off-track fallback behavior
@@ -200,7 +220,7 @@ function advtrains.path_get_interpolated(train, index)
 	local i_floor = atfloor(index)
 	local i_ceil = i_floor + 1
 	local frac = index - i_floor
-	local p_floor,  = advtrains.path_get(train, i_floor)
+	local p_floor = advtrains.path_get(train, i_floor)
 	local p_ceil = advtrains.path_get(train, i_ceil)
 	-- Note: minimal code duplication to path_get_adjacent, for performance
 	
@@ -211,7 +231,7 @@ function advtrains.path_get_interpolated(train, index)
 	
 	local ang = advtrains.minAngleDiffRad(a_floor, a_ceil)
 	
-	return vector.add(p_floor, vector.multiply(vector.subtract(npos2, npos), frac), (a_floor + frac * ang)%(2*math.pi), p_floor, p_ceil -- TODO does this behave correctly?
+	return vector.add(p_floor, vector.multiply(vector.subtract(p_ceil, p_floor), frac)), (a_floor + frac * ang)%(2*math.pi), p_floor, p_ceil -- TODO does this behave correctly?
 end
 -- returns the 2 path positions directly adjacent to index and the fraction on how to interpolate between them
 -- returns: pos_floor, pos_ceil, fraction
@@ -219,26 +239,43 @@ function advtrains.path_get_adjacent(train, index)
 	local i_floor = atfloor(index)
 	local i_ceil = i_floor + 1
 	local frac = index - i_floor
-	local p_floor,  = advtrains.path_get(train, i_floor)
+	local p_floor = advtrains.path_get(train, i_floor)
 	local p_ceil = advtrains.path_get(train, i_ceil)
 	return p_floor, p_ceil, frac
 end
 
 function advtrains.path_get_index_by_offset(train, index, offset)
-	local pos_in_train_left=pit
-	local index=train.index
-	if pos_in_train_left>(index-math.floor(index))*(train.path_dist[math.floor(index)] or 1) then
-		pos_in_train_left=pos_in_train_left - (index-math.floor(index))*(train.path_dist[math.floor(index)] or 1)
-		index=math.floor(index)
-		while pos_in_train_left>(train.path_dist[index-1] or 1) do
-			pos_in_train_left=pos_in_train_left - (train.path_dist[index-1] or 1)
-			index=index-1
-		end
-		index=index-(pos_in_train_left/(train.path_dist[index-1] or 1))
-	else
-		index=index-(pos_in_train_left/(train.path_dist[math.floor(index-1)] or 1))
+	local off = offset
+	local idx = atfloor(index)
+	-- go down to floor. Calculate required path_dist
+	advtrains.path_get_adjacent(train, idx)
+	off = off + ((index-idx) * train.path_dist[idx])
+	--atdebug("pibo: 1 off=",off,"idx=",idx,"  index=",index)
+	
+	-- then walk the path back until we overshoot (off becomes >=0)
+	while off<0 do
+		idx = idx - 1
+		advtrains.path_get_adjacent(train, idx)
+		off = off + train.path_dist[idx]
 	end
-	return index
+	--atdebug("pibo: 2 off=",off,"idx=",idx)
+	-- then walk the path forward until we would overshoot
+	while off - train.path_dist[idx] >= 0 do
+		idx = idx - 1
+		advtrains.path_get_adjacent(train, idx)
+		if not train.path_dist[idx] then
+			atdebug("second while",idx)
+			for i=-5,5 do
+				atdebug(idx+i,train.path_dist[idx+i])
+			end
+		end
+		off = off - train.path_dist[idx]
+	end
+	--atdebug("pibo: 3 off=",off,"idx=",idx," returns:",idx + (off / train.path_dist[idx]))
+	-- we should now be on the floor of the index we actually want.
+	-- give them the rest!
+	
+	return idx + (off / train.path_dist[idx])
 end
 
 local PATH_CLEAR_KEEP = 2
@@ -246,14 +283,14 @@ local PATH_CLEAR_KEEP = 2
 function advtrains.path_clear_unused(train)
 	for i = train.path_ext_b, train.path_req_b - PATH_CLEAR_KEEP do
 		train.path[i] = nil
-		train.path_dist[i] = nil
+		train.path_dist[i-1] = nil
 		train.path_cp[i] = nil
 		train.path_cn[i] = nil
 		train.path_dir[i] = nil
 	end
 	for i = train.path_req_f + PATH_CLEAR_KEEP, train.path_ext_f do
 		train.path[i] = nil
-		train.path_dist[i-1] = nil
+		train.path_dist[i] = nil
 		train.path_cp[i] = nil
 		train.path_cn[i] = nil
 		train.path_dir[i+1] = nil

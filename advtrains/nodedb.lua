@@ -210,7 +210,7 @@ ndb.run_lbm = function(pos, node)
 			end
 		else
 			--if not in database, take it.
-			atlog("Node Database:", pos, "was not found in the database, have you used worldedit?")
+			--atlog("Node Database:", pos, "was not found in the database, have you used worldedit?")
 			ndb.update(pos, node)
 		end
 		return false
@@ -256,7 +256,7 @@ ndb.restore_all = function()
 			end
 		end
 	end
-	local text="Restore node database: Replaced"..cnt.."nodes, removed"..dcnt.."ghost nodes."
+	local text="Restore node database: Replaced "..cnt.." nodes, removed "..dcnt.." ghost nodes."
 	atlog(text)
 	return text
 end

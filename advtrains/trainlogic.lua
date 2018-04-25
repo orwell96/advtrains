@@ -70,23 +70,25 @@ advtrains.mainloop_trainlogic=function(dtime)
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
 		advtrains.atprint_context_tid_full=k
-		train_ensure_clean(k, v, dtime)
+		advtrains.train_ensure_clean(k, v, dtime, advtrains.occ.restore_required)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
 		advtrains.atprint_context_tid_full=k
-		train_step_b(k, v, dtime)
+		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
 		advtrains.atprint_context_tid_full=k
-		train_step_c(k, v, dtime)
+		advtrains.train_step_c(k, v, dtime)
 	end
 	
 	advtrains.atprint_context_tid=nil
 	advtrains.atprint_context_tid_full=nil
+	
+	advtrains.occ.end_step()
 	
 	atprintbm("trainsteps", t)
 	endstep()
@@ -216,7 +218,7 @@ local function write_occupation(win, train_id, train, write_mode)
 	local c_index = math.ceil(win[1])
 	while win[n_window] do
 		local winix = win[n_window]
-		local oid = WINDOW_ZONE_IDS[n_windows - 1]
+		local oid = WINDOW_ZONE_IDS[n_window - 1]
 		while winix > c_index do
 			local pos = advtrains.path_get(train, c_index)
 			if write_mode == 1 then
@@ -242,7 +244,7 @@ end
 -- - the train's path got cleared
 -- - the occupation table got cleared
 -- Additionally, this gets called outside the step cycle to initialize and/or remove a train, then occ_write_mode is set.
-local function train_ensure_clean(id, train, dtime, report_occupations, occ_write_mode)
+function advtrains.train_ensure_clean(id, train, dtime, report_occupations, occ_write_mode)
 	train.dirty = true
 	if train.no_step then return end
 
@@ -258,29 +260,31 @@ local function train_ensure_clean(id, train, dtime, report_occupations, occ_writ
 	--restore path
 	if not train.path then
 		if not train.last_pos then
-			atwarn("Train",id": Restoring path failed, no last_pos set! Train will be disabled. You can try to fix the issue in the save file.")
+			atwarn("Train",id,": Restoring path failed, no last_pos set! Train will be disabled. You can try to fix the issue in the save file.")
 			train.no_step = true
 			return
 		end
 		if not train.last_connid then
-			atwarn("Train",id": Restoring path failed, no last_connid set! Will assume 1")
+			atwarn("Train",id,": Restoring path: no last_connid set! Will assume 1")
 		end
 		
-		local result = advtrains.path_create(train, train.last_pos, train.last_connid, train.last_frac or 0)
+		local result = advtrains.path_create(train, train.last_pos, train.last_connid or 1, train.last_frac or 0)
 		
 		if result==false then
-			atwarn("Train",id": Restoring path failed, node at",train.last_pos,"is gone! Train will be disabled. You can try to fix the issue in the save file.")
+			atwarn("Train",id,": Restoring path failed, node at",train.last_pos,"is gone! Train will be disabled. You can try to fix the issue in the save file.")
 			train.no_step = true
 			return
 		elseif result==nil then
 			if not train.wait_for_path then
-				atwarn("Train",id": Can't initialize: Waiting for the (yet unloaded) node at",train.last_pos," to be loaded.")
+				atwarn("Train",id,": Can't initialize: Waiting for the (yet unloaded) node at",train.last_pos," to be loaded.")
 			end
 			train.wait_for_path = true
 		end
 		-- by now, we should have a working initial path
+		train.wait_for_path = false
 		train.occwindows = nil
 		advtrains.update_trainpart_properties(id)
+		atdebug("Train",id,": Successfully restored path at",train.last_pos," connid",train.last_connid," frac",train.last_frac)
 		-- TODO recoverposition?!
 	end
 	
@@ -289,18 +293,18 @@ local function train_ensure_clean(id, train, dtime, report_occupations, occ_writ
 		train.occwindows = calc_occwindows(id, train)
 	end
 	if report_occupations then
-		write_occupation(train.occwindows, train, occ_write_mode)
+		write_occupation(train.occwindows, id, train, occ_write_mode)
 	end
 	
 	train.dirty = false -- TODO einbauen!
 end
 
-local function train_step_b(id, train, dtime)
+function advtrains.train_step_b(id, train, dtime)
 	if train.no_step or train.wait_for_path then return end
 	
 	-- in this code, we check variables such as path_trk_? and path_dist. We need to ensure that the path is known for the whole 'Train' zone
-	advtrains.path_get(train, train.index + 1)
-	advtrains.path_get(train, train.end_index - 1)
+	advtrains.path_get(train, atfloor(train.index + 2))
+	advtrains.path_get(train, atfloor(train.end_index - 1))
 	
 	--- 3. handle velocity influences ---
 	local train_moves=(train.velocity~=0)
@@ -318,7 +322,7 @@ local function train_step_b(id, train, dtime)
 	end
 	
 	--- 3a. this can be useful for debugs/warnings and is used for check_trainpartload ---
-	local t_info, train_pos=sid(id), advtrains.path_get(atfloor(train.index))
+	local t_info, train_pos=sid(id), advtrains.path_get(train, atfloor(train.index))
 	if train_pos then
 		t_info=t_info.." @"..minetest.pos_to_string(train_pos)
 		--atprint("train_pos:",train_pos)
@@ -416,13 +420,13 @@ local function train_step_b(id, train, dtime)
 
 end
 
-local function train_recalc_occupation()
+local function train_recalc_occupation(id, train)
 	local new_occwindows = calc_occwindows(id, train)
 	apply_occupation_changes(train.occwindows, new_occwindows, id)
 	train.occwindows = new_occwindows
 end
 
-local function train_step_c(id, train, dtime)
+function advtrains.train_step_c(id, train, dtime)
 if train.no_step or train.wait_for_path then return end
 	
 	-- all location/extent-critical actions have been done.
@@ -433,7 +437,7 @@ if train.no_step or train.wait_for_path then return end
 	
 	-- Set our path restoration position
 	local fli = atfloor(train.index)
-	train.last_pos = advtrains.path_get(fli)
+	train.last_pos = advtrains.path_get(train, fli)
 	train.last_connid = train.path_cn[fli]
 	train.last_frac = train.index - fli
 	
@@ -453,7 +457,8 @@ if train.no_step or train.wait_for_path then return end
 		
 		local collpos
 		local coll_grace=1
-		collpos=advtrains.path_get_index_by_offset(train, train.index-coll_grace)
+		local collindex = advtrains.path_get_index_by_offset(train, train.index, coll_grace)
+		collpos = advtrains.path_get(train, atround(collindex))
 		if collpos then
 			local rcollpos=advtrains.round_vector_floor_y(collpos)
 			for x=-train.extent_h,train.extent_h do
@@ -509,8 +514,8 @@ function advtrains.create_new_train_at(pos, connid, ioff, trainparts)
 	local new_id=advtrains.random_id()
 	while advtrains.trains[new_id] do new_id=advtrains.random_id() end--ensure uniqueness
 	
-	t={}
-	t.id = newtrain_id
+	local t={}
+	t.id = new_id
 	
 	t.last_pos=pos
 	t.last_connid=connid
@@ -520,22 +525,24 @@ function advtrains.create_new_train_at(pos, connid, ioff, trainparts)
 	t.velocity=0
 	t.trainparts=trainparts
 	
-	
 	advtrains.trains[new_id] = t
+	atdebug("Created new train:",t)
 	
 	advtrains.update_trainpart_properties(new_id)
 	
-	train_ensure_clean(new_id, advtrains.trains[new_id], 0, true, 1)
+	advtrains.train_ensure_clean(new_id, advtrains.trains[new_id], 0, true, 1)
 	
-	return newtrain_id
+	return new_id
 end
 
 function advtrains.remove_train(id)
 	local train = advtrains.trains[id]
 	
+	advtrains.train_ensure_clean(id, train)
+	
 	advtrains.update_trainpart_properties(id)
 	
-	train_ensure_clean(id, train, 0, true, 2)
+	advtrains.train_ensure_clean(id, train, 0, true, 2)
 	
 	local tp = train.trainparts
 	
@@ -549,7 +556,7 @@ end
 function advtrains.add_wagon_to_train(wagon_id, train_id, index)
 	local train=advtrains.trains[train_id]
 	
-	train_ensure_clean(train_id, train)
+	advtrains.train_ensure_clean(train_id, train)
 	
 	if index then
 		table.insert(train.trainparts, index, wagon_id)
@@ -578,10 +585,10 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 		
 		-- 1st: update wagon data (pos_in_train a.s.o)
 		if data then
-			local wagon = minetest.registered_luaentites[data.type]
+			local wagon = advtrains.wagon_prototypes[data.type]
 			if not wagon then
 				atwarn("Wagon '",data.type,"' couldn't be found. Please check that all required modules are loaded!")
-				wagon = minetest.registered_luaentites["advtrains:wagon_placeholder"]
+				wagon = advtrains.wagon_prototypes["advtrains:wagon_placeholder"]
 			end
 			
 			rel_pos=rel_pos+wagon.wagon_span
@@ -608,6 +615,8 @@ function advtrains.update_trainpart_properties(train_id, invert_flipstate)
 			train.extent_h = math.max(train.extent_h, wagon.extent_h or 1);
 		end
 	end
+	train.trainlen = rel_pos
+	train.locomotives_in_train = count_l
 end
 
 -- This function checks whether entities need to be spawned for certain wagons, and spawns them.
@@ -624,13 +633,11 @@ function advtrains.spawn_wagons(train_id)
 				
 				if minetest.get_node_or_nil(pos) then
 					local wt = advtrains.get_wagon_prototype(data)
-					wagon=minetest.add_entity(pos, wt):get_luaentity()
+					local wagon = minetest.add_entity(pos, wt):get_luaentity()
 					wagon:set_id(w_id)
 				end
 			end
 		end
-		
-		
 	end
 end
 		
@@ -641,7 +648,7 @@ function advtrains.split_train_at_wagon(wagon_id)
 	local train=advtrains.trains[data.train_id]
 	local _, wagon = advtrains.get_wagon_prototype(data)
 	
-	train_ensure_clean(data.train_id, train)
+	advtrains.train_ensure_clean(data.train_id, train)
 	
 	local index=advtrains.path_get_index_by_offset(train, train.index, -(data.pos_in_train + wagon.wagon_span))
 	
@@ -901,21 +908,8 @@ end
 function advtrains.invalidate_path(id)
 	local v=advtrains.trains[id]
 	if not v then return end
-	--TODO duplicate code in init.lua avt_save()!
-	if v.index then
-		v.restore_add_index=v.index-math.floor(v.index+1)
-	end
-	v.path=nil
-	v.path_dist=nil
-	v.index=nil
-	v.end_index=nil
-	v.min_index_on_track=nil
-	v.max_index_on_track=nil
-	v.path_extent_min=nil
-	v.path_extent_max=nil
-
-	v.detector_old_index=nil
-	v.detector_old_end_index=nil
+	advtrains.path_invalidate(v)
+	v.dirty = true
 end
 
 --not blocking trains group

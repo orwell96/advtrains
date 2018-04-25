@@ -103,8 +103,8 @@ function advtrains.yawToClosestConn(yaw, conns)
 end
 
 function advtrains.dir_to_angle(dir)
-	local uvec = vector.normalize(advtrains.dirToCoord())
-	local yaw1 = math.atan2(uvec.z, -uvec.x)
+	local uvec = vector.normalize(advtrains.dirToCoord(dir))
+	return math.atan2(uvec.z, -uvec.x)
 end
 
 
@@ -304,8 +304,8 @@ function advtrains.get_adjacent_rail(this_posnr, this_conns_p, conn_idx, drives_
 	end
 	if not conn_idx then
 		for coni, _ in ipairs(this_conns) do
-			local adj_pos, adj_conn_idx, _, nry = advtrains.get_adjacent_rail(this_pos, this_conns, coni)
-			if adj_pos then return adj_pos,adj_conn_idx,coni,nry end
+			local adj_pos, adj_conn_idx, _, nry, nco = advtrains.get_adjacent_rail(this_pos, this_conns, coni)
+			if adj_pos then return adj_pos,adj_conn_idx,coni,nry, nco end
 		end
 		return nil
 	end
@@ -330,7 +330,7 @@ function advtrains.get_adjacent_rail(this_posnr, this_conns_p, conn_idx, drives_
 	end
 	local adj_connid = advtrains.conn_matches_to({c=conn.c, y=conn_y}, nextconns)
 	if adj_connid then
-		return adj_pos, adj_connid, conn_idx, nextrail_y
+		return adj_pos, adj_connid, conn_idx, nextrail_y, nextconns
 	end
 	return nil
 end
