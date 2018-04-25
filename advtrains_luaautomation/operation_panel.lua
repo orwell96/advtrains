@@ -18,6 +18,11 @@ minetest.register_node("advtrains_luaautomation:oppanel", {
 	on_punch = on_punch,
 	luaautomation = {
 		fire_event=atlatc.active.run_in_env
-	}
-	
+	},
+	digiline = {
+		receptor = {},
+		effector = {
+			action = atlatc.active.on_digiline_receive
+		},
+	},
 })

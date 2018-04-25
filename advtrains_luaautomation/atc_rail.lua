@@ -119,9 +119,15 @@ advtrains.register_tracks("default", {
 			},
 			luaautomation = {
 				fire_event=r.fire_event
-			}
+			},
+			digiline = {
+				receptor = {},
+				effector = {
+					action = atlatc.active.on_digiline_receive
+				},
+			},
 		}
-	end
+	end,
 }, advtrains.trackpresets.t_30deg_straightonly)
 
 

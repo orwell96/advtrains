@@ -111,8 +111,18 @@ function ac.run_in_env(pos, evtdata, customfct_p)
 	end
 	
 	local customfct=customfct_p or {}
+	-- add interrupt function
 	customfct.interrupt=function(t, imesg)
+		assertt(t, "number")
+		assert(t >= 0)
 		atlatc.interrupt.add(t, pos, {type="int", int=true, message=imesg})
+	end
+	-- add digiline_send function, if digiline is loaded
+	if digiline then
+		customfct.digiline_send=function(channel, msg)
+			assertt(channel, "string")
+			digiline:receptor_send(pos, digiline.rules.default, channel, msg)
+		end
 	end
 	
 	local datain=nodetbl.data or {}
@@ -129,6 +139,10 @@ function ac.run_in_env(pos, evtdata, customfct_p)
 	if meta then
 		meta:set_string("formspec", ac.getform(pos, meta))
 	end
+end
+
+function ac.on_digiline_receive(pos, node, channel, msg)
+	atlatc.interrupt.add(0, pos, {type="digiline", digiline=true, channel = channel, msg = msg})
 end
 
 atlatc.active=ac

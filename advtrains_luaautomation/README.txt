@@ -63,6 +63,10 @@ setstate(pos, newstate)
 Set the state of the passive component at position 'pos'.
 pos can be either a position vector (created by POS()) or a string, the name of this passive component.
 
+is_passive(pos)
+Checks whether there is a passive component at the position pos (and/or whether a passive component with this name exists)
+pos can be either a position vector (created by POS()) or a string, the name of this passive component.
+
 interrupt(time, message)
 Cause LuaAutomation to trigger an 'int' event on this component after the given time in seconds with the specified 'message' field. 'message' can be of any Lua data type.
 Not available in init code!
@@ -70,6 +74,10 @@ Not available in init code!
 interrupt_pos(pos, message)
 Immediately trigger an 'ext_int' event on the active component at position pos. 'message' is like in interrupt().
 USE WITH CARE, or better don't use! Incorrect use can result in expotential growth of interrupts.
+
+digiline_send(channel, message)
+Make this active component send a digiline message on the specified channel.
+Not available in init code!
 
 ## Components and events
 
@@ -110,6 +118,9 @@ Fired when an interrupt set by the 'interrupt' function runs out. 'message' is t
 {type="ext_int", ext_int=true, message=<message>}
 Fired when another node called 'interrupt_pos' on this position. 'message' is the message passed to the interrupt_pos function.
 
+{type="digiline", digiline=true, channel=<channel>, msg=<message>}
+Fired when the controller receives a digiline message.
+
 In addition to the default environment functions, the following functions are available:
 
 atc_send(<atc_command>)
@@ -132,7 +143,7 @@ set_line(number)
 # Operator panel
 This simple node executes its actions when punched. It can be used to change a switch and update the corresponding signals or similar applications.
 
-The event fired is {type="punch", punch=true} by default. In case of an interrupt, the events are similar to the ones of the ATC rail.
+The event fired is {type="punch", punch=true} by default. In case of an interrupt or a digiline message, the events are similar to the ones of the ATC rail.
 
 ### Passive components
 
