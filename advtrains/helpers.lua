@@ -30,6 +30,11 @@ function advtrains.dirCoordSet(coord, dir)
 end
 advtrains.pos_add_dir = advtrains.dirCoordSet
 
+function advtrains.pos_add_angle(pos, ang)
+	-- 0 is +Z -> meaning of sin/cos swapped
+	return vector.add(pos, {x=math.sin(ang), y=0, z=math.cos(ang)})
+end
+
 function advtrains.dirToCoord(dir)
 	return advtrains.dirCoordSet({x=0, y=0, z=0}, dir)
 end
@@ -104,12 +109,11 @@ end
 
 function advtrains.dir_to_angle(dir)
 	local uvec = vector.normalize(advtrains.dirToCoord(dir))
-	return math.atan2(uvec.z, -uvec.x)
+	return math.atan2(uvec.z, uvec.x)
 end
 
-
+local pi, pi2 = math.pi, 2*math.pi
 function advtrains.minAngleDiffRad(r1, r2)
-	local pi, pi2 = math.pi, 2*math.pi
 	while r1>pi2 do
 		r1=r1-pi2
 	end
@@ -138,18 +142,18 @@ function advtrains.minAngleDiffRad(r1, r2)
 	end
 end
 
-function advtrains.dumppath(path)
-	atlog("Dumping a path:")
-	if not path then atlog("dumppath: no path(nil)") return end
-	local temp_path={}
-	for ipt, iit in pairs(path) do 
-		temp_path[#temp_path+1]={i=ipt, p=iit}
-	end
-	table.sort(temp_path, function (k1, k2) return k1.i < k2.i end)
-	for _,pit in ipairs(temp_path) do
-		atlog(pit.i.." > "..minetest.pos_to_string(pit.p))
-	end
+
+-- Takes 2 connections (0...AT_CMAX) as argument
+-- Returns the angle median of those 2 positions from the pov
+-- of standing on the cdir1 side and looking towards cdir2
+-- cdir1 - >NODE> - cdir2
+function advtrains.conn_angle_median(cdir1, cdir2)
+	local ang1 = advtrains.dir_to_angle(advtrains.oppd(cdir1))
+	local ang2 = advtrains.dir_to_angle(cdir2)
+	return ang1 + advtrains.minAngleDiffRad(ang1, ang2)/2
 end
+
+-- TODO removed dumppath, where is this used?
 
 function advtrains.merge_tables(a, ...)
 	local new={}
@@ -165,22 +169,9 @@ function advtrains.save_keys(tbl, keys)
 	end
 	return new
 end
-function advtrains.yaw_from_3_positions(prev, curr, next)
-	local pts=minetest.pos_to_string
-	--atprint("p3 "..pts(prev)..pts(curr)..pts(next))
-	local prev2curr=math.atan2((curr.x-prev.x), (prev.z-curr.z))
-	local curr2next=math.atan2((next.x-curr.x), (curr.z-next.z))
-	--atprint("y3 "..(prev2curr*360/(2*math.pi)).." "..(curr2next*360/(2*math.pi)))
-	return prev2curr+(advtrains.minAngleDiffRad(prev2curr, curr2next)/2)
-end
-function advtrains.get_wagon_yaw(front, first, second, back, pct)
-	local pts=minetest.pos_to_string
-	--atprint("p "..pts(front)..pts(first)..pts(second)..pts(back))
-	local y2=advtrains.yaw_from_3_positions(second, first, front)
-	local y1=advtrains.yaw_from_3_positions(back, second, first)
-	--atprint("y "..(y1*360/(2*math.pi)).." "..(y2*360/(2*math.pi)))
-	return y1+advtrains.minAngleDiffRad(y1, y2)*pct
-end
+
+-- TODO yaw_from_3_positions and get_wagon_yaw removed
+
 function advtrains.get_real_index_position(path, index)
 	if not path or not index then return end
 	

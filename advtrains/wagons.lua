@@ -185,7 +185,7 @@ function wagon:destroy()
 		
 		if data.train_id and self:train() then
 			table.remove(self:train().trainparts, data.pos_in_trainparts)
-			advtrains.update_trainpart_properties(self.train_id)
+			advtrains.update_trainpart_properties(data.train_id)
 			advtrains.wagons[self.id]=nil
 			if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
 			return true
@@ -196,6 +196,7 @@ function wagon:destroy()
 	self.object:remove()
 end
 
+local pihalf = math.pi/2
 
 function wagon:on_step(dtime)
 	return advtrains.pcall(function()
@@ -375,8 +376,10 @@ function wagon:on_step(dtime)
 		
 		-- Calculate new position, yaw and direction vector
 		local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
-		local pos, yaw, npos, npos2 = advtrains.path_get_interpolated(train, index)
+		local pos, tyaw, npos, npos2 = advtrains.path_get_interpolated(train, index)
 		local vdir = vector.normalize(vector.subtract(npos2, npos))
+		
+		local yaw = tyaw - pihalf
 		
 		--automatic get_on
 		--needs to know index and path
@@ -478,7 +481,7 @@ function wagon:on_step(dtime)
 							self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
 						end
 						-- set player looking direction using calculated offset
-						p:set_look_horizontal((self.player_yaw[name] or 0)+yaw)
+						--TODO p:set_look_horizontal((self.player_yaw[name] or 0)+yaw)
 					end
 				end
 				self.turning = true							 

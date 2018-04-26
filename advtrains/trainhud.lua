@@ -60,7 +60,7 @@ function advtrains.on_control_change(pc, train, flip)
 				end
 				act=true
 			else
-				--train.movedir = -train.movedir
+				advtrains.invert_train(train.id)
 			end
 		end
 		if pc.left then

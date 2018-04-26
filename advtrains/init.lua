@@ -38,16 +38,20 @@ end
 function advtrains.pcall(fun)
 	if no_action then return end
 	
-	--local succ, return1, return2, return3, return4=xpcall(fun, function(err)
-	--		atwarn("Lua Error occured: ", err)
-	--		atwarn(debug.traceback())
-	--	end)
-	--if not succ then
-	--	reload_saves()
-	--else
-	--	return return1, return2, return3, return4
-	--end
-	return fun()
+	local succ, return1, return2, return3, return4=xpcall(fun, function(err)
+			atwarn("Lua Error occured: ", err)
+			atwarn(debug.traceback())
+			if advtrains.atprint_context_tid_full then
+				advtrains.path_print(advtrains.trains[advtrains.atprint_context_tid_full], atdebug)
+			end
+		end)
+	if not succ then
+		--reload_saves()
+		no_action=true --this does also not belong here!
+		minetest.request_shutdown()
+	else
+		return return1, return2, return3, return4
+	end
 end
 
 

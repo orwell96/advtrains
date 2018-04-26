@@ -113,8 +113,7 @@ function advtrains.path_create(train, pos, connid, rel_index)
 	train.path_dist = {}
 	
 	train.path_dir = {
-		[1] = conns[connid].c,
-		[0] = advtrains.oppd(conns[mconnid].c)
+		[0] = advtrains.conn_angle_median(conns[mconnid].c, conns[connid].c)
 	}
 	
 	train.path_ext_f=0
@@ -123,10 +122,12 @@ function advtrains.path_create(train, pos, connid, rel_index)
 	train.path_trk_b=0
 	train.path_req_f=0
 	train.path_req_b=0
-	atdebug("path_create",train)
 	
 end
 
+-- Invalidates a path
+-- TODO: this is supposed to clear stuff from the occupation tables
+-- (note: why didn't I think of that earlier?)
 function advtrains.path_invalidate(train)
 	train.path = nil
 	train.path_dist = nil
@@ -141,6 +142,15 @@ function advtrains.path_invalidate(train)
 	train.path_req_b=0
 end
 
+-- Prints a path using the passed print function
+-- This function should be 'atprint', 'atlog', 'atwarn' or 'atdebug', because it needs to use print_concat_table
+function advtrains.path_print(train, printf)
+	printf("i:	CP	Position	Dir	CN		->Dist->")
+	for i = train.path_ext_b, train.path_ext_f do
+		printf(i,":	",train.path_cp[i],"	",train.path[i],"	",train.path_dir[i],"	",train.path_cn[i],"		->",train.path_dist[i],"->")
+	end
+end
+
 -- Function to get path entry at a position. This function will automatically calculate more of the path when required.
 -- returns: pos, on_track
 function advtrains.path_get(train, index)
@@ -150,58 +160,60 @@ function advtrains.path_get(train, index)
 	if index ~= atfloor(index) then
 		error("For train "..train.id..": Called path_get() but index="..index.." is not a round number")
 	end
-	while index > train.path_ext_f do
-		local pos = train.path[train.path_ext_f]
-		local connid = train.path_cn[train.path_ext_f]
+	local pef = train.path_ext_f
+	while index > pef do
+		local pos = train.path[pef]
+		local connid = train.path_cn[pef]
 		local node_ok, this_conns, adj_pos, adj_connid, conn_idx, nextrail_y, next_conns
-		if train.path_ext_f == train.path_trk_f then
+		if pef == train.path_trk_f then
 			node_ok, this_conns = advtrains.get_rail_info_at(pos)
-			if not node_ok then error("For train "..train.id..": Path item "..train.path_ext_f.." on-track but not a valid node!") end
+			if not node_ok then error("For train "..train.id..": Path item "..pef.." on-track but not a valid node!") end
 			adj_pos, adj_connid, conn_idx, nextrail_y, next_conns = advtrains.get_adjacent_rail(pos, this_conns, connid, train.drives_on)
 		end
-		train.path_ext_f = train.path_ext_f + 1
+		pef = pef + 1
 		if adj_pos then
 			adj_pos.y = adj_pos.y + nextrail_y
-			train.path_cp[train.path_ext_f] = adj_connid
+			train.path_cp[pef] = adj_connid
 			local mconnid = advtrains.get_matching_conn(adj_connid, #next_conns)
-			train.path_cn[train.path_ext_f] = mconnid
-			train.path_dir[train.path_ext_f+1] = this_conns[mconnid].c
-			train.path_trk_f = train.path_ext_f
+			train.path_cn[pef] = mconnid
+			train.path_dir[pef] = advtrains.conn_angle_median(next_conns[adj_connid].c, next_conns[mconnid].c)
+			train.path_trk_f = pef
 		else
 			-- off-track fallback behavior
-			adj_pos = advtrains.pos_add_dir(pos, train.path_dir[train.path_ext_f-1])
-			train.path_dir[train.path_ext_f] = train.path_dir[train.path_ext_f-1]
+			adj_pos = advtrains.pos_add_angle(pos, train.path_dir[pef-1])
+			train.path_dir[pef] = train.path_dir[pef-1]
 		end
-		train.path[train.path_ext_f] = adj_pos
-		train.path_dist[train.path_ext_f - 1] = vector.distance(pos, adj_pos)
+		train.path[pef] = adj_pos
+		train.path_dist[pef - 1] = vector.distance(pos, adj_pos)
 	end
-	while index < train.path_ext_b do
-		local pos = train.path[train.path_ext_b]
-		local connid = train.path_cp[train.path_ext_b]
+	train.path_ext_f = pef
+	local peb = train.path_ext_b
+	while index < peb do
+		local pos = train.path[peb]
+		local connid = train.path_cp[peb]
 		local node_ok, this_conns, adj_pos, adj_connid, conn_idx, nextrail_y, next_conns
-		if train.path_ext_b == train.path_trk_b then
+		if peb == train.path_trk_b then
 			node_ok, this_conns = advtrains.get_rail_info_at(pos)
-			if not node_ok then error("For train "..train.id..": Path item "..train.path_ext_f.." on-track but not a valid node!") end
+			if not node_ok then error("For train "..train.id..": Path item "..peb.." on-track but not a valid node!") end
 			adj_pos, adj_connid, conn_idx, nextrail_y, next_conns = advtrains.get_adjacent_rail(pos, this_conns, connid, train.drives_on)
 		end
-		train.path_ext_b = train.path_ext_b - 1
+		peb = peb - 1
 		if adj_pos then
 			adj_pos.y = adj_pos.y + nextrail_y
-			train.path_cn[train.path_ext_b] = adj_connid
+			train.path_cn[peb] = adj_connid
 			local mconnid = advtrains.get_matching_conn(adj_connid, #next_conns)
-			train.path_cp[train.path_ext_b] = mconnid
-			
-			train.path_dir[train.path_ext_b] = advtrains.oppd(this_conns[mconnid].c)
-			
-			train.path_trk_b = train.path_ext_b
+			train.path_cp[peb] = mconnid
+			train.path_dir[peb] = advtrains.conn_angle_median(next_conns[mconnid].c, next_conns[adj_connid].c)
+			train.path_trk_b = peb
 		else
 			-- off-track fallback behavior
-			adj_pos = advtrains.pos_add_dir(pos, train.path_dir[train.path_ext_b-1])
-			train.path_dir[train.path_ext_b] = train.path_dir[train.path_ext_b-1]
+			adj_pos = advtrains.pos_add_angle(pos, train.path_dir[peb+1])
+			train.path_dir[peb] = train.path_dir[peb+1]
 		end
-		train.path[train.path_ext_b] = adj_pos
-		train.path_dist[train.path_ext_b] = vector.distance(pos, adj_pos)
+		train.path[peb] = adj_pos
+		train.path_dist[peb] = vector.distance(pos, adj_pos)
 	end
+	train.path_ext_b = peb
 	
 	if index < train.path_req_b then
 		train.path_req_b = index
@@ -224,10 +236,8 @@ function advtrains.path_get_interpolated(train, index)
 	local p_ceil = advtrains.path_get(train, i_ceil)
 	-- Note: minimal code duplication to path_get_adjacent, for performance
 	
-	local d_floor = train.path_dir[i_floor]
-	local d_ceil = train.path_dir[i_ceil]
-	local a_floor = advtrains.dir_to_angle(d_floor)
-	local a_ceil = advtrains.dir_to_angle(d_ceil)
+	local a_floor = train.path_dir[i_floor]
+	local a_ceil = train.path_dir[i_ceil]
 	
 	local ang = advtrains.minAngleDiffRad(a_floor, a_ceil)
 	
@@ -278,23 +288,28 @@ function advtrains.path_get_index_by_offset(train, index, offset)
 	return idx + (off / train.path_dist[idx])
 end
 
-local PATH_CLEAR_KEEP = 2
+local PATH_CLEAR_KEEP = 4
 
 function advtrains.path_clear_unused(train)
+	local i
 	for i = train.path_ext_b, train.path_req_b - PATH_CLEAR_KEEP do
 		train.path[i] = nil
 		train.path_dist[i-1] = nil
 		train.path_cp[i] = nil
 		train.path_cn[i] = nil
 		train.path_dir[i] = nil
+		train.path_ext_b = i + 1
 	end
-	for i = train.path_req_f + PATH_CLEAR_KEEP, train.path_ext_f do
+	
+	for i = train.path_ext_f,train.path_req_f + PATH_CLEAR_KEEP,-1 do
 		train.path[i] = nil
 		train.path_dist[i] = nil
 		train.path_cp[i] = nil
 		train.path_cn[i] = nil
 		train.path_dir[i+1] = nil
+		train.path_ext_b = i - 1
 	end
+	
 	train.path_req_f = math.ceil(train.index)
 	train.path_req_b = math.floor(train.end_index or train.index)
 end

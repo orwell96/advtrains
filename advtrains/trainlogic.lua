@@ -411,7 +411,7 @@ function advtrains.train_step_b(id, train, dtime)
 			train.tarvelocity = train.velocity
 		end
 	else
-		train.last_accel = 0
+		train.acceleration = 0
 	end
 	
 	--- 4. move train ---
@@ -436,6 +436,7 @@ if train.no_step or train.wait_for_path then return end
 	advtrains.path_clear_unused(train)
 	
 	-- Set our path restoration position
+	-- TODO make a common function to find a restore positionon the path, in case the wanted position is off-track
 	local fli = atfloor(train.index)
 	train.last_pos = advtrains.path_get(train, fli)
 	train.last_connid = train.path_cn[fli]
@@ -854,26 +855,21 @@ function advtrains.do_connect_trains(first_id, second_id, player)
 	return true
 end
 
--- TODO
 function advtrains.invert_train(train_id)
 	local train=advtrains.trains[train_id]
 	
-	local old_path=train.path
-	local old_path_dist=train.path_dist
-	train.path={}
-	train.path_dist={}
-	train.index, train.end_index= -train.end_index, -train.index
-	train.path_extent_min, train.path_extent_max = -train.path_extent_max, -train.path_extent_min
-	train.min_index_on_track, train.max_index_on_track = -train.max_index_on_track, -train.min_index_on_track
-	train.detector_old_index, train.detector_old_end_index = -train.detector_old_end_index, -train.detector_old_index
-	train.couple_lck_back, train.couple_lck_front = train.couple_lck_front, train.couple_lck_back 
+	advtrains.train_ensure_clean(train_id, train, 0)
+	-- Set the path restoration position to the opposite direction
+	local fli = atfloor(train.end_index) + 1
+	train.last_pos = advtrains.path_get(train, fli)
+	train.last_connid = train.path_cp[fli]
+	train.last_frac = fli - train.end_index
 	
-	train.velocity=-train.velocity
-	train.tarvelocity=-train.tarvelocity
-	for k,v in pairs(old_path) do
-		train.path[-k]=v
-		train.path_dist[-k-1]=old_path_dist[k]
-	end
+	-- rotate some other stuff
+	train.couple_lck_back, train.couple_lck_front = train.couple_lck_front, train.couple_lck_back
+	
+	advtrains.path_invalidate(train)
+	
 	local old_trainparts=train.trainparts
 	train.trainparts={}
 	for k,v in ipairs(old_trainparts) do

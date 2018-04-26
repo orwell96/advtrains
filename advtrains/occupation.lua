@@ -227,14 +227,14 @@ function handle_chg(t, pos, train_id, old, new)
 	if #blocking > 0 then
 		-- the aware trains should brake
 		for _, ix in ipairs(aware) do
-			atc.train_set_command(t[ix], "B2")
+			advtrains.atc.train_set_command(t[ix], "B2")
 		end
 		if #blocking > 1 then
 			-- not good, 2 trains interfered with their blocking zones
 			-- make them brake too
 			local txt = {}
 			for _, ix in ipairs(blocking) do
-				atc.train_set_command(t[ix], "B2")
+				advtrains.atc.train_set_command(t[ix], "B2")
 				txt[#txt+1] = t[ix]
 			end
 			atwarn("Trains",table.concat(txt, ","), "interfered with their blocking zones, braking...")
