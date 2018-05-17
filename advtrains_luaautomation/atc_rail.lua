@@ -24,7 +24,7 @@ function r.fire_event(pos, evtdata)
 	
 	--prepare ingame API for ATC. Regenerate each time since pos needs to be known
 	--If no train, then return false.
-	local train_id=advtrains.detector.get(pos)
+	local train_id=advtrains.get_train_at_pos(pos)
 	local train, atc_arrow, tvel
 	if train_id then train=advtrains.trains[train_id] end
 	if train then 
@@ -34,19 +34,16 @@ function r.fire_event(pos, evtdata)
 			atlatc.interrupt.add(0,pos,evtdata)
 			return
 		end
-		for index, ppos in pairs(train.path) do
-			if vector.equals(advtrains.round_vector_floor_y(ppos), pos) then
-				atc_arrow =
-						vector.equals(
-								advtrains.dirCoordSet(pos, arrowconn),
-								advtrains.round_vector_floor_y(train.path[index+train.movedir])
-						)
-			end
+		local index = advtrains.path_lookup(train, pos)
+				
+		local iconnid = 1
+		if index then
+			iconnid = train.path_cn[index]
+		else
+			atwarn("ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
 		end
-		if atc_arrow==nil then
-			atwarn("LuaAutomation ATC rail at", pos, ": Rail not on train's path! Can't determine arrow direction. Assuming +!")
-			atc_arrow=true
-		end
+		atc_arrow = iconnid == 1
+		
 		tvel=train.velocity
 	end
 	local customfct={

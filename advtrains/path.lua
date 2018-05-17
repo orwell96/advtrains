@@ -137,7 +137,7 @@ function advtrains.path_setrestore(train, invert)
 		idx = train.end_index
 	end
 	
-	local pos, connid, frac = advtrains.path_getrestore(train, idx, invert)
+	local pos, connid, frac = advtrains.path_getrestore(train, idx, invert, true)
 	
 	train.last_pos = pos
 	train.last_connid = connid
@@ -145,23 +145,25 @@ function advtrains.path_setrestore(train, invert)
 end
 -- Get restore position, connid and frac (in this order) for a train that will originate at the passed index
 -- If invert is set, it will return path_cp and multiply frac by -1, in order to reverse the train there.
-function advtrains.path_getrestore(train, index, invert)
-	local idx = train.index
+function advtrains.path_getrestore(train, index, invert, tmp)
+	local idx = index
 	local cns = train.path_cn
 	
 	if invert then
-		idx = train.end_index
 		cns = train.path_cp
 	end
 	
-	fli = atfloor(train.index)
+	fli = atfloor(index)
+	advtrains.path_get(train, fli)
 	if fli > train.path_trk_f then
 		fli = train.path_trk_f
 	end
 	if fli < train.path_trk_b then
 		fli = train.path_trk_b
 	end
-	
+	if not tmp then
+	atdebug ("getrestore ",atround(train.index),"calc",atround(index),fli)
+	end
 	return advtrains.path_get(train, fli),
 			cns[fli],
 			(idx - fli) * (invert and -1 or 1)
@@ -359,7 +361,7 @@ function advtrains.path_clear_unused(train)
 		train.path_cp[i] = nil
 		train.path_cn[i] = nil
 		train.path_dir[i+1] = nil
-		train.path_ext_b = i - 1
+		train.path_ext_f = i - 1
 	end
 	
 	train.path_req_f = math.ceil(train.index)

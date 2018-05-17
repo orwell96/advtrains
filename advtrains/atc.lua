@@ -30,7 +30,7 @@ function atc.send_command(pos, par_tid)
 	local pts=minetest.pos_to_string(pos)
 	if atc.controllers[pts] then
 		--atprint("Called send_command at "..pts)
-		local train_id = par_tid or advtrains.detector.get(pos) -- TODO: succesively replace those detector calls!
+		local train_id = par_tid or advtrains.get_train_at_pos(pos)
 		if train_id then
 			if advtrains.trains[train_id] then
 				--atprint("send_command inside if: "..sid(train_id))
@@ -131,7 +131,7 @@ advtrains.atc_function = function(def, preset, suffix, rotation)
 						local pts=minetest.pos_to_string(pos)
 						local _, conns=advtrains.get_rail_info_at(pos, advtrains.all_tracktypes)
 						atc.controllers[pts]={command=fields.command}
-						if advtrains.detector.get(pos) then
+						if #advtrains.occ.get_trains_at(pos) > 0 then
 							atc.send_command(pos)
 						end
 					end

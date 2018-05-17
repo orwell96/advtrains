@@ -44,19 +44,19 @@ minetest.register_entity("advtrains:discouple", {
 	end,
 	on_step=function(self, dtime)
 		return advtrains.pcall(function()
-			local t=os.clock()
 			if not self.wagon then
 				self.object:remove()
-				atprint("Discouple: no wagon, destroying")
 				return
 			end
 			--getyaw seems to be a reliable method to check if an object is loaded...if it returns nil, it is not.
 			if not self.wagon.object:getyaw() then
-				atprint("Discouple: wagon no longer loaded, destroying")
 				self.object:remove()
 				return
 			end
-			atprintbm("discouple_step", t)
+			if not self.wagon:train() and self.wagon:train().velocity > 0 then
+				self.object:remove()
+				return
+			end
 		end)
 	end,
 })
@@ -102,13 +102,13 @@ minetest.register_entity("advtrains:couple", {
 			advtrains.train_ensure_init(self.train_id_2, train2)
 			
 			local id1, id2=self.train_id_1, self.train_id_2
-			local bp1, bp2 = self.t1_is_backpos, self.t2_is_backpos
-			if not bp1 then
+			local bp1, bp2 = self.t1_is_front, self.t2_is_front
+			if bp1 then
 				if train1.couple_lock_front then
 					lockmarker(self.object)
 					return
 				end
-				if not bp2 then
+				if bp2 then
 					if train2.couple_lock_front then
 						lockmarker(self.object)
 						return
@@ -127,7 +127,7 @@ minetest.register_entity("advtrains:couple", {
 					lockmarker(self.object)
 					return
 				end
-				if not bp2 then
+				if bp2 then
 					if train2.couple_lock_front then
 						lockmarker(self.object)
 						return
@@ -174,13 +174,13 @@ minetest.register_entity("advtrains:couple", {
 			
 			if not self.position_set then
 				local tp1
-				if not self.train1_is_backpos then
+				if self.t1_is_front then
 					tp1=advtrains.path_get_interpolated(train1, train1.index)
 				else
 					tp1=advtrains.path_get_interpolated(train1, train1.end_index)
 				end
 				local tp2
-				if not self.train2_is_backpos then
+				if self.t2_is_front then
 					tp2=advtrains.path_get_interpolated(train2, train2.index)
 				else
 					tp2=advtrains.path_get_interpolated(train2, train2.end_index)

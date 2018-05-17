@@ -10,6 +10,7 @@
 advtrains.wagons = {}
 advtrains.wagon_prototypes = {}
 
+-- TODO: That yaw thing is still not fixed. seems like minetest itself obeys the counterclockwise system...
 
 --
 function advtrains.create_wagon(wtype, owner)
@@ -107,14 +108,18 @@ function wagon:ensure_init()
 			-- Train not being set just means that this will happen as soon as the train calls update_trainpart_properties.
 	if self.initialized and self.id then
 		local data = advtrains.wagons[self.id]
-		if data.train_id then
+		if data and data.train_id and self:train() then
 			if self.noninitticks then self.noninitticks=nil end
 			return true
 		end
 	end
-	if not self.noninitticks then self.noninitticks=0 end
+	if not self.noninitticks then
+		atwarn("wagon",self.id,"uninitialized init=",self.initialized)
+		self.noninitticks=0
+	end
 	self.noninitticks=self.noninitticks+1
 	if self.noninitticks>20 then
+		atwarn("wagon",self.id,"uninitialized, removing")
 		self:destroy()
 	else
 		self.object:setvelocity({x=0,y=0,z=0})
@@ -174,6 +179,10 @@ function wagon:destroy()
 	-- not when a driver is inside
 	if self.id then
 		local data = advtrains.wagons[self.id]
+		if not data then
+			atwarn("wagon:destroy(): data is not set!")
+			return
+		end
 		
 		if self.custom_on_destroy then
 			self.custom_on_destroy(self)
@@ -184,14 +193,12 @@ function wagon:destroy()
 		end
 		
 		if data.train_id and self:train() then
-			table.remove(self:train().trainparts, data.pos_in_trainparts)
-			advtrains.update_trainpart_properties(data.train_id)
+			advtrains.remove_train(data.train_id)
 			advtrains.wagons[self.id]=nil
 			if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
-			return true
 		end
 	end
-	atprint("[wagon ", self.id, "]: destroying")
+	atdebug("[wagon ", self.id, "]: destroying")
 	
 	self.object:remove()
 end
@@ -247,7 +254,7 @@ function wagon:on_step(dtime)
 					advtrains.on_control_change(pc, self:train(), data.wagon_flipped)
 					--bordcom
 					if pc.sneak and pc.jump then
-						self:show_bordcom(self.seatp[seatno])
+						self:show_bordcom(data.seatp[seatno])
 					end
 					--sound horn when required
 					if self.horn_sound and pc.aux1 and not pc.sneak and not self.horn_handle then
@@ -458,6 +465,7 @@ function wagon:on_step(dtime)
 				or not vector.equals(accelerationvec, self.old_acceleration_vector)
 				or self.old_yaw~=yaw
 				or self.updatepct_timer<=0 then--only send update packet if something changed
+			
 			self.object:setpos(pos)
 			self.object:setvelocity(velocityvec)
 			self.object:setacceleration(accelerationvec)
@@ -494,6 +502,10 @@ function wagon:on_step(dtime)
 			if self.custom_on_velocity_change then
 				self:custom_on_velocity_change(train.velocity, self.old_velocity or 0, dtime)
 			end
+			-- remove discouple object, because it will be in a wrong location
+			if self.discouple then
+				self.discouple.object:remove()
+			end
 		end
 		
 		
@@ -529,7 +541,7 @@ function wagon:on_rightclick(clicker)
 					poss[#poss+1]={name=attrans("Show Inventory"), key="inv"}
 				end
 				if self.seat_groups[sgr].driving_ctrl_access and advtrains.check_driving_couple_protection(pname, data.owner, data.whitelist) then
-					poss[#poss+1]={name=attrans("Bord Computer"), key="bordcom"}
+					poss[#poss+1]={name=attrans("Board Computer"), key="bordcom"}
 				end
 				if data.owner==pname then
 					poss[#poss+1]={name=attrans("Wagon properties"), key="prop"}
@@ -706,7 +718,7 @@ function wagon:show_get_on_form(pname)
 		local addtext, colorcode="", ""
 		if data.seatp and data.seatp[seatno] then
 			colorcode="#FF0000"
-			addtext=" ("..self.seatp[seatno]..")"
+			addtext=" ("..data.seatp[seatno]..")"
 		end
 		form=form..comma..colorcode..seattbl.name..addtext
 		comma=","
@@ -732,16 +744,12 @@ function wagon:show_wagon_properties(pname)
 end
 
 --BordCom
-local function checkcouple(eid)
-	if not eid then return nil end
-	local ent=minetest.object_refs[eid]
+local function checkcouple(ent)
 	if not ent or not ent:getyaw() then
-		eid=nil
 		return nil
 	end
 	local le = ent:get_luaentity()
 	if not le or not le.is_couple then
-		eid=nil
 		return nil
 	end
 	return le
@@ -793,8 +801,8 @@ function wagon:show_bordcom(pname)
 			form = form .. "label[0.5,"..(linhei)..";<--]"
 		end
 		--check cpl_eid_front and _back of train
-		local couple_front = checkcouple(train.couple_eid_front)
-		local couple_back = checkcouple(train.couple_eid_back)
+		local couple_front = checkcouple(train.cpl_front)
+		local couple_back = checkcouple(train.cpl_back)
 		if couple_front then
 			form = form .. "image_button[0.5,"..(linhei+1)..";1,1;advtrains_couple.png;cpl_f;]"
 		end
@@ -872,8 +880,8 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 		end
 	end
 	--check cpl_eid_front and _back of train
-	local couple_front = checkcouple(train.couple_eid_front)
-	local couple_back = checkcouple(train.couple_eid_back)
+	local couple_front = checkcouple(train.cpl_front)
+	local couple_back = checkcouple(train.cpl_back)
 	
 	if fields.cpl_f and couple_front then
 		couple_front:on_rightclick(pname)
