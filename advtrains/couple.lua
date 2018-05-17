@@ -61,15 +61,12 @@ minetest.register_entity("advtrains:discouple", {
 	end,
 })
 
---advtrains:couple
---when two trains overlap with their end-positions, this entity will be spawned and both trains set its id into appropiate fields for them to know when to free them again. The entity will destroy automatically when it recognizes that any of the trains left the common position. 
---[[fields
-train_id_1
-train_id_2
-train1_is_backpos
-train2_is_backpos
-]]
-
+-- advtrains:couple
+-- Couple entity 
+local function lockmarker(obj)
+	minetest.spawn_entity(obj:get_pos(), "advtrains.lockmarker")
+	obj:remove()
+end
 
 minetest.register_entity("advtrains:couple", {
 	visual="sprite",
@@ -99,30 +96,61 @@ minetest.register_entity("advtrains:couple", {
 			if type(clicker)~="string" then pname=clicker:get_player_name() end
 			if not minetest.check_player_privs(pname, "train_operator") then return end
 			
+			local train1=advtrains.trains[self.train_id_1]
+			local train2=advtrains.trains[self.train_id_2]
+			advtrains.train_ensure_init(self.train_id_1, train1)
+			advtrains.train_ensure_init(self.train_id_2, train2)
+			
 			local id1, id2=self.train_id_1, self.train_id_2
-			if self.train1_is_backpos and not self.train2_is_backpos then
+			local bp1, bp2 = self.t1_is_backpos, self.t2_is_backpos
+			if not bp1 then
+				if train1.couple_lock_front then
+					lockmarker(self.object)
+					return
+				end
+				if not bp2 then
+					if train2.couple_lock_front then
+						lockmarker(self.object)
+						return
+					end
+					advtrains.invert_train(id1)
+					advtrains.do_connect_trains(id1, id2, clicker)
+				else
+					if train2.couple_lock_back then
+						lockmarker(self.object)
+						return
+					end
+					advtrains.do_connect_trains(id2, id1, clicker)
+				end
+			else
+				if train1.couple_lock_back then
+					lockmarker(self.object)
+					return
+				end
+				if not bp2 then
+					if train2.couple_lock_front then
+						lockmarker(self.object)
+						return
+					end
+					advtrains.do_connect_trains(id1, id2, clicker)
+				else
+					if train2.couple_lock_back then
+						lockmarker(self.object)
+						return
+					end
+					advtrains.invert_train(id2)
 				advtrains.do_connect_trains(id1, id2, clicker)
-				--case 2 (second train is front)
-			elseif self.train2_is_backpos and not self.train1_is_backpos then
-				advtrains.do_connect_trains(id2, id1, clicker)
-				--case 3 
-			elseif self.train1_is_backpos and self.train2_is_backpos then
-				advtrains.invert_train(id2)
-				advtrains.do_connect_trains(id1, id2, clicker)
-				--case 4 
-			elseif not self.train1_is_backpos and not self.train2_is_backpos then
-				advtrains.invert_train(id1)
-				advtrains.do_connect_trains(id1, id2, clicker)
+				end
 			end
+			
 			atprint("Coupled trains", id1, id2)
 			self.object:remove()
 		end)
 	end,
 	on_step=function(self, dtime)
 		return advtrains.pcall(function()
-			advtrains.atprint_context_tid=sid(self.train_id_1)
-			advtrains.atprint_context_tid_full=self.train_id_1
-			local t=os.clock()
+			advtrains.atprint_context_tid=self.train_id_1
+
 			if not self.train_id_1 or not self.train_id_2 then atprint("Couple: train ids not set!") self.object:remove() return end
 			local train1=advtrains.trains[self.train_id_1]
 			local train2=advtrains.trains[self.train_id_2]
@@ -131,10 +159,9 @@ minetest.register_entity("advtrains:couple", {
 				self.object:remove()
 				return
 			end
-			if not train1.path or not train2.path or not train1.index or not train2.index or not train1.end_index or not train2.end_index then
-				atprint("Couple: paths or end_index missing. Might happen when paths got cleared")
-				return
-			end
+			
+			advtrains.train_ensure_init(self.train_id_1, train1)
+			advtrains.train_ensure_init(self.train_id_2, train2)
 			
 			if train1.velocity>0 or train2.velocity>0 then
 				if not self.position_set then --ensures that train stands a single time before check fires. Using flag below
@@ -148,15 +175,15 @@ minetest.register_entity("advtrains:couple", {
 			if not self.position_set then
 				local tp1
 				if not self.train1_is_backpos then
-					tp1=advtrains.get_real_index_position(train1.path, train1.index)
+					tp1=advtrains.path_get_interpolated(train1, train1.index)
 				else
-					tp1=advtrains.get_real_index_position(train1.path, train1.end_index)
+					tp1=advtrains.path_get_interpolated(train1, train1.end_index)
 				end
 				local tp2
 				if not self.train2_is_backpos then
-					tp2=advtrains.get_real_index_position(train2.path, train2.index)
+					tp2=advtrains.path_get_interpolated(train2, train2.index)
 				else
-					tp2=advtrains.get_real_index_position(train2.path, train2.end_index)
+					tp2=advtrains.path_get_interpolated(train2, train2.end_index)
 				end
 				local pos_median=advtrains.pos_median(tp1, tp2)
 				if not vector.equals(pos_median, self.object:getpos()) then
@@ -166,7 +193,7 @@ minetest.register_entity("advtrains:couple", {
 			end
 			atprintbm("couple step", t)
 			advtrains.atprint_context_tid=nil
-			advtrains.atprint_context_tid_full=nil
+
 		end)
 	end,
 })

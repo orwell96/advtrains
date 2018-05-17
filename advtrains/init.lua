@@ -105,6 +105,7 @@ atwarn=function(t, ...)
 end
 sid=function(id) if id then return string.sub(id, -6) end end
 
+
 --ONLY use this function for temporary debugging. for consistent debug prints use atprint
 atdebug=function(t, ...)
 	local text=advtrains.print_concat_table({t, ...})
@@ -122,6 +123,12 @@ if minetest.settings:get_bool("advtrains_enable_debugging") then
 		--atlog("@@",advtrains.atprint_context_tid,t,...)
 	end
 	dofile(advtrains.modpath.."/debugringbuffer.lua")
+end
+
+function assertt(var, typ)
+	if type(var)~=typ then
+		error("Assertion failed, variable has to be of type "..typ)
+	end
 end
 
 dofile(advtrains.modpath.."/helpers.lua");
@@ -193,6 +200,7 @@ function advtrains.avt_load()
 				--remove wagon_save entries that are not part of a train
 				local todel=advtrains.merge_tables(advtrains.wagon_save)
 				for tid, train in pairs(advtrains.trains) do
+					train.id = tid
 					for _, wid in ipairs(train.trainparts) do
 						todel[wid]=nil
 					end

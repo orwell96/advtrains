@@ -145,8 +145,6 @@ function o.clear_item(train_id, pos)
 				atwarn("Duplicate occupation entry at",pos,"for train",train_id,":",t)
 				i = i - 2
 			end
-			local oldoid = t[i+1] or 0
-			addchg(pos, train_id, oldoid, 0)
 			moving = true
 		end
 		if moving then
@@ -167,7 +165,7 @@ function o.check_collision(pos, train_id)
 		if t[i]~=train_id then
 			local idx = t[i+1]
 			local train = advtrains.trains[train_id]
-			advtrains.train_ensure_clean(train_id, train)
+			advtrains.train_ensure_init(train_id, train)
 			if idx >= train.end_index and idx <= train.index then
 				return true
 			end
@@ -177,4 +175,27 @@ function o.check_collision(pos, train_id)
 	return false
 end
 
+-- Gets a mapping of train id's to indexes of trains that share this path item with this train
+-- The train itself will not be included.
+-- If the requested index position is off-track, returns {}.
+-- returns (table with train_id->index), position
+function o.get_occupations(train, index)
+	local ppos, ontrack = advtrains.path_get(train, index)
+	if not ontrack then
+		atdebug("Train",train.id,"get_occupations requested off-track",index)
+		return {}, pos
+	end
+	local pos = advtrains.round_vector_floor_y(ppos)
+	local t = occget(pos)
+	local r = {}
+	local i = 1
+	local train_id = train.id
+	while t[i] do
+		if t[i]~=train_id then
+			r[train_id] = t[i+1]
+		end
+		i = i + 2
+	end
+	return r, pos
+end
 advtrains.occ = o

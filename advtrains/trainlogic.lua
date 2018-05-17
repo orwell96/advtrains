@@ -69,26 +69,20 @@ advtrains.mainloop_trainlogic=function(dtime)
 	
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
-		advtrains.atprint_context_tid_full=k
-		advtrains.train_ensure_clean(k, v)
+		advtrains.train_ensure_init(k, v)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
-		advtrains.atprint_context_tid_full=k
 		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
-		advtrains.atprint_context_tid_full=k
 		advtrains.train_step_c(k, v, dtime)
 	end
 	
 	advtrains.atprint_context_tid=nil
-	advtrains.atprint_context_tid_full=nil
-	
-	advtrains.occ.end_step()
 	
 	atprintbm("trainsteps", t)
 	endstep()
@@ -174,39 +168,6 @@ local function assertdef(tbl, var, def)
 end
 
 
--- Calculates the indices where the window borders of the occupation windows are.
--- TODO adapt this code to new system, probably into a callback
-local function calc_occwindows(id, train)
-	local end_index = advtrains.path_get_index_by_offset(train, train.index, -train.trainlen)
-	train.end_index = end_index
-	local cpl_b = end_index - COUPLE_ZONE
-	local safety_b = advtrains.path_get_index_by_offset(train, cpl_b, -SAFETY_ZONE)
-	local cpl_f = end_index + COUPLE_ZONE
-	local safety_f = advtrains.path_get_index_by_offset(train, cpl_f, SAFETY_ZONE)
-	
-	-- calculate brake distance
-	local acc_all = t_accel_all[1]
-	local acc_eng = t_accel_eng[1]
-	local nwagons = #train.trainparts
-	local acc = acc_all + (acc_eng*train.locomotives_in_train)/nwagons
-	local vel = train.velocity
-	local brakedst = (vel*vel) / (2*acc)
-	
-	local brake_i = math.max(advtrains.path_get_index_by_offset(train, train.index, brakedst + BRAKE_SPACE), safety_f)
-	local aware_i = advtrains.path_get_index_by_offset(train, brake_i, AWARE_ZONE)
-	
-	return {
-		safety_b,
-		cpl_b,
-		end_index,
-		train.index,
-		cpl_f,
-		safety_f,
-		brake_i,
-		aware_i,
-	}
-end
-
 -- Small local util function to recalculate train's end index
 local function recalc_end_index(train)
 	train.end_index = advtrains.path_get_index_by_offset(train, train.index, -train.trainlen)
@@ -218,11 +179,11 @@ end
 local callbacks_new_path = {}
 local callbacks_update = {}
 
-function advtrains.tb_register_on_new_path(func)
+function advtrains.te_register_on_new_path(func)
 	assertt(func, "function")
 	table.insert(callbacks_new_path, func)
 end
-function advtrains.tb_register_on_update(func)
+function advtrains.te_register_on_update(func)
 	assertt(func, "function")
 	table.insert(callbacks_update, func)
 end
@@ -239,11 +200,11 @@ local function run_callbacks_update(id, train)
 end
 
 
--- train_ensure_clean: responsible for creating a state that we can work on, after one of the following events has happened:
+-- train_ensure_init: responsible for creating a state that we can work on, after one of the following events has happened:
 -- - the train's path got cleared
 -- - save files were loaded
 -- Additionally, this gets called outside the step cycle to initialize and/or remove a train, then occ_write_mode is set.
-function advtrains.train_ensure_clean(id, train)
+function advtrains.train_ensure_init(id, train)
 	train.dirty = true
 	if train.no_step then return end
 
@@ -451,6 +412,12 @@ if train.no_step or train.wait_for_path then return end
 	
 	local train_moves=(train.velocity~=0)
 	
+	--- Check whether this train can be coupled to another, and set couple entities accordingly
+	if not train.was_standing and not train_moves then
+		advtrains.train_check_couples(train)
+	end
+	train.was_standing = not train_moves
+	
 	if train_moves then
 		
 		local collpos
@@ -529,8 +496,8 @@ end
 
 advtrains.te_register_on_new_path(function(id, train)
 	train.tnc = {
-		old_index = atround(train.index)
-		old_end_index = atround(train.end_index)
+		old_index = atround(train.index),
+		old_end_index = atround(train.end_index),
 	}
 end)
 advtrains.te_register_on_update(function(id, train)
@@ -549,6 +516,39 @@ advtrains.te_register_on_update(function(id, train)
 		old_end_index = old_end_index - 1
 	end
 end)
+
+-- Calculates the indices where the window borders of the occupation windows are.
+-- TODO adapt this code to new system, probably into a callback (probably only the brake distance code is needed)
+local function calc_occwindows(id, train)
+	local end_index = advtrains.path_get_index_by_offset(train, train.index, -train.trainlen)
+	train.end_index = end_index
+	local cpl_b = end_index - COUPLE_ZONE
+	local safety_b = advtrains.path_get_index_by_offset(train, cpl_b, -SAFETY_ZONE)
+	local cpl_f = end_index + COUPLE_ZONE
+	local safety_f = advtrains.path_get_index_by_offset(train, cpl_f, SAFETY_ZONE)
+	
+	-- calculate brake distance
+	local acc_all = t_accel_all[1]
+	local acc_eng = t_accel_eng[1]
+	local nwagons = #train.trainparts
+	local acc = acc_all + (acc_eng*train.locomotives_in_train)/nwagons
+	local vel = train.velocity
+	local brakedst = (vel*vel) / (2*acc)
+	
+	local brake_i = math.max(advtrains.path_get_index_by_offset(train, train.index, brakedst + BRAKE_SPACE), safety_f)
+	local aware_i = advtrains.path_get_index_by_offset(train, brake_i, AWARE_ZONE)
+	
+	return {
+		safety_b,
+		cpl_b,
+		end_index,
+		train.index,
+		cpl_f,
+		safety_f,
+		brake_i,
+		aware_i,
+	}
+end
 
 --TODO: Collisions!
 
@@ -573,7 +573,7 @@ function advtrains.create_new_train_at(pos, connid, ioff, trainparts)
 	atdebug("Created new train:",t)
 	
 	
-	advtrains.train_ensure_clean(new_id, advtrains.trains[new_id])
+	advtrains.train_ensure_init(new_id, advtrains.trains[new_id])
 	
 	return new_id
 end
@@ -581,7 +581,7 @@ end
 function advtrains.remove_train(id)
 	local train = advtrains.trains[id]
 	
-	advtrains.train_ensure_clean(id, train)
+	advtrains.train_ensure_init(id, train)
 	
 	advtrains.path_invalidate(train)
 	
@@ -597,7 +597,7 @@ end
 function advtrains.add_wagon_to_train(wagon_id, train_id, index)
 	local train=advtrains.trains[train_id]
 	
-	advtrains.train_ensure_clean(train_id, train)
+	advtrains.train_ensure_init(train_id, train)
 	
 	if index then
 		table.insert(train.trainparts, index, wagon_id)
@@ -691,7 +691,7 @@ function advtrains.split_train_at_wagon(wagon_id)
 	local train=advtrains.trains[old_id]
 	local _, wagon = advtrains.get_wagon_prototype(data)
 	
-	advtrains.train_ensure_clean(old_id, train)
+	advtrains.train_ensure_init(old_id, train)
 	
 	local index=advtrains.path_get_index_by_offset(train, train.index, -(data.pos_in_train + wagon.wagon_span))
 	
@@ -727,6 +727,77 @@ function advtrains.split_train_at_wagon(wagon_id)
 	
 end
 
+-- coupling
+local CPL_CHK_DST = 1
+local CPL_ZONE = 2
+
+-- train.couple_* contain references to ObjectRefs of couple objects, which contain all relevant information
+-- These objectRefs will delete themselves once the couples no longer match
+local function createcouple(pos, train1, t1_is_front, train2, t2_is_front)
+	local obj=minetest.add_entity(pos, "advtrains:couple")
+	if not obj then error("Failed creating couple object!") return end
+	local le=obj:get_luaentity()
+	le.train_id_1=train1.id
+	le.train_id_2=train2.id
+	le.train1_is_backpos=not t1_is_front
+	le.train2_is_backpos=not t2_is_front
+end
+
+function advtrains.train_check_couples(train)
+	if train.cpl_front then
+		if not train.cpl_front:getyaw() then
+			-- objectref is no longer valid. reset.
+			train.cpl_front = nil
+		end
+	end
+	if not train.cpl_front then
+		-- recheck front couple
+		local front_trains, pos = advtrains.occ.get_occupations(train, atround(train.index) + CPL_CHK_DST)
+		for tid, idx in pairs(front_trains) do
+			local other_train = advtrains.trains[tid]
+			advtrains.train_ensure_init(tid, other_train)
+			if other_train.velocity == 0 then
+				if idx>=other_train.index and idx<=other_train.index + CPL_ZONE then
+					createcouple(pos, train, true, other_train, true)
+					break
+				end
+				if idx<=other_train.end_index and idx>=other_train.end_index - CPL_ZONE then
+					createcouple(pos, train, true, other_train, false)
+					break
+				end
+			end
+		end
+	end
+	if train.cpl_back then
+		if not train.cpl_back:getyaw() then
+			-- objectref is no longer valid. reset.
+			train.cpl_back = nil
+		end
+	end
+	if not train.cpl_back then
+		-- recheck back couple
+		local back_trains, pos = advtrains.occ.get_occupations(train, atround(train.end_index) - CPL_CHK_DST)
+		for tid, idx in pairs(back_trains) do
+			local other_train = advtrains.trains[tid]
+			advtrains.train_ensure_init(tid, other_train)
+			if other_train.velocity == 0 then
+				if idx>=other_train.index and idx<=other_train.index + CPL_ZONE then
+					createcouple(pos, train, false, other_train, true)
+					break
+				end
+				if idx<=other_train.end_index and idx>=other_train.end_index - CPL_ZONE then
+					createcouple(pos, train, false, other_train, false)
+					break
+				end
+			end
+		end
+	end
+end
+
+
+
+-- relevant code for this comment is in couple.lua
+
 --there are 4 cases:
 --1/2. F<->R F<->R regular, put second train behind first
 --->frontpos of first train will match backpos of second
@@ -735,132 +806,16 @@ end
 --4.   R<->F F<->R flip one of these trains and take it as new parent
 --->frontpos's will match
 
---true when trains are facing each other. needed on colliding.
--- check done by iterating paths and checking their direction
---returns nil when not on the same track at all OR when required path items are not generated. this distinction may not always be needed.
--- TODO Will be changed when implementing coupling.
-function advtrains.trains_facing(train1, train2)
-	local sr_pos=train1.path[atround(train1.index)]
-	local sr_pos_p=train1.path[atround(train1.index)-1]
 
-	for i=advtrains.minN(train2.path), advtrains.maxN(train2.path) do
-		if vector.equals(sr_pos, train2.path[i]) then
-			if train2.path[i+1] and vector.equals(sr_pos_p, train2.path[i+1]) then return true end
-			if train2.path[i-1] and vector.equals(sr_pos_p, train2.path[i-1]) then return false end
-			return nil
-		end
-	end
-	return nil
-end
-
-function advtrains.collide_and_spawn_couple(id1, pos, id2, t1_is_backpos)
-	if minetest.settings:get_bool("advtrains_disable_collisions") then
-		return
-	end
-	
-	atprint("COLLISION: ",sid(id1)," and ",sid(id2)," at ",pos,", t1_is_backpos=",(t1_is_backpos and "true" or "false"))
-	--TODO:
-	local train1=advtrains.trains[id1]
-	
-	-- do collision
-	train1.recently_collided_with_env=true
-	train1.velocity=0.5*train1.velocity
-	train1.movedir=train1.movedir*-1
-	train1.tarvelocity=0
-	
-	local train2=advtrains.trains[id2]
-	
-	if not train1 or not train2 then return end
-	
-	local found
-	for i=advtrains.minN(train1.path), advtrains.maxN(train1.path) do
-		if vector.equals(train1.path[i], pos) then
-			found=true
-		end
-	end
-	if not found then
-		atprint("Err: pos not in path. Not spawning a couple")
-		return 
-	end
-	
-	local frontpos2=train2.path[atround(train2.detector_old_index)]
-	local backpos2=train2.path[atround(train2.detector_old_end_index)]
-	local t2_is_backpos
-	atprint("End positions: ",frontpos2,backpos2)
-	
-	t2_is_backpos = vector.distance(backpos2, pos) < vector.distance(frontpos2, pos)
-	
-	atprint("t2_is_backpos="..(t2_is_backpos and "true" or "false"))
-	
-	local t1_has_couple, t1_couple_lck
-	if t1_is_backpos then
-		t1_has_couple=train1.couple_eid_back
-		t1_couple_lck=train1.couple_lck_back
-	else
-		t1_has_couple=train1.couple_eid_front
-		t1_couple_lck=train1.couple_lck_front
-	end
-	local t2_has_couple, t2_couple_lck
-	if t2_is_backpos then
-		t2_has_couple=train2.couple_eid_back
-		t2_couple_lck=train2.couple_lck_back
-	else
-		t2_has_couple=train2.couple_eid_front
-		t2_couple_lck=train2.couple_lck_front
-	end
-	
-	if t1_has_couple then
-		if minetest.object_refs[t1_has_couple] then minetest.object_refs[t1_has_couple]:remove() end
-	end
-	if t2_has_couple then
-		if minetest.object_refs[t2_has_couple] then minetest.object_refs[t2_has_couple]:remove() end
-	end
-	if t1_couple_lck or t2_couple_lck then
-		minetest.add_entity(pos, "advtrains:lockmarker")
-		return
-	end
-	local obj=minetest.add_entity(pos, "advtrains:couple")
-	if not obj then atprint("failed creating object") return end
-	local le=obj:get_luaentity()
-	le.train_id_1=id1
-	le.train_id_2=id2
-	le.train1_is_backpos=t1_is_backpos
-	le.train2_is_backpos=t2_is_backpos
-	--find in object_refs
-	local p_aoi
-	for aoi, compare in pairs(minetest.object_refs) do
-		if compare==obj then
-			if t1_is_backpos then
-				train1.couple_eid_back=aoi
-			else
-				train1.couple_eid_front=aoi
-			end
-			if t2_is_backpos then
-				train2.couple_eid_back=aoi
-			else
-				train2.couple_eid_front=aoi
-			end
-			p_aoi=aoi
-		end
-	end
-	atprint("Couple spawned (ActiveObjectID ",p_aoi,")")
-end
---order of trains may be irrelevant in some cases. check opposite cases. TODO does this work?
---pos1 and pos2 are just needed to form a median.
-
-
-function advtrains.do_connect_trains(first_id, second_id, player)
+function advtrains.do_connect_trains(first_id, second_id)
 	local first, second=advtrains.trains[first_id], advtrains.trains[second_id]
 	
-	if not first or not second or not first.index or not second.index or not first.end_index or not second.end_index then
-		return false
-	end
+	advtrains.train_ensure_init(first_id, first)
+	advtrains.train_ensure_init(second_id, second)
 	
 	if first.couple_lck_back or second.couple_lck_front then
 		-- trains are ordered correctly!
-		if player then
-			minetest.chat_send_player(player:get_player_name(), "Can't couple: couples locked!")
-		end
+		-- Note, this is already checked in the rightclick step of the couple entity before trains are actually reversed
 		return
 	end
 	
@@ -870,24 +825,21 @@ function advtrains.do_connect_trains(first_id, second_id, player)
 	for _,v in ipairs(second.trainparts) do
 		table.insert(first.trainparts, v)
 	end
-	--kick it like physics (with mass being #wagons)
-	local new_velocity=((first.velocity*first_wagoncnt)+(second.velocity*second_wagoncnt))/(first_wagoncnt+second_wagoncnt)
+	
 	local tmp_cpl_lck=second.couple_lck_back
-	advtrains.trains[second_id]=nil
-	advtrains.update_trainpart_properties(first_id)
-	local train1=advtrains.trains[first_id]
-	train1.velocity=new_velocity
-	train1.tarvelocity=0
-	train1.couple_eid_front=nil
-	train1.couple_eid_back=nil
-	train1.couple_lck_back=tmp_cpl_lck
+	
+	advtrains.remove_train(second_id)
+	
+	first.velocity=0
+	first.tarvelocity=0
+	first.couple_lck_back=tmp_cpl_lck
 	return true
 end
 
 function advtrains.invert_train(train_id)
 	local train=advtrains.trains[train_id]
 	
-	advtrains.train_ensure_clean(train_id, train)
+	advtrains.train_ensure_init(train_id, train)
 	
 	advtrains.path_setrestore(train, true)
 	
