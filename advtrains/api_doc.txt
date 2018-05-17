@@ -140,7 +140,7 @@ If you can't enter or leave a train because the doors are closed, holding the Sn
 Most modders will be satisfied with the built-in tracks. If cog railways, maglev trains and mine trains are added, it is necessary to understand the definition of tracks. Although the tracks API is there, explaining it would require more effort than me creating the wanted definitions myself. Contact me if you need to register your own rails using my registration functions.
 
 However, it is still possible to register single rails by understanding the node properties of rails.
-minetest.register_node(nodename, {
+minetest.register_node(nodename, { -- TODO this is outdated!
 	... usual node definition ...
 	groups = {
 		advtrains_track_<tracktype>=1

@@ -109,7 +109,7 @@ end
 
 function advtrains.dir_to_angle(dir)
 	local uvec = vector.normalize(advtrains.dirToCoord(dir))
-	return math.atan2(uvec.z, uvec.x)
+	return math.atan2(uvec.x, uvec.z)
 end
 
 local pi, pi2 = math.pi, 2*math.pi
@@ -153,8 +153,6 @@ function advtrains.conn_angle_median(cdir1, cdir2)
 	return ang1 + advtrains.minAngleDiffRad(ang1, ang2)/2
 end
 
--- TODO removed dumppath, where is this used?
-
 function advtrains.merge_tables(a, ...)
 	local new={}
 	for _,t in ipairs({a,...}) do
@@ -169,8 +167,6 @@ function advtrains.save_keys(tbl, keys)
 	end
 	return new
 end
-
--- TODO yaw_from_3_positions and get_wagon_yaw removed
 
 function advtrains.get_real_index_position(path, index)
 	if not path or not index then return end
@@ -258,7 +254,7 @@ function advtrains.rotate_conn_by(conn, rotate)
 	return tmp
 end
 
---TODO use this
+
 function advtrains.oppd(dir)
 	return advtrains.rotate_conn_by(dir, AT_CMAX/2)
 end

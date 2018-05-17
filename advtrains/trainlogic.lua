@@ -70,7 +70,7 @@ advtrains.mainloop_trainlogic=function(dtime)
 	for k,v in pairs(advtrains.trains) do
 		advtrains.atprint_context_tid=sid(k)
 		advtrains.atprint_context_tid_full=k
-		advtrains.train_ensure_clean(k, v, dtime, advtrains.occ.restore_required)
+		advtrains.train_ensure_clean(k, v)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
@@ -135,12 +135,6 @@ minetest.register_on_dieplayer(function(player)
 end)
 
 --[[
-The occupation window system.
-
-Each train occupies certain nodes as certain occupation types. See occupation.lua for a graphic and an ID listing.
-There's an occwindows table in the train table. This is clearable, such as the path, and therefore needs to be exactly reconstructible.
-During runtime, the extents (in meters) of the zones are determined. the occwindows table holds the assigned fractional path indices.
-After the train moves, the occupation windows are re-calculated, and all differences are written to the occupation tables.
 
 Zone diagram of a train (copy from occupation.lua!):
               |___| |___| --> Direction of travel
@@ -150,10 +144,10 @@ Zone diagram of a train (copy from occupation.lua!):
 [1]     [2] [3]         [4] [5]     [6]                 [7]      [8]
 This mapping from indices in occwindows to zone ids is contained in WINDOW_ZONE_IDS
 
-occwindows = {
-[n] = (index of the position determined in the graphic above,
-	where floor(i) belongs to the left zone and floor(i+1) belongs to the right.
-}
+
+The occupation system has been abandoned. The constants will still be used
+to determine the couple distance
+(because of the reverse lookup, the couple system simplifies a lot...)
 
 ]]--
 -- unless otherwise stated, in meters.
@@ -181,6 +175,7 @@ end
 
 
 -- Calculates the indices where the window borders of the occupation windows are.
+-- TODO adapt this code to new system, probably into a callback
 local function calc_occwindows(id, train)
 	local end_index = advtrains.path_get_index_by_offset(train, train.index, -train.trainlen)
 	train.end_index = end_index
@@ -212,45 +207,50 @@ local function calc_occwindows(id, train)
 	}
 end
 
--- this function either inits (no write_mode), sets(1) or clears(2) the occupations for train
-local function write_occupation(win, train_id, train, write_mode)
-	local n_window = 2
-	local c_index = math.ceil(win[1])
-	while win[n_window] do
-		local winix = win[n_window]
-		local oid = WINDOW_ZONE_IDS[n_window - 1]
-		while winix > c_index do
-			local pos = advtrains.path_get(train, c_index)
-			if write_mode == 1 then
-				advtrains.occ.set_occupation(train_id, pos, oid)
-			elseif write_mode == 2 then
-				advtrains.occ.clear_occupation(train_id, pos)
-			else
-				advtrains.occ.init_occupation(train_id, pos, oid)
-			end
-			c_index = c_index + 1
-		end
-		c_index = math.ceil(winix)
-		n_window = n_window + 1
-	end
-	
+-- Small local util function to recalculate train's end index
+local function recalc_end_index(train)
+	train.end_index = advtrains.path_get_index_by_offset(train, train.index, -train.trainlen)
 end
-local function apply_occupation_changes(old, new, train_id, train)
-	-- TODO
+
+-- Occupation Callback system
+-- see occupation.lua
+
+local callbacks_new_path = {}
+local callbacks_update = {}
+
+function advtrains.tb_register_on_new_path(func)
+	assertt(func, "function")
+	table.insert(callbacks_new_path, func)
+end
+function advtrains.tb_register_on_update(func)
+	assertt(func, "function")
+	table.insert(callbacks_update, func)
+end
+
+local function run_callbacks_new_path(id, train)
+	for _,f in ipairs(callbacks_new_path) do
+		f(id, train)
+	end
+end
+local function run_callbacks_update(id, train)
+	for _,f in ipairs(callbacks_new_path) do
+		f(id, train)
+	end
 end
 
 
 -- train_ensure_clean: responsible for creating a state that we can work on, after one of the following events has happened:
 -- - the train's path got cleared
--- - the occupation table got cleared
+-- - save files were loaded
 -- Additionally, this gets called outside the step cycle to initialize and/or remove a train, then occ_write_mode is set.
-function advtrains.train_ensure_clean(id, train, dtime, report_occupations, occ_write_mode)
+function advtrains.train_ensure_clean(id, train)
 	train.dirty = true
 	if train.no_step then return end
 
 	assertdef(train, "velocity", 0)
 	assertdef(train, "tarvelocity", 0)
 	assertdef(train, "acceleration", 0)
+	assertdef(train, "id", id)
 	
 	
 	if not train.drives_on or not train.max_speed then
@@ -282,18 +282,14 @@ function advtrains.train_ensure_clean(id, train, dtime, report_occupations, occ_
 		end
 		-- by now, we should have a working initial path
 		train.wait_for_path = false
-		train.occwindows = nil
+		
 		advtrains.update_trainpart_properties(id)
+		recalc_end_index(train)
+		
 		atdebug("Train",id,": Successfully restored path at",train.last_pos," connid",train.last_connid," frac",train.last_frac)
-		-- TODO recoverposition?!
-	end
-	
-	--restore occupation windows
-	if not train.occwindows then
-		train.occwindows = calc_occwindows(id, train)
-	end
-	if report_occupations then
-		write_occupation(train.occwindows, id, train, occ_write_mode)
+		
+		-- run on_new_path callbacks
+		run_callbacks_new_path(id, train)
 	end
 	
 	train.dirty = false -- TODO einbauen!
@@ -346,8 +342,15 @@ function advtrains.train_step_b(id, train, dtime)
 	if train.active_control then
 		advtrains.atc.train_reset_command(id)
 	else
-		if train.atc_brake_target and train.atc_brake_target>=trainvelocity then
+		local braketar = train.atc_brake_target
+		local emerg = false -- atc_brake_target==-1 means emergency brake (BB command)
+		if braketar == -1 then
+			braketar = 0
+			emerg = true
+		end
+		if braketar and braketar>=trainvelocity then
 			train.atc_brake_target=nil
+			braketar = nil
 		end
 		if train.atc_wait_finish then
 			if not train.atc_brake_target and train.velocity==train.tarvelocity then
@@ -365,8 +368,12 @@ function advtrains.train_step_b(id, train, dtime)
 		train.lever = 3
 		if train.tarvelocity>trainvelocity then train.lever=4 end
 		if train.tarvelocity<trainvelocity then
-			if (train.atc_brake_target and train.atc_brake_target<trainvelocity) then
-				train.lever=1
+			if (braketar and braketar<trainvelocity) then
+				if emerg then
+					train.lever = 0
+				else
+					train.lever=1
+				end
 			else
 				train.lever=2
 			end
@@ -417,13 +424,8 @@ function advtrains.train_step_b(id, train, dtime)
 	--- 4. move train ---
 	
 	train.index=train.index and train.index+((train.velocity/(train.path_dist[math.floor(train.index)] or 1))*dtime) or 0
+	recalc_end_index()
 
-end
-
-local function train_recalc_occupation(id, train)
-	local new_occwindows = calc_occwindows(id, train)
-	apply_occupation_changes(train.occwindows, new_occwindows, id)
-	train.occwindows = new_occwindows
 end
 
 function advtrains.train_step_c(id, train, dtime)
@@ -431,16 +433,11 @@ if train.no_step or train.wait_for_path then return end
 	
 	-- all location/extent-critical actions have been done.
 	-- calculate the new occupation window
-	train_recalc_occupation(id, train)
+	run_callbacks_update(id, train)
 	
 	advtrains.path_clear_unused(train)
 	
-	-- Set our path restoration position
-	-- TODO make a common function to find a restore positionon the path, in case the wanted position is off-track
-	local fli = atfloor(train.index)
-	train.last_pos = advtrains.path_get(train, fli)
-	train.last_connid = train.path_cn[fli]
-	train.last_frac = train.index - fli
+	advtrains.path_setrestore(train)
 	
 	-- less important stuff
 	
@@ -507,6 +504,52 @@ if train.no_step or train.wait_for_path then return end
 	end
 end
 
+-- Default occupation callbacks for node callbacks
+-- (remember, train.end_index is set separately because callbacks are
+--  asserted to rely on this)
+
+local function tnc_call_enter_callback(pos, train_id)
+	--atprint("instructed to call enter calback")
+
+	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
+	local mregnode=minetest.registered_nodes[node.name]
+	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_enter then
+		mregnode.advtrains.on_train_enter(pos, train_id)
+	end
+end
+local function tnc_call_leave_callback(pos, train_id)
+	--atprint("instructed to call leave calback")
+
+	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
+	local mregnode=minetest.registered_nodes[node.name]
+	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_leave then
+		mregnode.advtrains.on_train_leave(pos, train_id)
+	end 
+end
+
+advtrains.te_register_on_new_path(function(id, train)
+	train.tnc = {
+		old_index = atround(train.index)
+		old_end_index = atround(train.end_index)
+	}
+end)
+advtrains.te_register_on_update(function(id, train)
+	local new_index = atround(train.index)
+	local new_end_index = atround(train.end_index)
+	local old_index = train.tnc.old_index
+	local old_end_index = train.tnc.old_end_index
+	while old_index < new_index do
+		old_index = old_index + 1
+		local pos = advtrains.round_vector_floor_y(advtrains.path_get(old_index))
+		tnc_call_enter_callback(pos, id)
+	end
+	while old_end_index > new_end_index do
+		local pos = advtrains.round_vector_floor_y(advtrains.path_get(old_end_index))
+		tnc_call_leave_callback(pos, id)
+		old_end_index = old_end_index - 1
+	end
+end)
+
 --TODO: Collisions!
 
 
@@ -529,9 +572,8 @@ function advtrains.create_new_train_at(pos, connid, ioff, trainparts)
 	advtrains.trains[new_id] = t
 	atdebug("Created new train:",t)
 	
-	advtrains.update_trainpart_properties(new_id)
 	
-	advtrains.train_ensure_clean(new_id, advtrains.trains[new_id], 0, true, 1)
+	advtrains.train_ensure_clean(new_id, advtrains.trains[new_id])
 	
 	return new_id
 end
@@ -541,9 +583,7 @@ function advtrains.remove_train(id)
 	
 	advtrains.train_ensure_clean(id, train)
 	
-	advtrains.update_trainpart_properties(id)
-	
-	advtrains.train_ensure_clean(id, train, 0, true, 2)
+	advtrains.path_invalidate(train)
 	
 	local tp = train.trainparts
 	
@@ -566,7 +606,8 @@ function advtrains.add_wagon_to_train(wagon_id, train_id, index)
 	end
 	
 	advtrains.update_trainpart_properties(train_id)
-	train_recalc_occupation(train_id, train)
+	recalc_end_index(train)
+	run_callbacks_update(train_id, train)
 end
 
 -- this function sets wagon's pos_in_train(parts) properties and train's max_speed and drives_on (and more)
@@ -646,31 +687,17 @@ end
 function advtrains.split_train_at_wagon(wagon_id)
 	--get train
 	local data = advtrains.wagons[wagon_id]
-	local train=advtrains.trains[data.train_id]
+	local old_id = data.train_id
+	local train=advtrains.trains[old_id]
 	local _, wagon = advtrains.get_wagon_prototype(data)
 	
-	advtrains.train_ensure_clean(data.train_id, train)
+	advtrains.train_ensure_clean(old_id, train)
 	
 	local index=advtrains.path_get_index_by_offset(train, train.index, -(data.pos_in_train + wagon.wagon_span))
 	
-	if index < train.path_trk_b or index > train.path_trk_f then
-		atprint("split_train: pos_for_new_train is off-track") -- TODO function for finding initial positions from a path
-		return false
-	end
-	
-	local pos, _, frac = advtrains.path_get_adjacent(train, index)
-	local nconn = train.path_cn[atfloor(index)]
-	--before doing anything, check if both are rails. else do not allow
-	if not pos then
-		atprint("split_train: pos_for_new_train not set")
-		return false
-	end
-	local npos = advtrains.round_vector_floor_y(pos)
-	local node_ok=advtrains.get_rail_info_at(npos, train.drives_on)
-	if not node_ok then
-		atprint("split_train: pos_for_new_train ",advtrains.round_vector_floor_y(pos_for_new_train_prev)," not loaded or is not a rail")
-		return false
-	end
+	-- find new initial path position for this train
+	local pos, connid, frac = advtrains.path_getrestore(train, index)
+		
 	
 	-- build trainparts table, passing it directly to the train constructor
 	local tp = {}
@@ -682,11 +709,8 @@ function advtrains.split_train_at_wagon(wagon_id)
 	end
 	
 	--create subtrain
-	local newtrain_id=advtrains.create_new_train_at(npos, nconn, frac, tp)
+	local newtrain_id=advtrains.create_new_train_at(pos, connid, frac, tp)
 	local newtrain=advtrains.trains[newtrain_id]
-	
-	--update train parts
-	advtrains.update_trainpart_properties(data.train_id)--atm it still is the desierd id.
 	
 	train.tarvelocity=0
 	newtrain.velocity=train.velocity
@@ -695,6 +719,11 @@ function advtrains.split_train_at_wagon(wagon_id)
 	newtrain.couple_lck_back=train.couple_lck_back
 	newtrain.couple_lck_front=false
 	train.couple_lck_back=false
+	
+	--update train parts
+	advtrains.update_trainpart_properties(old_id)
+	recalc_end_index(train)
+	run_callbacks_update(old_id, train)
 	
 end
 
@@ -709,7 +738,7 @@ end
 --true when trains are facing each other. needed on colliding.
 -- check done by iterating paths and checking their direction
 --returns nil when not on the same track at all OR when required path items are not generated. this distinction may not always be needed.
--- TODO do we need to change this behavior, since direct path accesses are now discouraged?
+-- TODO Will be changed when implementing coupling.
 function advtrains.trains_facing(train1, train2)
 	local sr_pos=train1.path[atround(train1.index)]
 	local sr_pos_p=train1.path[atround(train1.index)-1]
@@ -858,12 +887,9 @@ end
 function advtrains.invert_train(train_id)
 	local train=advtrains.trains[train_id]
 	
-	advtrains.train_ensure_clean(train_id, train, 0)
-	-- Set the path restoration position to the opposite direction
-	local fli = atfloor(train.end_index) + 1
-	train.last_pos = advtrains.path_get(train, fli)
-	train.last_connid = train.path_cp[fli]
-	train.last_frac = fli - train.end_index
+	advtrains.train_ensure_clean(train_id, train)
+	
+	advtrains.path_setrestore(train, true)
 	
 	-- rotate some other stuff
 	train.couple_lck_back, train.couple_lck_front = train.couple_lck_front, train.couple_lck_back

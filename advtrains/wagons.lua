@@ -196,8 +196,6 @@ function wagon:destroy()
 	self.object:remove()
 end
 
-local pihalf = math.pi/2
-
 function wagon:on_step(dtime)
 	return advtrains.pcall(function()
 		if not self:ensure_init() then return end
@@ -296,12 +294,12 @@ function wagon:on_step(dtime)
 		local fct=data.wagon_flipped and -1 or 1
 		--set line number
 		if self.name == "advtrains:subway_wagon" and train.line and train.line~=self.line_cache then
-			local new_line_tex="advtrains_subway_wagon.png^advtrains_subway_wagon_line"..gp.line..".png"
+			local new_line_tex="advtrains_subway_wagon.png^advtrains_subway_wagon_line"..train.line..".png"
 			self.object:set_properties({
 				textures={new_line_tex},
 		 	})
 			self.line_cache=train.line
-		elseif self.line_cache~=nil and gp.line==nil then
+		elseif self.line_cache~=nil and train.line==nil then
 			self.object:set_properties({
 				textures=self.textures,
 		 	})
@@ -366,8 +364,9 @@ function wagon:on_step(dtime)
 			end
 		end
 		--for path to be available. if not, skip step
-		if not train.path then
+		if not train.path or train.no_step then
 			self.object:setvelocity({x=0, y=0, z=0})
+			self.object:setacceleration({x=0, y=0, z=0})
 			return
 		end
 		if not data.pos_in_train then
@@ -376,10 +375,8 @@ function wagon:on_step(dtime)
 		
 		-- Calculate new position, yaw and direction vector
 		local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
-		local pos, tyaw, npos, npos2 = advtrains.path_get_interpolated(train, index)
+		local pos, yaw, npos, npos2 = advtrains.path_get_interpolated(train, index)
 		local vdir = vector.normalize(vector.subtract(npos2, npos))
-		
-		local yaw = tyaw - pihalf
 		
 		--automatic get_on
 		--needs to know index and path
@@ -391,7 +388,7 @@ function wagon:on_step(dtime)
 				local ix1, ix2 = advtrains.path_get_adjacent(train, aci)
 				-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
 				-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
-				local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
+				local add = { x = (ix2.z-ix1.z)*train.door_open, y = 0, z = (ix1.x-ix2.x)*train.door_open }
 				local pts1=vector.round(vector.add(ix1, add))
 				local pts2=vector.round(vector.add(ix2, add))
 				if minetest.get_item_group(minetest.get_node(pts1).name, "platform")>0 then
@@ -420,10 +417,9 @@ function wagon:on_step(dtime)
 				for y=0,exv do
 					for z=-exh,exh do
 						local node=minetest.get_node_or_nil(vector.add(npos, {x=x, y=y, z=z}))
-						-- TODO
-						--if (advtrains.train_collides(node)) then
-						--	collides=true
-						--end
+						if (advtrains.train_collides(node)) then
+							collides=true
+						end
 					end
 				end
 			end
@@ -431,13 +427,13 @@ function wagon:on_step(dtime)
 				if self.collision_count and self.collision_count>10 then
 					--enable collision mercy to get trains stuck in walls out of walls
 					--actually do nothing except limiting the velocity to 1
-					gp.velocity=math.min(gp.velocity, 1)
-					gp.tarvelocity=math.min(gp.tarvelocity, 1)
+					train.velocity=math.min(train.velocity, 1)
+					train.tarvelocity=math.min(train.tarvelocity, 1)
 				else
-					gp.recently_collided_with_env=true
-					gp.velocity=2*gp.velocity
-					gp.movedir=-gp.movedir
-					gp.tarvelocity=0
+					train.recently_collided_with_env=true
+					train.velocity=0
+					-- TODO what should happen when a train collides?
+					train.tarvelocity=0
 					self.collision_count=(self.collision_count or 0)+1
 				end
 			else
@@ -481,7 +477,7 @@ function wagon:on_step(dtime)
 							self.player_yaw[name] = p:get_look_horizontal()-self.old_yaw
 						end
 						-- set player looking direction using calculated offset
-						--TODO p:set_look_horizontal((self.player_yaw[name] or 0)+yaw)
+						p:set_look_horizontal((self.player_yaw[name] or 0)+yaw)
 					end
 				end
 				self.turning = true							 
@@ -493,7 +489,7 @@ function wagon:on_step(dtime)
 			self.object:setyaw(yaw)
 			self.updatepct_timer=2
 			if self.update_animation then
-				self:update_animation(gp.velocity, self.old_velocity)
+				self:update_animation(train.velocity, self.old_velocity)
 			end
 			if self.custom_on_velocity_change then
 				self:custom_on_velocity_change(train.velocity, self.old_velocity or 0, dtime)
@@ -664,13 +660,13 @@ function wagon:get_off(seatno)
 		if self.door_entry and train.door_open and train.door_open~=0 and train.velocity==0 and train.index and train.path then
 			local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
 			for i, ino in ipairs(self.door_entry) do
-				--fct is the flipstate flag from door animation above
+				local fct=data.wagon_flipped and -1 or 1
 				local aci = advtrains.path_get_index_by_offset(train, index, ino*fct)
 				local ix1, ix2 = advtrains.path_get_adjacent(train, aci)
 				-- the two wanted positions are ix1 and ix2 + (2nd-1st rotated by 90deg)
 				-- (x z) rotated by 90deg is (-z x)  (http://stackoverflow.com/a/4780141)
-				local add = { x = (ix2.z-ix1.z)*gp.door_open, y = 0, z = (ix1.x-ix2.x)*gp.door_open }
-				local oadd = { x = (ix2.z-ix1.z)*gp.door_open*2, y = 1, z = (ix1.x-ix2.x)*gp.door_open*2}
+				local add = { x = (ix2.z-ix1.z)*train.door_open, y = 0, z = (ix1.x-ix2.x)*train.door_open }
+				local oadd = { x = (ix2.z-ix1.z)*train.door_open*2, y = 1, z = (ix1.x-ix2.x)*train.door_open*2}
 				local platpos=vector.round(vector.add(ix1, add))
 				local offpos=vector.round(vector.add(ix1, oadd))
 				atprint("platpos:", platpos, "offpos:", offpos)

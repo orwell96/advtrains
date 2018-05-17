@@ -175,7 +175,7 @@ local matchptn={
 	end,
 	["B([0-9B]+)"]=function(id, train, match)
 		if match=="B" then
-			train.atc_brake_target = -1 -- this means emergency brake. TODO don't forget to implement in train step!
+			train.atc_brake_target = -1
 			train.tarvelocity = 0
 		elseif train.velocity>tonumber(match) then
 			train.atc_brake_target=tonumber(match)

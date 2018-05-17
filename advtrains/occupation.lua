@@ -1,6 +1,7 @@
 -- occupation.lua
 --[[
 Collects and manages positions where trains occupy and/or reserve/require space
+THIS SECTION ABOVE IS OUTDATED, look below
 
 Zone diagram of a train:
               |___| |___| --> Direction of travel
@@ -41,40 +42,45 @@ occ_chg[n] = {
 	new_val, (0 when entry was deleted)
 }
 
-*Sequence number:
-Sequence number system reserved for possible future use, but unused.
-The train will (and has to) memorize it's zone path indexes ("windows"), and do all actions that in any way modify these zone lengths
-in the movement phase (after restore, but before reporting occupations)
-((
-The sequence number is used to determine out-of-date entries to the occupation list
-The current sequence number (seqnum) is increased each step, until it rolls over MAX_SEQNUM, which is when a complete reset is triggered
-Inside a step, when a train updates an occupation, the sequence number is set to the currently active sequence number
-Whenever checking an entry for other occupations (e.g. in the aware zone), all entries that have a seqnum different from the current seqnum
-are considered not existant, and are cleared.
-Note that those outdated entries are only cleared on-demand, so there will be a large memory overhead over time. This is why in certain time intervals
-complete resets are required (however, this method should be much more performant than resetting the whole occ table each step, to spare continuous memory allocations)
-This complex behavior is required because there is no way to reliably determine which positions are _no longer_ occupied...
-))
+---------------------
+It turned out that, especially for the TSS, some more, even overlapping zones are required.
+Packing those into a data structure would just become a huge mess!
+Instead, this occupation system will store the path indices of positions in the corresponding.
+train's paths.
+So, the occupation is a reverse lookup of paths.
+Then, a callback system will handle changes in those indices, as follows:
 
-Composition of a step:
+Whenever the train generates new path items (path_get/path_create), their counterpart indices will be filled in here.
+Whenever a path gets invalidated or path items are deleted, their index counterpart is erased from here.
 
-1. (only when needed) restore step - write all current occupations into the table
-2. trains move
-3. trains pass new occupations to here. We keep track of which entries have changed
-4. we iterate our change lists and determine what to do
+When a train needs to know whether a position is blocked by another train, it will (and is permitted to)
+query the train.index and train.end_index and compare them to the blocked position's index.
+
+Callback system for 3rd-party path checkers: TODO
+advtrains.te_register_on_new_path(func(id, train))
+-- Called when a train's path is re-initalized, either when it was invalidated
+-- or the saves were just loaded
+-- It can be assumed that everything is in the state of when the last run
+-- of on_update was made, but all indices are shifted by an unknown amount.
+
+advtrains.te_register_on_update(func(id, train))
+-- Called each step and after a train moved, its length changed or some other event occured
+-- The path is unmodified, and train.index and train.end_index can be reliably
+-- queried for the new position and length of the train.
+-- note that this function might be called multiple times per step, and this 
+-- function being called does not necessarily mean that something has changed.
+-- It is ensured that on_new_path callbacks are executed prior to these callbacks whenever
+-- an invalidation or a reload occured.
+
+All callbacks are allowed to save certain values inside the train table, but they must ensure that
+those are reinitialized in the on_new_path callback. The on_new_path callback must explicitly
+set ALL OF those values to nil or to a new updated value, and must not rely on their existence.
 
 ]]--
 local o = {}
 
-o.restore_required = true
-
-local MAX_SEQNUM = 65500
-local seqnum = 0
-
 local occ = {}
 local occ_chg = {}
-
-local addchg, handle_chg
 
 
 local function occget(p)
@@ -112,16 +118,8 @@ local function occgetcreate(p)
 	return t
 end
 
--- Resets the occupation memory, and sets the o.restore_required flag that instructs trains to report their occupations before moving
-function o.reset()
-	o.restore_required = true
-	occ = {}
-	occ_chg = {}
-	seqnum = 0
-end
 
--- set occupation inside the restore step
-function o.init_occupation(train_id, pos, oid)
+function o.set_item(train_id, pos, idx)
 	local t = occgetcreate(pos)
 	local i = 1
 	while t[i] do
@@ -131,28 +129,11 @@ function o.init_occupation(train_id, pos, oid)
 		i = i + 2
 	end
 	t[i] = train_id
-	t[i+1] = oid
-end
-
-function o.set_occupation(train_id, pos, oid)
-	local t = occgetcreate(pos)
-	local i = 1
-	while t[i] do
-		if t[i]==train_id then
-			break
-		end
-		i = i + 2
-	end
-	local oldoid = t[i+1] or 0
-	if oldoid ~= oid then
-		addchg(pos, train_id, oldoid, oid)
-	end
-	t[i] = train_id
-	t[i+1] = oid
+	t[i+1] = idx
 end
 
 
-function o.clear_occupation(train_id, pos)
+function o.clear_item(train_id, pos)
 	local t = occget(pos)
 	if not t then return end
 	local i = 1
@@ -176,94 +157,6 @@ function o.clear_occupation(train_id, pos)
 	end
 end
 
-function addchg(pos, train_id, old, new)
-	occ_chg[#occ_chg + 1] = {
-		pos = pos,
-		train_id = train_id,
-		old_val = old,
-		new_val = new,
-	}
-end
-
--- Called after all occupations have been fed in
--- This function is doing the interesting work...
-function o.end_step()
-	count_chg = false
-	
-	for _,chg in ipairs(occ_chg) do
-		local t = occget(chg.pos)
-		if not t then
-			atwarn("o.end_step() change entry but there's no entry in occ table!",chg)
-		end
-		handle_chg(t, chg.pos, chg.train_id, chg.old_val, chg.new_val)
-	end
-	
-	seqnum = seqnum + 1
-end
-
-function handle_chg(t, pos, train_id, old, new)
-	-- Handling the actual "change" is only necessary on_train_enter (change to 1) and on_train_leave (change from 1)
-	if new==1 then
-		o.call_enter_callback(pos, train_id)
-	elseif old==1 then
-		o.call_leave_callback(pos, train_id)
-	end
-	
-	--all other cases check the simultaneous presence of 2 or more occupations
-	if #t<=2 then
-		return
-	end
-	local blocking = {}
-	local aware = {}
-	local i = 1
-	while t[i] do
-		if t[i+1] ~= 7 then --anything not aware zone:
-			blocking[#blocking+1] = i
-		else
-			aware[#aware+1] = i
-		end
-		i = i + 2
-	end
-	if #blocking > 0 then
-		-- the aware trains should brake
-		for _, ix in ipairs(aware) do
-			advtrains.atc.train_set_command(t[ix], "B2")
-		end
-		if #blocking > 1 then
-			-- not good, 2 trains interfered with their blocking zones
-			-- make them brake too
-			local txt = {}
-			for _, ix in ipairs(blocking) do
-				advtrains.atc.train_set_command(t[ix], "B2")
-				txt[#txt+1] = t[ix]
-			end
-			atwarn("Trains",table.concat(txt, ","), "interfered with their blocking zones, braking...")
-			-- TODO: different behavior for automatic trains! they need to be notified of those brake events and handle them!
-			-- To drive in safety zone is ok when train is controlled by hand
-		end
-	end
-	
-end
-
-function o.call_enter_callback(pos, train_id)
-	--atprint("instructed to call enter calback")
-
-	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
-	local mregnode=minetest.registered_nodes[node.name]
-	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_enter then
-		mregnode.advtrains.on_train_enter(pos, train_id)
-	end
-end
-function o.call_leave_callback(pos, train_id)
-	--atprint("instructed to call leave calback")
-
-	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
-	local mregnode=minetest.registered_nodes[node.name]
-	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_leave then
-		mregnode.advtrains.on_train_leave(pos, train_id)
-	end 
-end
-
 -- Checks whether some other train (apart from train_id) has it's 0 zone here
 function o.check_collision(pos, train_id)
 	local npos = advtrains.round_vector_floor_y(pos)
@@ -272,7 +165,10 @@ function o.check_collision(pos, train_id)
 	local i = 1
 	while t[i] do
 		if t[i]~=train_id then
-			if t[i+1] ~= 7 then
+			local idx = t[i+1]
+			local train = advtrains.trains[train_id]
+			advtrains.train_ensure_clean(train_id, train)
+			if idx >= train.end_index and idx <= train.index then
 				return true
 			end
 		end

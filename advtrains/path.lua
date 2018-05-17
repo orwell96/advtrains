@@ -123,12 +123,58 @@ function advtrains.path_create(train, pos, connid, rel_index)
 	train.path_req_f=0
 	train.path_req_b=0
 	
+	advtrains.occ.set_item(train.id, posr, 0)
+	
+end
+
+-- Sets position and connid to properly restore after a crash, e.g. in order
+-- to save the train or to invalidate its path
+-- Assumes that the train is in clean state
+-- if invert ist true, setrestore will use the end index
+function advtrains.path_setrestore(train, invert)
+	local idx = train.index
+	if invert then
+		idx = train.end_index
+	end
+	
+	local pos, connid, frac = advtrains.path_getrestore(train, idx, invert)
+	
+	train.last_pos = pos
+	train.last_connid = connid
+	train.last_frac = frac
+end
+-- Get restore position, connid and frac (in this order) for a train that will originate at the passed index
+-- If invert is set, it will return path_cp and multiply frac by -1, in order to reverse the train there.
+function advtrains.path_getrestore(train, index, invert)
+	local idx = train.index
+	local cns = train.path_cn
+	
+	if invert then
+		idx = train.end_index
+		cns = train.path_cp
+	end
+	
+	fli = atfloor(train.index)
+	if fli > train.path_trk_f then
+		fli = train.path_trk_f
+	end
+	if fli < train.path_trk_b then
+		fli = train.path_trk_b
+	end
+	
+	return advtrains.path_get(train, fli),
+			cns[fli],
+			(idx - fli) * (invert and -1 or 1)
 end
 
 -- Invalidates a path
--- TODO: this is supposed to clear stuff from the occupation tables
--- (note: why didn't I think of that earlier?)
+-- this is supposed to clear stuff from the occupation tables
 function advtrains.path_invalidate(train)
+	if train.path then
+		for i,p in pairs(train.path) do
+			advtrains.occ.clear_item(train.id, advtrains.round_vector_floor_y(p))
+		end
+	end
 	train.path = nil
 	train.path_dist = nil
 	train.path_cp = nil
@@ -172,6 +218,8 @@ function advtrains.path_get(train, index)
 		end
 		pef = pef + 1
 		if adj_pos then
+			advtrains.occ.set_item(train.id, adj_pos, pef)
+		
 			adj_pos.y = adj_pos.y + nextrail_y
 			train.path_cp[pef] = adj_connid
 			local mconnid = advtrains.get_matching_conn(adj_connid, #next_conns)
@@ -199,6 +247,8 @@ function advtrains.path_get(train, index)
 		end
 		peb = peb - 1
 		if adj_pos then
+			advtrains.occ.set_item(train.id, adj_pos, peb)
+			
 			adj_pos.y = adj_pos.y + nextrail_y
 			train.path_cn[peb] = adj_connid
 			local mconnid = advtrains.get_matching_conn(adj_connid, #next_conns)
@@ -207,7 +257,7 @@ function advtrains.path_get(train, index)
 			train.path_trk_b = peb
 		else
 			-- off-track fallback behavior
-			adj_pos = advtrains.pos_add_angle(pos, train.path_dir[peb+1])
+			adj_pos = advtrains.pos_add_angle(pos, train.path_dir[peb+1] + math.pi)
 			train.path_dir[peb] = train.path_dir[peb+1]
 		end
 		train.path[peb] = adj_pos
@@ -241,7 +291,7 @@ function advtrains.path_get_interpolated(train, index)
 	
 	local ang = advtrains.minAngleDiffRad(a_floor, a_ceil)
 	
-	return vector.add(p_floor, vector.multiply(vector.subtract(p_ceil, p_floor), frac)), (a_floor + frac * ang)%(2*math.pi), p_floor, p_ceil -- TODO does this behave correctly?
+	return vector.add(p_floor, vector.multiply(vector.subtract(p_ceil, p_floor), frac)), (a_floor + frac * ang)%(2*math.pi), p_floor, p_ceil
 end
 -- returns the 2 path positions directly adjacent to index and the fraction on how to interpolate between them
 -- returns: pos_floor, pos_ceil, fraction
@@ -293,6 +343,7 @@ local PATH_CLEAR_KEEP = 4
 function advtrains.path_clear_unused(train)
 	local i
 	for i = train.path_ext_b, train.path_req_b - PATH_CLEAR_KEEP do
+		advtrains.occ.clear_item(train.id, advtrains.round_vector_floor_y(train.path[i]))
 		train.path[i] = nil
 		train.path_dist[i-1] = nil
 		train.path_cp[i] = nil
@@ -302,6 +353,7 @@ function advtrains.path_clear_unused(train)
 	end
 	
 	for i = train.path_ext_f,train.path_req_f + PATH_CLEAR_KEEP,-1 do
+		advtrains.occ.clear_item(train.id, advtrains.round_vector_floor_y(train.path[i]))
 		train.path[i] = nil
 		train.path_dist[i] = nil
 		train.path_cp[i] = nil
