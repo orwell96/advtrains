@@ -194,32 +194,28 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 				if k1~=k2 then
 					local dconn1 = tr.double_conn_1
 					local dconn2 = tr.double_conn_2
-					if not (advtrains.yawToDirection((math.pi/2) - yaw, k1, k2) == k1) then
+					if not (advtrains.yawToDirection(yaw, conn1, conn2) == conn1) then
 						dconn1 = tr.double_conn_2
 						dconn2 = tr.double_conn_1
 					end
-					if (dconn1[conn1.."_"..conn2]) then
-						local using = dconn1[conn1.."_"..conn2]
-						tp.bend_rail(p_railpos[conn1], conn1, nnpref)
-						tp.bend_rail(p_railpos[conn2], conn2, nnpref)
-						advtrains.ndb.swap_node(pos, using)
-						local nname=using.name
-						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
-							minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
-						end
-						return
-					end
+					-- Checks are made this way round so that dconn1 has priority (this will make arrows of atc rails
+					-- point in the right direction)
+					local using
 					if (dconn2[conn1.."_"..conn2]) then
-						local using = dconn2[conn1.."_"..conn2]
-						tp.bend_rail(p_railpos[conn1], conn1, nnpref)
-						tp.bend_rail(p_railpos[conn2], conn2, nnpref)
-						advtrains.ndb.swap_node(pos, using)
-						local nname=using.name
-						if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
-							minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
-						end
-						return
+						using = dconn2[conn1.."_"..conn2]
 					end
+					if (dconn1[conn1.."_"..conn2]) then
+						using = dconn1[conn1.."_"..conn2]
+					end
+					
+					tp.bend_rail(p_railpos[conn1], conn1, nnpref)
+					tp.bend_rail(p_railpos[conn2], conn2, nnpref)
+					advtrains.ndb.swap_node(pos, using)
+					local nname=using.name
+					if minetest.registered_nodes[nname] and minetest.registered_nodes[nname].after_place_node then
+						minetest.registered_nodes[nname].after_place_node(pos, placer, itemstack, pointed_thing)
+					end
+					return
 				end
 			end
 		end
@@ -229,7 +225,7 @@ function tp.placetrack(pos, nnpref, placer, itemstack, pointed_thing, yaw)
 		for ix, p_rail in ipairs(p_rails) do
 			local sconn1 = tr.single_conn_1
 			local sconn2 = tr.single_conn_2
-			if not (advtrains.yawToDirection((math.pi/2) - yaw, p_rail, (p_rail+8)%16) == p_rail) then
+			if not (advtrains.yawToDirection(yaw, p_rail, (p_rail+8)%16) == p_rail) then
 				sconn1 = tr.single_conn_2
 				sconn2 = tr.single_conn_1
 			end
@@ -285,7 +281,7 @@ function tp.register_track_placer(nnprefix, imgprefix, dispname)
 					if minetest.registered_nodes[minetest.get_node(pos).name] and minetest.registered_nodes[minetest.get_node(pos).name].buildable_to
 					and minetest.registered_nodes[minetest.get_node(upos).name] and minetest.registered_nodes[minetest.get_node(upos).name].walkable then
 --						minetest.chat_send_all(nnprefix)
-						local yaw = placer:get_look_horizontal() + (math.pi/2)
+						local yaw = placer:get_look_horizontal()
 						tp.placetrack(pos, nnprefix, placer, itemstack, pointed_thing, yaw)
 						if not minetest.settings:get_bool("creative_mode") then
 							itemstack:take_item()

@@ -1,42 +1,47 @@
 --advtrains by orwell96, see readme.txt
 
-advtrains.dir_trans_tbl={
-	[0]={x=0, z=1},
-	[1]={x=1, z=2},
-	[2]={x=1, z=1},
-	[3]={x=2, z=1},
-	[4]={x=1, z=0},
-	[5]={x=2, z=-1},
-	[6]={x=1, z=-1},
-	[7]={x=1, z=-2},
-	[8]={x=0, z=-1},
-	[9]={x=-1, z=-2},
-	[10]={x=-1, z=-1},
-	[11]={x=-2, z=-1},
-	[12]={x=-1, z=0},
-	[13]={x=-2, z=1},
-	[14]={x=-1, z=1},
-	[15]={x=-1, z=2},
+local dir_trans_tbl={
+	[0]={x=0, z=1, y=0},
+	[1]={x=1, z=2, y=0},
+	[2]={x=1, z=1, y=0},
+	[3]={x=2, z=1, y=0},
+	[4]={x=1, z=0, y=0},
+	[5]={x=2, z=-1, y=0},
+	[6]={x=1, z=-1, y=0},
+	[7]={x=1, z=-2, y=0},
+	[8]={x=0, z=-1, y=0},
+	[9]={x=-1, z=-2, y=0},
+	[10]={x=-1, z=-1, y=0},
+	[11]={x=-2, z=-1, y=0},
+	[12]={x=-1, z=0, y=0},
+	[13]={x=-2, z=1, y=0},
+	[14]={x=-1, z=1, y=0},
+	[15]={x=-1, z=2, y=0},
 }
 
+local dir_angle_tbl={}
+for d,v in pairs(dir_trans_tbl) do
+	local uvec = vector.normalize(v)
+	dir_angle_tbl[d] = math.atan2(-uvec.x, uvec.z)
+end
+
+
+function advtrains.dir_to_angle(dir)
+	return dir_angle_tbl[dir] or error("advtrains: in helpers.lua/dir_to_angle() given dir="..(dir or "nil"))
+end
+
 function advtrains.dirCoordSet(coord, dir)
-	local x,z
-	if advtrains.dir_trans_tbl[dir] then
-		x,z=advtrains.dir_trans_tbl[dir].x, advtrains.dir_trans_tbl[dir].z
-	else
-		error("advtrains: in helpers.lua/dirCoordSet() given dir="..(dir or "nil"))
-	end
-	return {x=coord.x+x, y=coord.y, z=coord.z+z}
+	return vector.add(coord, advtrains.dirToCoord(dir))
 end
 advtrains.pos_add_dir = advtrains.dirCoordSet
 
 function advtrains.pos_add_angle(pos, ang)
 	-- 0 is +Z -> meaning of sin/cos swapped
-	return vector.add(pos, {x=math.sin(ang), y=0, z=math.cos(ang)})
+	return vector.add(pos, {x = -math.cos(ang), y = 0, z = math.sin(ang)})
 end
 
 function advtrains.dirToCoord(dir)
-	return advtrains.dirCoordSet({x=0, y=0, z=0}, dir)
+	return dir_trans_tbl[dir] or error("advtrains: in helpers.lua/dir_to_vector() given dir="..(dir or "nil"))
 end
 advtrains.dir_to_vector = advtrains.dirToCoord
 
@@ -86,7 +91,7 @@ function advtrains.yawToAnyDir(yaw)
 	local min_conn, min_diff=0, 10
 	for conn, vec in pairs(advtrains.dir_trans_tbl) do
 		local yaw1 = advtrains.dir_to_angle(conn)
-		local diff = advtrains.minAngleDiffRad(yaw, yaw1)
+		local diff = math.abs(advtrains.minAngleDiffRad(yaw, yaw1))
 		if diff < min_diff then
 			min_conn = conn
 			min_diff = diff
@@ -105,11 +110,6 @@ function advtrains.yawToClosestConn(yaw, conns)
 		end
 	end
 	return min_connid
-end
-
-function advtrains.dir_to_angle(dir)
-	local uvec = vector.normalize(advtrains.dirToCoord(dir))
-	return math.atan2(uvec.x, uvec.z)
 end
 
 local pi, pi2 = math.pi, 2*math.pi

@@ -10,8 +10,6 @@
 advtrains.wagons = {}
 advtrains.wagon_prototypes = {}
 
--- TODO: That yaw thing is still not fixed. seems like minetest itself obeys the counterclockwise system...
-
 --
 function advtrains.create_wagon(wtype, owner)
 	local new_id=advtrains.random_id()
@@ -1092,7 +1090,7 @@ function advtrains.register_wagon(sysname_p, prototype, desc, inv_img, nincreati
 					return itemstack
 				end
 				local tconns=advtrains.get_track_connections(node.name, node.param2)
-				local yaw = placer:get_look_horizontal() + (math.pi/2)
+				local yaw = placer:get_look_horizontal()
 				local plconnid = advtrains.yawToClosestConn(yaw, tconns)
 				
 				local prevpos = advtrains.get_adjacent_rail(pointed_thing.under, tconns, plconnid, prototype.drives_on)
