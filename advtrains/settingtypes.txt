@@ -1,7 +1,6 @@
-#    Disable the train collision behavior. Trains will never collide and just drive through each other.
-#    Note that this makes coupling trains impossible, and introduces 'interesting' behavior with detector and ATC rails.
-#    Also, it is very hard to separate two subway trains that are stuck inside each other, since it can be impossible to access the driver seat.
-advtrains_disable_collisions (Disable train collisions) bool false
+#    Display train and wagon ID in the infotext of trains.
+#    Useful when working with LuaATC or while debugging.
+advtrains_show_ids (Show ID's in infotext) bool false
 #    Enable the debug ring buffer
 #    This has no effect on the user experience, except decreased performance. Debug outputs are saved in a ring buffer to be printed when an error occurs.
 #    You probably want to leave this setting set to false.

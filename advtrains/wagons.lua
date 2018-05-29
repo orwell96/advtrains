@@ -11,6 +11,8 @@ advtrains.wagons = {}
 advtrains.wagon_prototypes = {}
 advtrains.wagon_objects = {}
 
+local setting_show_ids = minetest.settings:get_bool("advtrains_show_ids")
+
 --
 function advtrains.create_wagon(wtype, owner)
 	local new_id=advtrains.random_id()
@@ -285,6 +287,9 @@ function wagon:on_step(dtime)
 		
 		--check infotext
 		local outside=self:train().text_outside or ""
+		if setting_show_ids then
+			outside = outside .. "\nT:" .. data.train_id .. " W:" .. self.id
+		end
 		
 		local train=self:train()
 		--show off-track information in outside text instead of notifying the whole server about this
