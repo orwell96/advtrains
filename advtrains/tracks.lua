@@ -304,7 +304,7 @@ function advtrains.register_tracks(tracktype, def, preset)
 				
 				if var.switchalt and var.switchst then
 					local switchfunc=function(pos, node, newstate)
-						if newstate~=var.switchst then
+						if newstate~=var.switchst and not advtrains.get_train_at_pos(pos) then
 							advtrains.ndb.swap_node(pos, {name=def.nodename_prefix.."_"..var.switchalt..rotation, param2=node.param2})
 							advtrains.invalidate_all_paths(pos)
 						end

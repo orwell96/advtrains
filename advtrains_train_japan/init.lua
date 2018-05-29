@@ -73,6 +73,7 @@ advtrains.register_wagon("engine_japan", {
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
 	horn_sound = "advtrains_japan_horn",
+	glow = -1, --supposed to disable effect of light to texture color, so that the entity always appears as full-bright
 }, S("Japanese Train Engine"), "advtrains_engine_japan_inv.png")
 
 advtrains.register_wagon("wagon_japan", {
@@ -141,5 +142,6 @@ advtrains.register_wagon("wagon_japan", {
 	wagon_span=2.3,
 	collisionbox = {-1.0,-0.5,-1.0, 1.0,2.5,1.0},
 	drops={"default:steelblock 4"},
+	glow = -1, --supposed to disable effect of light to texture color, so that the entity always appears as full-bright
 }, S("Japanese Train Wagon"), "advtrains_wagon_japan_inv.png")
 

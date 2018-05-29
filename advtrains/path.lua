@@ -54,7 +54,7 @@ function advtrains.path_create(train, pos, connid, rel_index)
 	train.path_req_b=0
 	
 	advtrains.occ.set_item(train.id, posr, 0)
-	
+	return true
 end
 
 -- Sets position and connid to properly restore after a crash, e.g. in order

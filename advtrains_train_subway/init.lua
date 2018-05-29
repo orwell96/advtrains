@@ -76,6 +76,7 @@ advtrains.register_wagon("subway_wagon", {
 	is_locomotive=true,
 	drops={"default:steelblock 4"},
 	horn_sound = "advtrains_subway_horn",
+	glow = -1, --supposed to disable effect of light to texture color, so that the entity always appears as full-bright
 	custom_on_velocity_change = function(self, velocity, old_velocity, dtime)
 		if not velocity or not old_velocity then return end
 		if old_velocity == 0 and velocity > 0 then

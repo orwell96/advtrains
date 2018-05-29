@@ -374,7 +374,7 @@ function advtrains.save(remove_players_from_wagons)
 	end
 	atprint("[save_all]Saved advtrains save files")
 end
---minetest.register_on_shutdown(advtrains.save)
+minetest.register_on_shutdown(advtrains.save)
 
 -- This chat command provides a solution to the problem known on the LinuxWorks server
 -- There are many players that joined a single time, got on a train and then left forever
