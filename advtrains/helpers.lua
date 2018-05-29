@@ -37,7 +37,7 @@ advtrains.pos_add_dir = advtrains.dirCoordSet
 
 function advtrains.pos_add_angle(pos, ang)
 	-- 0 is +Z -> meaning of sin/cos swapped
-	return vector.add(pos, {x = -math.cos(ang), y = 0, z = math.sin(ang)})
+	return vector.add(pos, {x = -math.sin(ang), y = 0, z = math.cos(ang)})
 end
 
 function advtrains.dirToCoord(dir)
@@ -103,7 +103,7 @@ function advtrains.yawToClosestConn(yaw, conns)
 	local min_connid, min_diff=1, 10
 	for connid, conn in ipairs(conns) do
 		local yaw1 = advtrains.dir_to_angle(conn.c)
-		local diff = advtrains.minAngleDiffRad(yaw, yaw1)
+		local diff = math.abs(advtrains.minAngleDiffRad(yaw, yaw1))
 		if diff < min_diff then
 			min_connid = connid
 			min_diff = diff

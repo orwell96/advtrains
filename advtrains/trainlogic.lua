@@ -1,7 +1,6 @@
 --trainlogic.lua
 --controls train entities stuff about connecting/disconnecting/colliding trains and other things
 
--- TODO: what should happen when a train has no trainparts anymore?
 
 local benchmark=false
 local bm={}
@@ -68,17 +67,17 @@ advtrains.mainloop_trainlogic=function(dtime)
 	local t=os.clock()
 	
 	for k,v in pairs(advtrains.trains) do
-		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid=k
 		advtrains.train_ensure_init(k, v)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
-		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid=k
 		advtrains.train_step_b(k, v, dtime)
 	end
 	
 	for k,v in pairs(advtrains.trains) do
-		advtrains.atprint_context_tid=sid(k)
+		advtrains.atprint_context_tid=k
 		advtrains.train_step_c(k, v, dtime)
 	end
 	
@@ -242,7 +241,7 @@ function advtrains.train_ensure_init(id, train)
 		advtrains.update_trainpart_properties(id)
 		recalc_end_index(train)
 		
-		atdebug("Train",id,": Successfully restored path at",train.last_pos," connid",train.last_connid," frac",train.last_frac)
+		--atdebug("Train",id,": Successfully restored path at",train.last_pos," connid",train.last_connid," frac",train.last_frac)
 		
 		-- run on_new_path callbacks
 		run_callbacks_new_path(id, train)
@@ -470,8 +469,7 @@ end
 --  asserted to rely on this)
 
 local function tnc_call_enter_callback(pos, train_id)
-	--atprint("instructed to call enter calback")
-
+	--atdebug("tnc enter",pos,train_id)
 	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
 	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_enter then
@@ -479,8 +477,7 @@ local function tnc_call_enter_callback(pos, train_id)
 	end
 end
 local function tnc_call_leave_callback(pos, train_id)
-	--atprint("instructed to call leave calback")
-
+	--atdebug("tnc leave",pos,train_id)
 	local node = advtrains.ndb.get_node(pos) --this spares the check if node is nil, it has a name in any case
 	local mregnode=minetest.registered_nodes[node.name]
 	if mregnode and mregnode.advtrains and mregnode.advtrains.on_train_leave then
@@ -493,7 +490,7 @@ advtrains.te_register_on_new_path(function(id, train)
 		old_index = atround(train.index),
 		old_end_index = atround(train.end_index),
 	}
-	atdebug(id,"tnc init",train.index,train.end_index)
+	--atdebug(id,"tnc init",train.index,train.end_index)
 end)
 
 advtrains.te_register_on_update(function(id, train)
@@ -523,7 +520,7 @@ advtrains.te_register_on_create(function(id, train)
 		tnc_call_enter_callback(pos, id)
 		end_index = end_index + 1
 	end
-	atdebug(id,"tnc create",train.index,train.end_index)
+	--atdebug(id,"tnc create",train.index,train.end_index)
 end)
 
 advtrains.te_register_on_remove(function(id, train)
@@ -534,7 +531,7 @@ advtrains.te_register_on_remove(function(id, train)
 		tnc_call_leave_callback(pos, id)
 		end_index = end_index + 1
 	end
-	atdebug(id,"tnc remove",train.index,train.end_index)
+	--atdebug(id,"tnc remove",train.index,train.end_index)
 end)
 
 -- Calculates the indices where the window borders of the occupation windows are.
@@ -570,8 +567,6 @@ local function calc_occwindows(id, train)
 	}
 end
 
---TODO: Collisions!
-
 
 --returns new id
 function advtrains.create_new_train_at(pos, connid, ioff, trainparts)
@@ -590,7 +585,7 @@ function advtrains.create_new_train_at(pos, connid, ioff, trainparts)
 	t.trainparts=trainparts
 	
 	advtrains.trains[new_id] = t
-	atdebug("Created new train:",t)
+	--atdebug("Created new train:",t)
 	
 	advtrains.train_ensure_init(new_id, advtrains.trains[new_id])
 	
@@ -610,7 +605,7 @@ function advtrains.remove_train(id)
 	advtrains.couple_invalidate(train)
 	
 	local tp = train.trainparts
-	atdebug("Removing train",id,"leftover trainparts:",tp)
+	--atdebug("Removing train",id,"leftover trainparts:",tp)
 	
 	advtrains.trains[id] = nil
 	
@@ -633,6 +628,23 @@ function advtrains.add_wagon_to_train(wagon_id, train_id, index)
 	advtrains.update_trainpart_properties(train_id)
 	recalc_end_index(train)
 	run_callbacks_update(train_id, train)
+end
+
+function advtrains.safe_decouple_wagon(w_id, pname)
+	if not minetest.check_player_privs(pname, "train_operator") then
+		minetest.chat_send_player(pname, "Missing train_operator privilege")
+		return false
+	end
+	local data = advtrains.wagons[w_id]
+	if data.dcpl_lock then
+		minetest.chat_send_player(pname, "Couple is locked (ask owner or admin to unlock it)")
+		return false
+	end
+	atprint("wagon:discouple() Splitting train", data.train_id)
+	local train = advtrains.trains[data.train_id]
+	advtrains.log("Discouple", pname, train.last_pos, train.text_outside)
+	advtrains.split_train_at_wagon(w_id)
+	return true
 end
 
 -- this function sets wagon's pos_in_train(parts) properties and train's max_speed and drives_on (and more)
@@ -692,14 +704,15 @@ local ablkrng = minetest.settings:get("active_block_range")*16
 function advtrains.spawn_wagons(train_id)
 	local train = advtrains.trains[train_id]
 	
-	for i, w_id in ipairs(train.trainparts) do
+	for i = 1, #train.trainparts do
+		local w_id = train.trainparts[i]
 		local data = advtrains.wagons[w_id]
 		if data then
 			if data.train_id ~= train_id then
 				atwarn("Train",train_id,"Wagon #",1,": Saved train ID",data.train_id,"did not match!")
 				data.train_id = train_id
 			end
-			if not data.object or not data.object:getyaw() then
+			if not advtrains.wagon_objects[w_id] or not advtrains.wagon_objects[w_id]:getyaw() then
 				-- eventually need to spawn new object. check if position is loaded.
 				local index = advtrains.path_get_index_by_offset(train, train.index, -data.pos_in_train)
 				local pos   = advtrains.path_get(train, atfloor(index))
@@ -717,6 +730,10 @@ function advtrains.spawn_wagons(train_id)
 					wagon:set_id(w_id)
 				end
 			end
+		else
+			atwarn("Train",train_id,"Wagon #",1,": A wagon with id",w_id,"does not exist! Wagon will be removed from train.")
+			table.remove(train.trainparts, i)
+			i = i - 1
 		end
 	end
 end
@@ -745,6 +762,11 @@ function advtrains.split_train_at_wagon(wagon_id)
 		end
 	end
 	
+	--update train parts
+	advtrains.update_trainpart_properties(old_id)
+	recalc_end_index(train)
+	run_callbacks_update(old_id, train)
+	
 	--create subtrain
 	local newtrain_id=advtrains.create_new_train_at(pos, connid, frac, tp)
 	local newtrain=advtrains.trains[newtrain_id]
@@ -756,11 +778,6 @@ function advtrains.split_train_at_wagon(wagon_id)
 	newtrain.couple_lck_back=train.couple_lck_back
 	newtrain.couple_lck_front=false
 	train.couple_lck_back=false
-	
-	--update train parts
-	advtrains.update_trainpart_properties(old_id)
-	recalc_end_index(train)
-	run_callbacks_update(old_id, train)
 	
 end
 
@@ -778,7 +795,7 @@ local function createcouple(pos, train1, t1_is_front, train2, t2_is_front)
 	le.train_id_2=train2.id
 	le.t1_is_front=t1_is_front
 	le.t2_is_front=t2_is_front
-	atdebug("created couple between",train1.id,t1_is_front,train2.id,t2_is_front)
+	--atdebug("created couple between",train1.id,t1_is_front,train2.id,t2_is_front)
 	if t1_is_front then
 		train1.cpl_front = obj
 	else
@@ -793,7 +810,7 @@ local function createcouple(pos, train1, t1_is_front, train2, t2_is_front)
 end
 
 function advtrains.train_check_couples(train)
-	atdebug("rechecking couples")
+	--atdebug("rechecking couples")
 	if train.cpl_front then
 		if not train.cpl_front:getyaw() then
 			-- objectref is no longer valid. reset.
@@ -806,7 +823,7 @@ function advtrains.train_check_couples(train)
 		for tid, idx in pairs(front_trains) do
 			local other_train = advtrains.trains[tid]
 			advtrains.train_ensure_init(tid, other_train)
-			atdebug(train.id,"front: ",idx,"on",tid,atround(other_train.index),atround(other_train.end_index))
+			--atdebug(train.id,"front: ",idx,"on",tid,atround(other_train.index),atround(other_train.end_index))
 			if other_train.velocity == 0 then
 				if idx>=other_train.index and idx<=other_train.index + CPL_ZONE then
 					createcouple(pos, train, true, other_train, true)
@@ -924,8 +941,12 @@ function advtrains.invert_train(train_id)
 	advtrains.update_trainpart_properties(train_id, true)
 end
 
+-- returns: train id, index of one of the trains that stand at this position.
 function advtrains.get_train_at_pos(pos)
-	return advtrains.occ.get_trains_at(pos)[1]
+	local t = advtrains.occ.get_trains_at(pos)
+	for tid,idx in pairs(t) do
+		return tid, idx
+	end
 end
 
 function advtrains.invalidate_all_paths(pos)

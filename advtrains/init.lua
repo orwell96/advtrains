@@ -41,14 +41,12 @@ function advtrains.pcall(fun)
 	local succ, return1, return2, return3, return4=xpcall(fun, function(err)
 			atwarn("Lua Error occured: ", err)
 			atwarn(debug.traceback())
-			if advtrains.atprint_context_tid_full then
-				advtrains.path_print(advtrains.trains[advtrains.atprint_context_tid_full], atdebug)
+			if advtrains.atprint_context_tid then
+				advtrains.path_print(advtrains.trains[advtrains.atprint_context_tid], atdebug)
 			end
 		end)
 	if not succ then
-		--reload_saves()
-		no_action=true --this does also not belong here!
-		minetest.request_shutdown()
+		reload_saves()
 	else
 		return return1, return2, return3, return4
 	end
@@ -123,6 +121,7 @@ if minetest.settings:get_bool("advtrains_enable_debugging") then
 		--atlog("@@",advtrains.atprint_context_tid,t,...)
 	end
 	dofile(advtrains.modpath.."/debugringbuffer.lua")
+	
 end
 
 function assertt(var, typ)
@@ -182,7 +181,8 @@ end
 function advtrains.avt_load()
 	local file, err = io.open(advtrains.fpath, "r")
 	if not file then
-		minetest.log("error", " Failed to read advtrains save data from file "..advtrains.fpath..": "..(err or "Unknown Error"))
+		minetest.log("warning", " Failed to read advtrains save data from file "..advtrains.fpath..": "..(err or "Unknown Error"))
+		minetest.log("warning", " (this is normal when first enabling advtrains on this world)")
 	else
 		local tbl = minetest.deserialize(file:read("*a"))
 		if type(tbl) == "table" then
@@ -193,7 +193,7 @@ function advtrains.avt_load()
 				for id, train in pairs(advtrains.trains) do
 					train.id = id
 				end
-				advtrains.wagon_save = tbl.wagon_save
+				advtrains.wagons = tbl.wagon_save
 				advtrains.player_to_train_mapping = tbl.ptmap or {}
 				advtrains.ndb.load_data(tbl.ndb)
 				advtrains.atc.load_data(tbl.atc)
@@ -248,48 +248,30 @@ end
 
 advtrains.avt_save = function(remove_players_from_wagons)
 	--atprint("saving")
-	--No more invalidating.
-	--Instead, remove path a.s.o from the saved table manually
 	
-	-- update wagon saves
-	for _,wagon in pairs(minetest.luaentities) do
-		if wagon.is_wagon and wagon.initialized then
-			wagon:get_staticdata()
-		end
-	end
-	--cross out userdata
-	for w_id, data in pairs(advtrains.wagon_save) do
-		data.name=nil
-		data.object=nil
-		if data.driver then
-			data.driver_name=data.driver:get_player_name()
-			data.driver=nil
-		else
-			data.driver_name=nil
-		end
-		if data.discouple then
-			data.discouple.object:remove()
-			data.discouple=nil
-		end
-		if remove_players_from_wagons then
+	if remove_players_from_wagons then
+		for w_id, data in pairs(advtrains.wagons) do
 			data.seatp={}
 		end
-	end
-	if remove_players_from_wagons then
 		advtrains.player_to_train_mapping={}
 	end
 	
 	local tmp_trains={}
 	for id, train in pairs(advtrains.trains) do
 		--first, deep_copy the train
-		local v=advtrains.save_keys(train, {
-			"last_pos", "last_pos_prev", "movedir", "velocity", "tarvelocity",
-			"trainparts", "savedpos_off_track_index_offset", "recently_collided_with_env",
-			"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open",
-			"text_outside", "text_inside", "couple_lck_front", "couple_lck_back", "line"
-		})
-		--then save it
-		tmp_trains[id]=v
+		if #train.trainparts > 0 then
+			local v=advtrains.save_keys(train, {
+				"last_pos", "last_connid", "last_frac", "velocity", "tarvelocity",
+				"trainparts", "recently_collided_with_env",
+				"atc_brake_target", "atc_wait_finish", "atc_command", "atc_delay", "door_open",
+				"text_outside", "text_inside", "couple_lck_front", "couple_lck_back", "line"
+			})
+			--then save it
+			tmp_trains[id]=v
+		else
+			atwarn("Train",id,"had no wagons left because of some bug. It is being deleted. Wave it goodbye!")
+			advtrains.remove_train(id)
+		end
 	end
 	
 	--versions:
@@ -353,7 +335,7 @@ minetest.register_globalstep(function(dtime_mt)
 		if save_timer<=0 then
 			local t=os.clock()
 			--save
-			--advtrains.save()
+			advtrains.save()
 			save_timer=save_interval
 			atprintbm("saving", t)
 		end
@@ -427,3 +409,4 @@ minetest.register_chatcommand("at_reroute",
 
 local tot=(os.clock()-lot)*1000
 minetest.log("action", "[advtrains] Loaded in "..tot.."ms")
+

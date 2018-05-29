@@ -9,6 +9,7 @@
 
 advtrains.wagons = {}
 advtrains.wagon_prototypes = {}
+advtrains.wagon_objects = {}
 
 --
 function advtrains.create_wagon(wtype, owner)
@@ -21,7 +22,7 @@ function advtrains.create_wagon(wtype, owner)
 	wgn.id = new_id
 	---wgn.train_id = train_id   --- will get this via update_trainpart_properties
 	advtrains.wagons[new_id] = wgn
-	atdebug("Created new wagon:",wgn)
+	--atdebug("Created new wagon:",wgn)
 	return new_id
 end
 
@@ -60,9 +61,9 @@ function wagon:set_id(wid)
 	self.initialized = true
 	
 	local data = advtrains.wagons[self.id]
+	advtrains.wagon_objects[self.id] = self.object
 	
-	data.object = self.object
-	atdebug("Created wagon entity:",self.name," w_id",wid," t_id",data.train_id)
+	--atdebug("Created wagon entity:",self.name," w_id",wid," t_id",data.train_id)
 	
 	if self.has_inventory then
 		--to be used later
@@ -196,7 +197,7 @@ function wagon:destroy()
 			if self.discouple then self.discouple.object:remove() end--will have no effect on unloaded objects
 		end
 	end
-	atdebug("[wagon ", self.id, "]: destroying")
+	--atdebug("[wagon ", self.id, "]: destroying")
 	
 	self.object:remove()
 end
@@ -210,7 +211,7 @@ function wagon:on_step(dtime)
 		local data = advtrains.wagons[self.id]
 		
 		if not pos then
-			atdebug("["..self.id.."][fatal] missing position (object:getpos() returned nil)")
+			--atdebug("["..self.id.."][fatal] missing position (object:getpos() returned nil)")
 			return
 		end
 		
@@ -437,7 +438,6 @@ function wagon:on_step(dtime)
 				else
 					train.recently_collided_with_env=true
 					train.velocity=0
-					-- TODO what should happen when a train collides?
 					train.tarvelocity=0
 					self.collision_count=(self.collision_count or 0)+1
 				end
@@ -852,11 +852,7 @@ function wagon:handle_bordcom_fields(pname, formname, fields)
 	end
 	for i, tpid in ipairs(train.trainparts) do
 		if fields["dcpl_"..i] then
-			for _,wagon in pairs(minetest.luaentities) do
-				if wagon.is_wagon and wagon.initialized and wagon.id==tpid then
-					wagon:safe_decouple(pname)										-- TODO: Move this into external function (don't search entity?)
-				end
-			end
+			advtrains.safe_decouple_wagon(tpid, pname)
 		end
 		if i>1 and fields["dcpl_lck_"..i] then
 			local ent = advtrains.wagons[tpid]
@@ -1026,26 +1022,10 @@ function wagon:reattach_all()
 	end
 end
 
-function wagon:safe_decouple(pname)
-	if not minetest.check_player_privs(pname, "train_operator") then
-		minetest.chat_send_player(pname, "Missing train_operator privilege")
-		return false
-	end
-	local data = advtrains.wagons[self.id]
-	if data.dcpl_lock then
-		minetest.chat_send_player(pname, "Couple is locked (ask owner or admin to unlock it)")
-		return false
-	end
-	atprint("wagon:discouple() Splitting train", self.train_id)
-	advtrains.log("Discouple", pname, self.object:getpos(), self:train().text_outside)
-	advtrains.split_train_at_wagon(self.id)--found in trainlogic.lua
-	return true
-end
-
 function advtrains.get_wagon_prototype(data)
 	local wt = data.type
-	if not advtrains.wagon_prototypes[wt] then
-		atprint("Unable to load wagon type",wt,", using placeholder")
+	if not data.type or not advtrains.wagon_prototypes[wt] then
+		atwarn("Unable to load wagon type",wt,", using placeholder")
 		wt="advtrains:wagon_placeholder"
 	end
 	return wt, advtrains.wagon_prototypes[wt]

@@ -1,76 +1,6 @@
 -- path.lua
 -- Functions for pathpredicting, put in a separate file. 
 
-function advtrains.conway(midreal, prev, drives_on)--in order prev,mid,return
-	local mid=advtrains.round_vector_floor_y(midreal)
-	
-	local midnode_ok, midconns=advtrains.get_rail_info_at(mid, drives_on)
-	if not midnode_ok then
-		return nil 
-	end
-	local pconnid
-	for connid, conn in ipairs(midconns) do
-		local tps = advtrains.dirCoordSet(mid, conn.c)
-		if tps.x==prev.x and tps.z==prev.z then
-			pconnid=connid
-		end
-	end
-	local nconnid = advtrains.get_matching_conn(pconnid, #midconns)
-	
-	local next, next_connid, _, nextrailheight = advtrains.get_adjacent_rail(mid, midconns, nconnid, drives_on)
-	if not next then
-		return nil
-	end
-	return vector.add(advtrains.round_vector_floor_y(next), {x=0, y=nextrailheight, z=0}), midconns[nconnid].c
-end
-
-function advtrains.pathpredict(id, train, gen_front, gen_back)
-	
-	local maxn=train.path_extent_max or 0
-	while maxn < gen_front do--pregenerate
-		local conway
-		if train.max_index_on_track == maxn then
-			--atprint("maxn conway for ",maxn,train.path[maxn],maxn-1,train.path[maxn-1])
-			conway=advtrains.conway(train.path[maxn], train.path[maxn-1], train.drives_on)
-		end
-		if conway then
-			train.path[maxn+1]=conway
-			train.max_index_on_track=maxn+1
-		else
-			--do as if nothing has happened and preceed with path
-			--but do not update max_index_on_track
-			atprint("over-generating path max to index ",(maxn+1)," (position ",train.path[maxn]," )")
-			train.path[maxn+1]=vector.add(train.path[maxn], vector.subtract(train.path[maxn], train.path[maxn-1]))
-		end
-		train.path_dist[maxn]=vector.distance(train.path[maxn+1], train.path[maxn])
-		maxn=maxn+1
-	end
-	train.path_extent_max=maxn
-	
-	local minn=train.path_extent_min or -1
-	while minn > gen_back do
-		local conway
-		if train.min_index_on_track == minn then
-			--atprint("minn conway for ",minn,train.path[minn],minn+1,train.path[minn+1])
-			conway=advtrains.conway(train.path[minn], train.path[minn+1], train.drives_on)
-		end
-		if conway then
-			train.path[minn-1]=conway
-			train.min_index_on_track=minn-1
-		else
-			--do as if nothing has happened and preceed with path
-			--but do not update min_index_on_track
-			atprint("over-generating path min to index ",(minn-1)," (position ",train.path[minn]," )")
-			train.path[minn-1]=vector.add(train.path[minn], vector.subtract(train.path[minn], train.path[minn+1]))
-		end
-		train.path_dist[minn-1]=vector.distance(train.path[minn], train.path[minn-1])
-		minn=minn-1
-	end
-	train.path_extent_min=minn
-	if not train.min_index_on_track then train.min_index_on_track=-1 end
-	if not train.max_index_on_track then train.max_index_on_track=0 end
-end
-
 -- Naming conventions:
 -- 'index' - An index of the train.path table.
 -- 'offset' - A value in meters that determines how far on the path to walk relative to a certain index
@@ -145,7 +75,7 @@ function advtrains.path_setrestore(train, invert)
 end
 -- Get restore position, connid and frac (in this order) for a train that will originate at the passed index
 -- If invert is set, it will return path_cp and multiply frac by -1, in order to reverse the train there.
-function advtrains.path_getrestore(train, index, invert, tmp)
+function advtrains.path_getrestore(train, index, invert)
 	local idx = index
 	local cns = train.path_cn
 	
@@ -153,16 +83,13 @@ function advtrains.path_getrestore(train, index, invert, tmp)
 		cns = train.path_cp
 	end
 	
-	fli = atfloor(index)
+	local fli = atfloor(index)
 	advtrains.path_get(train, fli)
 	if fli > train.path_trk_f then
 		fli = train.path_trk_f
 	end
 	if fli < train.path_trk_b then
 		fli = train.path_trk_b
-	end
-	if not tmp then
-	atdebug ("getrestore ",atround(train.index),"calc",atround(index),fli)
 	end
 	return advtrains.path_get(train, fli),
 			cns[fli],
@@ -195,7 +122,13 @@ end
 function advtrains.path_print(train, printf)
 	printf("i:	CP	Position	Dir	CN		->Dist->")
 	for i = train.path_ext_b, train.path_ext_f do
+		if i==train.path_trk_b then
+			printf("--Back on-track border here--")
+		end
 		printf(i,":	",train.path_cp[i],"	",train.path[i],"	",train.path_dir[i],"	",train.path_cn[i],"		->",train.path_dist[i],"->")
+		if i==train.path_trk_f then
+			printf("--Front on-track border here--")		
+		end
 	end
 end
 
@@ -231,6 +164,7 @@ function advtrains.path_get(train, index)
 		else
 			-- off-track fallback behavior
 			adj_pos = advtrains.pos_add_angle(pos, train.path_dir[pef-1])
+			--atdebug("Offtrack overgenerating(front) at",adj_pos,"index",peb,"trkf",train.path_trk_f)
 			train.path_dir[pef] = train.path_dir[pef-1]
 		end
 		train.path[pef] = adj_pos
@@ -260,6 +194,7 @@ function advtrains.path_get(train, index)
 		else
 			-- off-track fallback behavior
 			adj_pos = advtrains.pos_add_angle(pos, train.path_dir[peb+1] + math.pi)
+			--atdebug("Offtrack overgenerating(back) at",adj_pos,"index",peb,"trkb",train.path_trk_b)
 			train.path_dir[peb] = train.path_dir[peb+1]
 		end
 		train.path[peb] = adj_pos
@@ -326,7 +261,6 @@ function advtrains.path_get_index_by_offset(train, index, offset)
 		idx = idx - 1
 		advtrains.path_get_adjacent(train, idx)
 		if not train.path_dist[idx] then
-			atdebug("second while",idx)
 			for i=-5,5 do
 				atdebug(idx+i,train.path_dist[idx+i])
 			end
@@ -363,6 +297,8 @@ function advtrains.path_clear_unused(train)
 		train.path_dir[i+1] = nil
 		train.path_ext_f = i - 1
 	end
+	train.path_trk_b = math.max(train.path_trk_b, train.path_ext_b)
+	train.path_trk_f = math.min(train.path_trk_f, train.path_ext_f)
 	
 	train.path_req_f = math.ceil(train.index)
 	train.path_req_b = math.floor(train.end_index or train.index)

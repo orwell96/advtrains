@@ -34,7 +34,7 @@ minetest.register_entity("advtrains:discouple", {
 		return advtrains.pcall(function()
 			local pname = player:get_player_name()
 			if pname and pname~="" and self.wagon then
-				if self.wagon:safe_decouple(pname) then
+				if advtrains.safe_decouple_wagon(self.wagon.id, pname) then
 					self.object:remove()
 				else
 					minetest.add_entity(self.object:getpos(), "advtrains:lockmarker")
@@ -53,7 +53,7 @@ minetest.register_entity("advtrains:discouple", {
 				self.object:remove()
 				return
 			end
-			if not self.wagon:train() and self.wagon:train().velocity > 0 then
+			if not self.wagon:train() or self.wagon:train().velocity > 0 then
 				self.object:remove()
 				return
 			end
