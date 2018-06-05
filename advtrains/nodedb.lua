@@ -57,7 +57,7 @@ local path=minetest.get_worldpath()..DIR_DELIM.."advtrains_ndb2"
 --nodeids get loaded by advtrains init.lua and passed here
 function ndb.load_data(data)
 	ndb_nodeids = data and data.nodeids or {}
-	local file, err = io.open(path, "r")
+	local file, err = io.open(path, "rb")
 	if not file then
 		atwarn("Couldn't load the node database: ", err or "Unknown Error")
 	else
@@ -81,7 +81,7 @@ end
 
 --save
 function ndb.save_data()
-	local file, err = io.open(path, "w")
+	local file, err = io.open(path, "wb")
 	if not file then
 		atwarn("Couldn't save the node database: ", err or "Unknown Error")
 	else
