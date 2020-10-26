@@ -4,7 +4,7 @@ THIS REPOSITORY IS NO LONGER UPDATED!
 The new repository for this mod can be found at:
 http://git.bananach.space/advtrains.git/
 Please report issues to:
-http://mantis.bleipb.de/ (select "advtrains" in the project list)
+https://bugs.linux-forks.de/advtrains/ (no registration required)
 
 This repository will continue to mirror the state of advtrains as it was on 2018/06/14.
 Issues and PRs reported here will probably no longer be processed.
